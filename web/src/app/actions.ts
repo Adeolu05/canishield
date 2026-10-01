@@ -2,9 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
-import { and, eq } from "drizzle-orm";
-import { reports, tests, addressType, type AddressType } from "@zecproof/db";
+import { and, arrayContains, eq } from "drizzle-orm";
+import { reports, services, tests, addressType, type AddressType } from "@zecproof/db";
+import { isNetworkId } from "@zecproof/zcash/networks";
 import { getDb } from "@/lib/db";
+import { basePath, canCreateTests } from "@/lib/network";
 
 const isAddressType = (v: unknown): v is AddressType =>
   typeof v === "string" && (addressType.enumValues as readonly string[]).includes(v);
@@ -22,18 +24,27 @@ const optionalUrl = (v: FormDataEntryValue | null) => {
   }
 };
 
-/** Creates a pending test; the worker derives its address on the next cycle. */
+/** Creates a pending test; the worker for that network assigns its address. */
 export async function createTest(formData: FormData) {
+  const network = formData.get("network");
   const serviceId = formData.get("serviceId");
   const type = formData.get("addressType");
-  if (typeof serviceId !== "string" || !isAddressType(type)) {
-    throw new Error("Pick a service and an address type.");
-  }
-  const [test] = await getDb()
+  if (!isNetworkId(network)) throw new Error("Unknown network.");
+  if (!canCreateTests(network)) throw new Error("Mainnet tests are not enabled.");
+  if (typeof serviceId !== "string" || !isAddressType(type)) throw new Error("Pick a service and an address type.");
+
+  const db = getDb();
+  const [service] = await db
+    .select({ id: services.id })
+    .from(services)
+    .where(and(eq(services.id, serviceId), arrayContains(services.networks, [network])));
+  if (!service) throw new Error(`That service is not listed on ${network}.`);
+
+  const [test] = await db
     .insert(tests)
-    .values({ serviceId, addressType: type })
+    .values({ network, serviceId, addressType: type })
     .returning({ id: tests.id });
-  redirect(`/test/${test.id}`);
+  redirect(`${basePath(network)}/test/${test.id}`);
 }
 
 /**
@@ -49,8 +60,9 @@ export async function markAddressRejected(testId: string, formData: FormData) {
       .set({ status: "address_rejected", testerNote: note })
       .where(and(eq(tests.id, testId), eq(tests.status, "awaiting_payment")))
       .returning();
-    if (!test) return; // already received, expired or rejected
+    if (!test) return; // already seen, received, expired or rejected
     await tx.insert(reports).values({
+      network: test.network,
       serviceId: test.serviceId,
       tier: "community",
       testId: test.id,

@@ -45,6 +45,32 @@ const call = <T>(fn: (cb: Callback<T>) => void) =>
 
 export const getLightdInfo = (c: Client) => call<LightdInfo>((cb) => c.GetLightdInfo({}, cb));
 
+/** True if any transaction touched `address` in [start, end]. Stops at the first one. */
+export function hasTaddressHistory(c: Client, address: string, start: number, end: number): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    let done = false;
+    const stream = (c as unknown as { GetTaddressTxids(req: object): grpc.ClientReadableStream<unknown> }).GetTaddressTxids({
+      address,
+      range: { start: { height: start }, end: { height: end } },
+    });
+    const finish = (value: boolean) => {
+      if (done) return;
+      done = true;
+      resolve(value);
+    };
+    stream.on("data", () => {
+      finish(true);
+      stream.cancel();
+    });
+    stream.on("end", () => finish(false));
+    stream.on("error", (err: grpc.ServiceError) => {
+      if (done || err.code === grpc.status.CANCELLED) return;
+      done = true;
+      reject(err);
+    });
+  });
+}
+
 export async function getAddressUtxos(c: Client, address: string, startHeight: number) {
   const res = await call<Awaited<ReturnType<Client["GetAddressUtxos"]>> & any>((cb) =>
     c.GetAddressUtxos({ addresses: [address], startHeight, maxEntries: 0 }, cb),

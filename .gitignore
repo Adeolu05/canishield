@@ -5,3 +5,8 @@ node_modules/
 dist/
 *.tsbuildinfo
 .DS_Store
+
+# Never commit key material. keygen already refuses to write inside a git
+# working tree; this is a second line of defence.
+*.seeds.enc.json
+*seeds*.json

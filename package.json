@@ -4,6 +4,8 @@
   "type": "module",
   "workspaces": [
     "packages/db",
+    "packages/zcash",
+    "keygen",
     "worker",
     "web"
   ],
@@ -15,8 +17,9 @@
     "db:seed": "npm run seed -w @zecproof/db",
     "dev:web": "npm run dev -w web",
     "dev:worker": "npm run dev -w worker",
-    "build": "npm run typecheck -w @zecproof/db -w worker && npm run build -w web",
-    "typecheck": "npm run typecheck --workspaces"
+    "build": "npm run typecheck -w @zecproof/db -w @zecproof/zcash -w keygen -w worker && npm run build -w web",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm test -w @zecproof/zcash -w keygen -w worker"
   },
   "engines": {
     "node": ">=20"

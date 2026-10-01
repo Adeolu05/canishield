@@ -1,0 +1,21 @@
+{
+  "name": "keygen",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "keygen": "tsx src/cli.ts",
+    "test": "tsx --test src/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@ledgerhq/zcash-utils": "2.5.0",
+    "@scure/bip39": "^2.4.0",
+    "@zecproof/zcash": "^0.1.0"
+  }
+}

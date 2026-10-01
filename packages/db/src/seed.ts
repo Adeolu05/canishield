@@ -1,5 +1,5 @@
-// Testnet-capable services to start the board with. Idempotent: safe to rerun.
-import { eq } from "drizzle-orm";
+// Services to start the boards with. Idempotent: safe to rerun.
+import { eq, sql } from "drizzle-orm";
 import { createDb, services, tests } from "./index";
 
 const db = createDb();
@@ -13,6 +13,7 @@ const added = await db
       kind: "faucet",
       websiteUrl: "https://fauzec.com",
       notes: "Public testnet faucet: 1 TAZ per address per 24h, UA and Sapling addresses only. Used for the day-1 spike.",
+      networks: ["testnet"],
     },
     {
       slug: "valar-faucet",
@@ -20,17 +21,20 @@ const added = await db
       kind: "faucet",
       websiteUrl: "https://faucet.testnet.valargroup.dev",
       notes: "Public testnet faucet: 0.125 TAZ per IP per day, all address types, global daily cap.",
+      networks: ["testnet"],
     },
     {
       slug: "zingo",
       name: "Zingo",
       kind: "wallet",
       websiteUrl: "https://zingolabs.org",
-      notes: "Supports testnet.",
+      notes: "Supports mainnet and testnet.",
+      networks: ["mainnet", "testnet"],
     },
   ])
-  .onConflictDoNothing({ target: services.slug })
-  .returning({ slug: services.slug });
+  // Keep `networks` in step with this file on existing databases.
+  .onConflictDoUpdate({ target: services.slug, set: { networks: sql`excluded.networks` } })
+  .returning({ slug: services.slug, inserted: sql<boolean>`xmax = 0` });
 
 // The day-1 spike receipt: a 1 TAZ fauzec payment to an Orchard-receiver UA
 // landed in Ironwood. The spike key was not created by the worker (no account
@@ -45,6 +49,7 @@ if (spike) {
   await db.update(tests).set({ ufvk: SPIKE_UFVK }).where(eq(tests.id, spike.id));
 } else {
   await db.insert(tests).values({
+    network: "testnet",
     serviceId: fauzec.id,
     addressType: "ironwood_ua",
     status: "received",
@@ -61,5 +66,5 @@ if (spike) {
   });
 }
 
-console.log(`Seeded ${added.length} new service(s); spike receipt ${spike ? "updated" : "inserted"}.`);
+console.log(`Seeded ${added.filter((s) => s.inserted).length} new service(s); spike receipt ${spike ? "updated" : "inserted"}.`);
 await db.$client.end();

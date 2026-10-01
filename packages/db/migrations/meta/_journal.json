@@ -15,6 +15,13 @@
       "when": 1790853288747,
       "tag": "0001_nostalgic_redwing",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790854586173,
+      "tag": "0002_shallow_nicolaos",
+      "breakpoints": true
     }
   ]
 }

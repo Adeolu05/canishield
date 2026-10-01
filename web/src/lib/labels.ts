@@ -38,14 +38,9 @@ export const OUTCOME_LABEL: Record<ReportOutcome, string> = {
 export const STATUS_LABEL: Record<TestStatus, string> = {
   pending: "Preparing address",
   awaiting_payment: "Waiting for payment",
-  received: "Payment received",
+  received: "Payment verified",
+  confirming: "Payment seen, confirming",
   address_rejected: "Address rejected by service",
   expired: "Expired",
   failed: "Failed",
 };
-
-// Testnet explorer (ZecBlock). Confirms a transaction and its block; only the
-// viewing key proves which address it paid.
-export const explorerTxUrl = (txid: string) => `https://testnet.zecblock.com/tx/${txid}`;
-
-export const formatTaz = (zat: number) => `${(zat / 1e8).toFixed(8).replace(/\.?0+$/, "")} TAZ`;

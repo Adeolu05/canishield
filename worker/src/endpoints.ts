@@ -1,6 +1,6 @@
 // Primary + fallback lightwalletd/Zaino endpoints.
 import zcash from "@ledgerhq/zcash-utils";
-import { ENDPOINT_TIMEOUT_MS, GRPC_URLS } from "./config";
+import { ENDPOINT_TIMEOUT_MS } from "./config";
 import { connect, getLightdInfo } from "./lightwalletd";
 
 export interface Endpoint {
@@ -18,16 +18,16 @@ export class WrongChainError extends Error {}
 const withTimeout = <T>(p: Promise<T>, ms: number) =>
   Promise.race([p, new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`timed out after ${ms} ms`)), ms))]);
 
-export function openEndpoints(urls = GRPC_URLS): Endpoint[] {
-  if (urls.length === 0) throw new Error("No lightwalletd endpoints configured (ZECPROOF_GRPC_URLS).");
+export function openEndpoints(urls: string[]): Endpoint[] {
+  if (urls.length === 0) throw new Error("No lightwalletd endpoints configured.");
   return urls.map((url) => ({ url, client: connect(url) }));
 }
 
 /**
- * Returns the first endpoint that answers and reports testnet. An endpoint on
- * the wrong chain is a hard error, not a reason to fall through.
+ * Returns the first endpoint that answers and reports `chainName`. An endpoint
+ * on the wrong chain is a hard error, not a reason to fall through.
  */
-export async function pickEndpoint(endpoints: Endpoint[]): Promise<HealthyEndpoint> {
+export async function pickEndpoint(endpoints: Endpoint[], chainName: "main" | "test"): Promise<HealthyEndpoint> {
   const failures: string[] = [];
   for (const ep of endpoints) {
     let info;
@@ -37,8 +37,8 @@ export async function pickEndpoint(endpoints: Endpoint[]): Promise<HealthyEndpoi
       failures.push(`${ep.url}: ${err instanceof Error ? err.message : err}`);
       continue;
     }
-    if (info.chainName !== "test") {
-      throw new WrongChainError(`Endpoint ${ep.url} reports chain "${info.chainName}", not "test". Refusing to run.`);
+    if (info.chainName !== chainName) {
+      throw new WrongChainError(`Endpoint ${ep.url} reports chain "${info.chainName}", not "${chainName}". Refusing to run.`);
     }
     try {
       const tip = await withTimeout(zcash.getChainTip(ep.url), ENDPOINT_TIMEOUT_MS);

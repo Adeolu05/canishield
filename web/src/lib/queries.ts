@@ -1,8 +1,11 @@
 import "server-only";
 import { connection } from "next/server";
-import { and, asc, desc, eq, ne } from "drizzle-orm";
+import { and, arrayContains, asc, desc, eq, ne } from "drizzle-orm";
 import { reports, services, tests, type AddressType, type Report, type Test } from "@zecproof/db";
 import { getDb } from "./db";
+import type { NetworkId } from "./network";
+
+// Every query takes the network explicitly; nothing defaults to one.
 
 /**
  * A board cell: the strongest evidence for one service × address type.
@@ -24,30 +27,47 @@ function bestCell(verified: Test[], serviceReports: Report[], type: AddressType)
   return { tier: "none" };
 }
 
-// Only tests with an on-chain receipt are evidence; a tester's "rejected"
-// mark becomes a community report instead (see markAddressRejected).
-const receivedTests = (db: ReturnType<typeof getDb>, serviceId?: string) =>
+type Db = ReturnType<typeof getDb>;
+
+// Only tests whose receipt passed every check are evidence. A tester's
+// "rejected" mark becomes a community report instead (see markAddressRejected).
+const verifiedTests = (db: Db, network: NetworkId, serviceId?: string) =>
   db
     .select()
     .from(tests)
-    .where(serviceId ? and(eq(tests.status, "received"), eq(tests.serviceId, serviceId)) : eq(tests.status, "received"))
+    .where(
+      and(
+        eq(tests.network, network),
+        eq(tests.status, "received"),
+        serviceId ? eq(tests.serviceId, serviceId) : undefined,
+      ),
+    )
     .orderBy(desc(tests.receivedAt));
 
 // Unreviewed reports show (marked as such) until an admin rejects them.
-const visibleReports = (db: ReturnType<typeof getDb>, serviceId?: string) =>
+const visibleReports = (db: Db, network: NetworkId, serviceId?: string) =>
   db
     .select()
     .from(reports)
-    .where(serviceId ? and(ne(reports.status, "rejected"), eq(reports.serviceId, serviceId)) : ne(reports.status, "rejected"))
+    .where(
+      and(
+        eq(reports.network, network),
+        ne(reports.status, "rejected"),
+        serviceId ? eq(reports.serviceId, serviceId) : undefined,
+      ),
+    )
     .orderBy(desc(reports.createdAt));
 
-export async function getBoard() {
+const servicesOn = (db: Db, network: NetworkId) =>
+  db.select().from(services).where(arrayContains(services.networks, [network])).orderBy(asc(services.name));
+
+export async function getBoard(network: NetworkId) {
   await connection(); // request-time data
   const db = getDb();
   const [allServices, verified, visible] = await Promise.all([
-    db.select().from(services).orderBy(asc(services.name)),
-    receivedTests(db),
-    visibleReports(db),
+    servicesOn(db, network),
+    verifiedTests(db, network),
+    visibleReports(db, network),
   ]);
   return allServices.map((service) => {
     const st = verified.filter((t) => t.serviceId === service.id);
@@ -63,12 +83,18 @@ export async function getBoard() {
   });
 }
 
-export async function getServiceDetail(slug: string) {
+export async function getServiceDetail(network: NetworkId, slug: string) {
   await connection();
   const db = getDb();
-  const [service] = await db.select().from(services).where(eq(services.slug, slug));
+  const [service] = await db
+    .select()
+    .from(services)
+    .where(and(eq(services.slug, slug), arrayContains(services.networks, [network])));
   if (!service) return null;
-  const [verified, visible] = await Promise.all([receivedTests(db, service.id), visibleReports(db, service.id)]);
+  const [verified, visible] = await Promise.all([
+    verifiedTests(db, network, service.id),
+    visibleReports(db, network, service.id),
+  ]);
   return {
     service,
     tests: verified,
@@ -77,18 +103,19 @@ export async function getServiceDetail(slug: string) {
   };
 }
 
-export async function listServices() {
+export async function listServices(network: NetworkId) {
   await connection();
-  return getDb().select().from(services).orderBy(asc(services.name));
+  return servicesOn(getDb(), network);
 }
 
-export async function getTest(id: string) {
+/** A test is only visible under its own network's routes. */
+export async function getTest(network: NetworkId, id: string) {
   await connection();
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const [row] = await getDb()
     .select({ test: tests, service: services })
     .from(tests)
     .innerJoin(services, eq(services.id, tests.serviceId))
-    .where(eq(tests.id, id));
+    .where(and(eq(tests.id, id), eq(tests.network, network)));
   return row ?? null;
 }

@@ -1,6 +1,6 @@
 # ZecProof — Build Spec
 
-Last updated: Oct 1, 2026 · Owner: David Peluola
+Last updated: Oct 1, 2026 (mainnet decisions added) · Owner: David Peluola
 Source doc: https://claude.ai/code/artifact/39691e4c-c885-4d44-ae85-c434fe54f62a
 
 ## Summary
@@ -16,7 +16,9 @@ ZecProof is a live, verifiable board that answers one question: **is this exchan
 ## Status (Oct 1)
 
 - Spike passed: a 1 TAZ testnet payment from the fauzec faucet was detected and classified as **IRONWOOD** (block 4,426,910, txid 848beda1…01c5) using `@ledgerhq/zcash-utils` on Windows.
-- Scaffold committed (web, worker, packages/db). Not yet verified: a real payment to a worker-generated address; full-UA and transparent tests.
+- Scaffold committed (web, worker, packages/db). The worker has detected a real payment to an address it generated: a fauzec 1 TAZ withdrawal to a **Full UA** test landed in **Ironwood** (block 4,427,113), and was re-confirmed on ZecBlock under mainnet rules (10 confirmations + explorer). Not yet verified: transparent tests.
+- Evidence model aligned with this spec (three tiers, rejected addresses as community reports, re-check instructions); fallback lightwalletd endpoint.
+- Mainnet support built and **off by default** (see "Mainnet decisions"). No mainnet keys exist yet; no real funds have been used.
 
 ## Problem
 
@@ -45,7 +47,7 @@ Every claim carries a tier, a test date and its evidence. A claim older than 30 
 
 | Tier | Meaning | Evidence |
 | --- | --- | --- |
-| On-chain verified | The scanner saw the payment land and recorded the pool | txid + the test address's viewing key, so anyone can re-check |
+| On-chain verified | The scanner saw the payment land and recorded the pool; on mainnet, 10 confirmations and an independent explorer agree | txid + the test address's viewing key, so anyone can re-check |
 | Community reported | Observed but not provable on-chain (e.g. a form rejected the address) | Screenshot + reporter note; needs admin review |
 | Unverified listing | Imported from an existing list, never tested | Link to the original source |
 
@@ -62,15 +64,33 @@ Every claim carries a tier, a test date and its evidence. A claim older than 30 
 - One fresh, throwaway key per test. Its viewing key is published, which is safe only because the wallet holds nothing else.
 - A test records the first payment it receives and ignores later ones.
 - A tester can mark that a service rejected the address; that shows on the board as a result.
-- Pending tests expire after 48 hours.
+- Pending tests expire after 48 hours, whether or not they ever got an address.
+- A seen payment is "confirming" until it is deep enough (testnet: 1 confirmation; mainnet: 10) and, on mainnet, an independent explorer confirms the txid and block. Any explorer that disagrees blocks verification.
 - Testnet only until mainnet tests are deliberately enabled.
 
 ## Architecture
 
 - **web** (Next.js + TypeScript + Tailwind, Vercel): board, service pages, run-a-test flow, report form, API routes. Never touches Zcash cryptography.
 - **worker** (Node + `@ledgerhq/zcash-utils`, Railway or small VPS): picks up pending tests, derives a fresh test address, scans via lightwalletd/Zaino, writes pool/txid/height/amount/memo back.
-- **db** (Postgres: local Docker for dev, Supabase or Neon free tier in prod): `services`, `tests`, `reports`.
-- **Chain access:** public endpoints (e.g. testnet.zec.rocks); support a second endpoint as fallback.
+- **db** (Postgres: local Docker for dev, Supabase or Neon free tier in prod): `services`, `tests`, `reports`, plus `key_batches` and `key_pool` for offline-generated mainnet keys (viewing keys and addresses only, never seeds).
+- **keygen** (offline CLI, never deployed): generates key batches, one seed per test; verifies one seed against a wallet; reveals a seed for backup or sweeping.
+- **Chain access:** public endpoints with fallback, separate lists per network. Testnet: testnet.zec.rocks → zaino.testnet.unsafe.zec.rocks. Mainnet: na.zec.rocks → eu.zec.rocks → zaino.unsafe.zec.rocks (all currently run by zec.rocks; a self-hosted Zaino would add independence).
+- **Explorer cross-check (mainnet):** ZecBlock (`api.zecblock.com`), falling back to Blockchair for txid + height only (its fee/value fields are wrong for v6 transactions).
+- **Routes:** mainnet board at `/`; testnet at `/testnet` with a permanent banner. A test is only reachable under its own network's routes.
+
+## Mainnet decisions (Oct 1)
+
+Mainnet is built but off. Turning it on takes `ZECPROOF_NETWORK=mainnet` **and** `ZECPROOF_ALLOW_MAINNET=yes` for the worker, and `ZECPROOF_ENABLE_MAINNET_TESTS=yes` for the web app.
+
+- **One seed per test.** Each mainnet test address comes from its own fresh 24-word seed (account 0), so any standard wallet can restore it.
+- **Seeds never reach the worker.** They are generated offline by `keygen`, stored in David's password manager plus one encrypted offline backup (scrypt + AES-256-GCM file), and never in `.env` or anywhere the worker can read. The mainnet worker refuses to start if `WORKER_TEST_MNEMONIC` is set, and the database rejects mainnet tests that use a worker-derived key.
+- **Key derivation:** `@ledgerhq/zcash-utils@2.5.0` `testDeriveKeys(seed, account 0, network)`: BIP-39 seed → ZIP-32 account 0 UFVK + transparent xpub `m/44'/133'/0'`; addresses are the Orchard receiver at diversifier 0 and P2PKH at `xpub/0/0`. The package labels this function test-only because a production host must never hold a seed; running it once on an offline machine is exactly the case it allows. The derivation string is recorded in every batch file.
+- **Human verification gate:** before a batch is used, one seed is revealed, restored in Zingo, and the address Zingo shows is checked with `keygen verify` (Orchard receiver must match; P2PKH too if given). The importer refuses unverified batches, re-derives every address from its viewing key, and refuses re-imports.
+- **No address reuse:** before handing out a pool key, the worker scans it from the batch birthday; any on-chain history burns the key instead.
+- **Independent confirmation:** a mainnet result is verified only after 10 confirmations and an explorer not run by zec.rocks confirms the txid at the same block (and hash).
+- **Strict separation:** every test, report and pool key carries a `network` with no default; CHECK constraints tie each viewing key and address to its network's encoding. One worker process serves one network, with its own endpoint list.
+- **Tester warnings:** the test page says the address and viewing key are published (a withdrawal from an account in your name is linkable to you), that test funds aren't returned, and to send the smallest amount the service allows.
+- **Treasury:** a new, dedicated shielded wallet (Zodl/Zingo) that David will create; its address is not in the code yet. Sweeps are manual: reveal a used test seed, restore it in a wallet, send to the treasury. Never sweep to a personal wallet or an exchange deposit address — the published viewing key shows outgoing transactions too.
 
 Flow: tester → web creates pending test → worker assigns address → tester sends → worker detects payment and classifies pool → web shows verified result.
 
