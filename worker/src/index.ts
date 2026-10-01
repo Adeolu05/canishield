@@ -4,10 +4,9 @@
 // are scanned until a payment lands (received) or they time out (expired).
 import { setTimeout as sleep } from "node:timers/promises";
 import { and, asc, eq, lt, sql } from "drizzle-orm";
-import zcash from "@ledgerhq/zcash-utils";
 import { createDb, tests, type Db } from "@zecproof/db";
-import { GRPC_URL, POLL_INTERVAL_MS, TEST_TTL_HOURS, requireMnemonic } from "./config";
-import { connect, getLightdInfo } from "./lightwalletd";
+import { POLL_INTERVAL_MS, TEST_TTL_HOURS, requireMnemonic } from "./config";
+import { WrongChainError, closeEndpoints, openEndpoints, pickEndpoint, type HealthyEndpoint } from "./endpoints";
 import { deriveTestKeys } from "./keys";
 import { findFirstReceipt } from "./scanner";
 
@@ -46,20 +45,33 @@ async function assignPending(db: Db, mnemonic: string, tip: number) {
   });
 }
 
-async function expireStale(db: Db) {
+/** Pending tests that never got an address (e.g. the worker was down). */
+async function expireUnassigned(db: Db) {
+  const cutoff = new Date(Date.now() - TEST_TTL_HOURS * 3600_000);
+  const expired = await db
+    .update(tests)
+    .set({ status: "expired" })
+    .where(and(eq(tests.status, "pending"), lt(tests.createdAt, cutoff)))
+    .returning({ id: tests.id });
+  for (const { id } of expired) console.log(`expired   ${id}  (never assigned)`);
+}
+
+/** Awaiting tests past their deadline. Runs after the cycle's last scan. */
+async function expireUnpaid(db: Db) {
   const expired = await db
     .update(tests)
     .set({ status: "expired" })
     .where(and(eq(tests.status, "awaiting_payment"), lt(tests.expiresAt, new Date())))
     .returning({ id: tests.id });
-  for (const { id } of expired) console.log(`expired   ${id}`);
+  for (const { id } of expired) console.log(`expired   ${id}  (no payment)`);
 }
 
-async function scanAwaiting(db: Db, client: ReturnType<typeof connect>, tip: number) {
+async function scanAwaiting(db: Db, endpoint: HealthyEndpoint) {
+  const { tip } = endpoint;
   const awaiting = await db.select().from(tests).where(eq(tests.status, "awaiting_payment"));
   for (const test of awaiting) {
     try {
-      const receipt = await findFirstReceipt(client, test, tip);
+      const receipt = await findFirstReceipt(endpoint, test);
       if (receipt) {
         await db
           .update(tests)
@@ -90,23 +102,34 @@ async function scanAwaiting(db: Db, client: ReturnType<typeof connect>, tip: num
 
 async function main() {
   const mnemonic = requireMnemonic();
-  const client = connect(GRPC_URL);
-  const info = await getLightdInfo(client);
-  if (info.chainName !== "test") {
-    throw new Error(`Endpoint ${GRPC_URL} reports chain "${info.chainName}", not "test". Refusing to run.`);
-  }
-  console.log(`worker    ${GRPC_URL}  (${info.vendor} ${info.version}, chain=${info.chainName})`);
+  const endpoints = openEndpoints();
+  console.log(`worker    endpoints: ${endpoints.map((e) => e.url).join(", ")}`);
 
   const db = createDb();
+  let lastUrl: string | undefined;
   for (;;) {
-    const tip = await zcash.getChainTip(GRPC_URL);
-    await assignPending(db, mnemonic, tip);
-    await expireStale(db);
-    await scanAwaiting(db, client, tip);
+    let endpoint: HealthyEndpoint | undefined;
+    try {
+      endpoint = await pickEndpoint(endpoints);
+    } catch (err) {
+      if (err instanceof WrongChainError) throw err; // never fall through to another chain
+      console.error(`error     ${err instanceof Error ? err.message : err}`);
+    }
+    // Expire stale pending tests before assigning, so they never get an address.
+    await expireUnassigned(db);
+    if (endpoint) {
+      if (endpoint.url !== lastUrl) console.log(`using     ${endpoint.url} (tip ${endpoint.tip})`);
+      lastUrl = endpoint.url;
+      await assignPending(db, mnemonic, endpoint.tip);
+      await scanAwaiting(db, endpoint);
+    }
+    // After the scan, so a payment that landed before the deadline still counts.
+    // Needs no chain access, so it also runs when every endpoint is down.
+    await expireUnpaid(db);
     if (once) break;
     await sleep(POLL_INTERVAL_MS);
   }
-  client.close();
+  closeEndpoints(endpoints);
   await db.$client.end();
 }
 

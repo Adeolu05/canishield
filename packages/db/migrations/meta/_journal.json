@@ -8,6 +8,13 @@
       "when": 1790845656431,
       "tag": "0000_plain_crystal",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790853288747,
+      "tag": "0001_nostalgic_redwing",
+      "breakpoints": true
     }
   ]
 }

@@ -10,6 +10,17 @@ Each test gets a throwaway testnet key of its own. The tester withdraws from the
 | `worker/` | Scanner worker: assigns addresses to pending tests, watches for payments, records pool / txid / height / memo |
 | `packages/db/` | Drizzle schema + migrations for `services`, `tests`, `reports` (Postgres) |
 | `spike/` | Day-1 spike that proved the scanning path (standalone, not a workspace) |
+| `docs/SPEC.md` | Build spec |
+
+## Evidence tiers
+
+- **On-chain verified** — a test whose payment the worker found. Its txid and viewing key are published so anyone can re-check.
+- **Community reported** — observed but not provable on-chain (e.g. the service's form rejected the address). Shown as "pending review" until an admin accepts or rejects it.
+- **Unverified listing** — imported from an existing list, never tested; must carry a `source_url`.
+
+## Chain endpoints
+
+The worker tries `ZECPROOF_GRPC_URLS` in order each cycle (default: `testnet.zec.rocks`, then `zaino.testnet.unsafe.zec.rocks`) and stops if an endpoint it reaches is not on testnet.
 
 ## Test matrix (MVP)
 

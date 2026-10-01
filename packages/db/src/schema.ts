@@ -1,9 +1,12 @@
 // ZecProof data model.
 //
-// Two evidence tiers:
-//   - tests   → "on-chain verified": a throwaway testnet key per test, its
-//               viewing key published, the receipt found by the scanner.
-//   - reports → "user-reported": claims from users, reviewed by hand.
+// Three evidence tiers (docs/SPEC.md, "Evidence model"):
+//   - tests with a receipt      → "on-chain verified": a throwaway testnet key
+//                                 per test, its viewing key published.
+//   - reports, tier "community" → "community reported": observed but not
+//                                 provable on-chain (e.g. a rejected address).
+//   - reports, tier "listing"   → "unverified listing": imported from an
+//                                 existing list, never tested.
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -40,8 +43,11 @@ export const reportOutcome = pgEnum("report_outcome", [
   "orchard",
   "sapling",
   "transparent",
-  "address_rejected",
+  "address_rejected", // the service's form refused the address
+  "form_accepted", // the form took the address; nothing was withdrawn
 ]);
+
+export const reportTier = pgEnum("report_tier", ["community", "listing"]);
 
 export const reportStatus = pgEnum("report_status", ["unreviewed", "accepted", "rejected"]);
 
@@ -123,15 +129,22 @@ export const reports = pgTable(
     serviceId: uuid("service_id")
       .notNull()
       .references(() => services.id, { onDelete: "cascade" }),
+    tier: reportTier("tier").notNull().default("community"),
+    // Set when the report came from a test (e.g. the tester marked the address rejected).
+    testId: uuid("test_id").references(() => tests.id, { onDelete: "set null" }),
     addressType: addressType("address_type"),
     outcome: reportOutcome("outcome").notNull(),
     txid: text("txid"),
-    evidenceUrl: text("evidence_url"),
+    evidenceUrl: text("evidence_url"), // screenshot link; no upload storage yet
+    sourceUrl: text("source_url"), // where an unverified listing was imported from
     note: text("note"),
     status: reportStatus("status").notNull().default("unreviewed"),
     ...timestamps,
   },
-  (t) => [index("reports_service_idx").on(t.serviceId)],
+  (t) => [
+    index("reports_service_idx").on(t.serviceId),
+    check("reports_listing_has_source", sql`${t.tier} <> 'listing' OR ${t.sourceUrl} IS NOT NULL`),
+  ],
 );
 
 export type Service = typeof services.$inferSelect;
@@ -140,3 +153,5 @@ export type Report = typeof reports.$inferSelect;
 export type AddressType = (typeof addressType.enumValues)[number];
 export type Pool = (typeof pool.enumValues)[number];
 export type TestStatus = (typeof testStatus.enumValues)[number];
+export type ReportOutcome = (typeof reportOutcome.enumValues)[number];
+export type ReportTier = (typeof reportTier.enumValues)[number];

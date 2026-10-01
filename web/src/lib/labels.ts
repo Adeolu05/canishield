@@ -1,4 +1,4 @@
-import type { AddressType, Pool, TestStatus } from "@zecproof/db";
+import type { AddressType, Pool, ReportOutcome, TestStatus } from "@zecproof/db";
 
 export const ADDRESS_TYPES: AddressType[] = ["ironwood_ua", "full_ua", "transparent"];
 
@@ -14,11 +14,25 @@ export const ADDRESS_TYPE_HINT: Record<AddressType, string> = {
   transparent: "Plain t-address (tm…).",
 };
 
+export type Tier = "verified" | "community" | "listing";
+
+export const TIER_LABEL: Record<Tier, string> = {
+  verified: "On-chain verified",
+  community: "Community reported",
+  listing: "Unverified listing",
+};
+
 export const POOL_LABEL: Record<Pool, string> = {
   ironwood: "Ironwood",
   orchard: "Orchard",
   sapling: "Sapling",
   transparent: "Transparent",
+};
+
+export const OUTCOME_LABEL: Record<ReportOutcome, string> = {
+  ...POOL_LABEL,
+  address_rejected: "Address rejected",
+  form_accepted: "Form accepted",
 };
 
 export const STATUS_LABEL: Record<TestStatus, string> = {
@@ -29,5 +43,9 @@ export const STATUS_LABEL: Record<TestStatus, string> = {
   expired: "Expired",
   failed: "Failed",
 };
+
+// Testnet explorer (ZecBlock). Confirms a transaction and its block; only the
+// viewing key proves which address it paid.
+export const explorerTxUrl = (txid: string) => `https://testnet.zecblock.com/tx/${txid}`;
 
 export const formatTaz = (zat: number) => `${(zat / 1e8).toFixed(8).replace(/\.?0+$/, "")} TAZ`;

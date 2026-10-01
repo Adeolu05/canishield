@@ -2,8 +2,9 @@
 // Ported from spike/src/index.ts.
 import zcash, { type ShieldedNote } from "@ledgerhq/zcash-utils";
 import type { Pool, Test } from "@zecproof/db";
-import { GRPC_URL, NETWORK, assertTestnetUfvk } from "./config";
-import { getAddressUtxos, type connect } from "./lightwalletd";
+import { NETWORK, assertTestnetUfvk } from "./config";
+import type { HealthyEndpoint } from "./endpoints";
+import { getAddressUtxos } from "./lightwalletd";
 
 export interface Receipt {
   pool: Pool;
@@ -15,9 +16,9 @@ export interface Receipt {
 
 const incoming = (notes: ShieldedNote[]) => notes.filter((n) => n.transferType === "incoming");
 
-async function scanShielded(ufvk: string, from: number, to: number): Promise<Receipt[]> {
+async function scanShielded(grpcUrl: string, ufvk: string, from: number, to: number): Promise<Receipt[]> {
   const stream = await zcash.startSync({
-    grpcUrl: GRPC_URL,
+    grpcUrl,
     viewingKey: ufvk,
     startHeight: from,
     endHeight: to,
@@ -47,11 +48,8 @@ async function scanShielded(ufvk: string, from: number, to: number): Promise<Rec
  * the transparent receiver's UTXOs since the birthday. Returns the earliest
  * receipt, if any. Mined blocks only.
  */
-export async function findFirstReceipt(
-  client: ReturnType<typeof connect>,
-  test: Test,
-  tip: number,
-): Promise<Receipt | undefined> {
+export async function findFirstReceipt(endpoint: HealthyEndpoint, test: Test): Promise<Receipt | undefined> {
+  const { tip } = endpoint;
   if (!test.ufvk || test.birthdayHeight == null) throw new Error(`Test ${test.id} has no keys assigned`);
   assertTestnetUfvk(test.ufvk);
 
@@ -60,10 +58,10 @@ export async function findFirstReceipt(
 
   // A bare t-address cannot receive shielded funds, so skip trial decryption.
   if (test.addressType !== "transparent" && from <= tip) {
-    receipts.push(...(await scanShielded(test.ufvk, from, tip)));
+    receipts.push(...(await scanShielded(endpoint.url, test.ufvk, from, tip)));
   }
   if (test.transparentAddress) {
-    for (const u of await getAddressUtxos(client, test.transparentAddress, test.birthdayHeight)) {
+    for (const u of await getAddressUtxos(endpoint.client, test.transparentAddress, test.birthdayHeight)) {
       receipts.push({ pool: "transparent", txid: u.txid, height: u.height, amountZat: u.valueZat });
     }
   }

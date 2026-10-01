@@ -1,16 +1,51 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PoolBadge, RejectedBadge, TierBadge } from "@/components/badges";
-import { ADDRESS_TYPE_LABEL, POOL_LABEL, formatTaz } from "@/lib/labels";
+import type { Report } from "@zecproof/db";
+import { OutcomeBadge, TierBadge } from "@/components/badges";
+import { ADDRESS_TYPE_LABEL, POOL_LABEL, explorerTxUrl, formatTaz } from "@/lib/labels";
 import { getServiceDetail } from "@/lib/queries";
 
 const mono = "break-all font-mono text-xs";
+const isoDate = (d: Date) => d.toISOString().slice(0, 10);
+
+function ReportCard({ report }: { report: Report }) {
+  return (
+    <article className="rounded-lg border border-zinc-200 p-4 text-sm dark:border-zinc-800">
+      <div className="flex flex-wrap items-center gap-2">
+        {report.addressType && <span className="font-medium">{ADDRESS_TYPE_LABEL[report.addressType]}</span>}
+        <OutcomeBadge outcome={report.outcome} />
+        <TierBadge tier={report.tier} />
+        {report.status === "unreviewed" && <span className="text-xs text-zinc-500">Pending review</span>}
+        <span className="ml-auto text-xs text-zinc-500">{isoDate(report.createdAt)}</span>
+      </div>
+      {report.note && <p className="mt-2">{report.note}</p>}
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        {report.evidenceUrl && (
+          <a href={report.evidenceUrl} className="hover:underline" rel="noreferrer nofollow" target="_blank">
+            Screenshot ↗
+          </a>
+        )}
+        {report.sourceUrl && (
+          <a href={report.sourceUrl} className="hover:underline" rel="noreferrer nofollow" target="_blank">
+            Original listing ↗
+          </a>
+        )}
+        {report.testId && (
+          <Link href={`/test/${report.testId}`} className="hover:underline">
+            Test and address used →
+          </Link>
+        )}
+      </div>
+      {report.txid && <p className={`mt-2 ${mono}`}>{report.txid}</p>}
+    </article>
+  );
+}
 
 export default async function ServicePage(props: PageProps<"/services/[slug]">) {
   const { slug } = await props.params;
   const detail = await getServiceDetail(slug);
   if (!detail) notFound();
-  const { service, tests, reports } = detail;
+  const { service, tests, communityReports, listings } = detail;
 
   return (
     <div className="space-y-10">
@@ -43,40 +78,34 @@ export default async function ServicePage(props: PageProps<"/services/[slug]">) 
             Run a test
           </Link>
         </div>
-        {tests.length === 0 && <p className="text-sm text-zinc-500">No completed tests yet.</p>}
+        {tests.length === 0 && <p className="text-sm text-zinc-500">No verified tests yet.</p>}
         {tests.map((t) => (
           <article key={t.id} className="space-y-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium">{ADDRESS_TYPE_LABEL[t.addressType]}</span>
-              {t.status === "address_rejected" ? <RejectedBadge /> : t.receivedPool && <PoolBadge pool={t.receivedPool} />}
+              {t.receivedPool && <OutcomeBadge outcome={t.receivedPool} />}
               <TierBadge tier="verified" />
-              <span className="ml-auto text-xs text-zinc-500">{t.updatedAt.toISOString().slice(0, 10)}</span>
+              <span className="ml-auto text-xs text-zinc-500">{isoDate(t.receivedAt ?? t.updatedAt)}</span>
             </div>
             <dl className="grid grid-cols-[8rem_1fr] gap-x-4 gap-y-1 text-sm">
               <dt className="text-zinc-500">Sent to</dt>
               <dd className={mono}>{t.receiveAddress ?? "—"}</dd>
-              {t.status === "received" && (
+              <dt className="text-zinc-500">Landed in</dt>
+              <dd>{t.receivedPool && POOL_LABEL[t.receivedPool]}</dd>
+              <dt className="text-zinc-500">Amount</dt>
+              <dd>{t.receivedAmountZat != null ? formatTaz(t.receivedAmountZat) : "—"}</dd>
+              <dt className="text-zinc-500">Block</dt>
+              <dd>{t.receivedHeight}</dd>
+              <dt className="text-zinc-500">Txid</dt>
+              <dd className={mono}>{t.receivedTxid}</dd>
+              {t.receivedMemo && (
                 <>
-                  <dt className="text-zinc-500">Landed in</dt>
-                  <dd>{t.receivedPool && POOL_LABEL[t.receivedPool]}</dd>
-                  <dt className="text-zinc-500">Amount</dt>
-                  <dd>{t.receivedAmountZat != null ? formatTaz(t.receivedAmountZat) : "—"}</dd>
-                  <dt className="text-zinc-500">Block</dt>
-                  <dd>{t.receivedHeight}</dd>
-                  <dt className="text-zinc-500">Txid</dt>
-                  <dd className={mono}>{t.receivedTxid}</dd>
-                  {t.receivedMemo && (
-                    <>
-                      <dt className="text-zinc-500">Memo</dt>
-                      <dd className="whitespace-pre-wrap font-mono text-xs">{t.receivedMemo}</dd>
-                    </>
-                  )}
+                  <dt className="text-zinc-500">Memo</dt>
+                  <dd className="whitespace-pre-wrap font-mono text-xs">{t.receivedMemo}</dd>
                 </>
               )}
               <dt className="text-zinc-500">Viewing key</dt>
-              <dd className={mono}>
-                {t.ufvk ?? <span className="font-sans text-zinc-500">Not published (recorded outside the worker)</span>}
-              </dd>
+              <dd className={mono}>{t.ufvk ?? <span className="font-sans text-zinc-500">Not published</span>}</dd>
               {t.testerNote && (
                 <>
                   <dt className="text-zinc-500">Tester note</dt>
@@ -84,27 +113,43 @@ export default async function ServicePage(props: PageProps<"/services/[slug]">) 
                 </>
               )}
             </dl>
+            <p className="border-t border-zinc-200 pt-3 text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
+              <strong className="font-medium">How to verify this yourself:</strong>{" "}
+              {t.ufvk && "import the viewing key into a testnet watch-only wallet (e.g. Zingo) and look for this payment, or "}
+              {t.receivedTxid ? (
+                <>
+                  look up the txid on a{" "}
+                  <a href={explorerTxUrl(t.receivedTxid)} className="underline" rel="noreferrer" target="_blank">
+                    testnet block explorer
+                  </a>{" "}
+                  to confirm the transaction and block (only the viewing key shows which address it paid).
+                </>
+              ) : (
+                "no txid recorded."
+              )}
+            </p>
           </article>
         ))}
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">User reports</h2>
-        {reports.length === 0 && <p className="text-sm text-zinc-500">No user reports yet.</p>}
-        {reports.map((r) => (
-          <article key={r.id} className="rounded-lg border border-zinc-200 p-4 text-sm dark:border-zinc-800">
-            <div className="flex flex-wrap items-center gap-2">
-              {r.addressType && <span className="font-medium">{ADDRESS_TYPE_LABEL[r.addressType]}</span>}
-              {r.outcome === "address_rejected" ? <RejectedBadge /> : <PoolBadge pool={r.outcome} />}
-              <TierBadge tier="reported" />
-              <span className="text-xs capitalize text-zinc-500">{r.status}</span>
-            </div>
-            {r.note && <p className="mt-2">{r.note}</p>}
-            {r.txid && <p className={`mt-2 ${mono}`}>{r.txid}</p>}
-          </article>
+        <h2 className="text-lg font-semibold">Community reports</h2>
+        {communityReports.length === 0 && <p className="text-sm text-zinc-500">No community reports yet.</p>}
+        {communityReports.map((r) => (
+          <ReportCard key={r.id} report={r} />
         ))}
-        {/* TODO: report submission form (writes `reports` with status "unreviewed"). */}
+        {/* TODO: report submission form (writes a community report with status "unreviewed"). */}
       </section>
+
+      {listings.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold">Unverified listings</h2>
+          <p className="text-sm text-zinc-500">Imported from existing lists and never tested by ZecProof.</p>
+          {listings.map((r) => (
+            <ReportCard key={r.id} report={r} />
+          ))}
+        </section>
+      )}
     </div>
   );
 }

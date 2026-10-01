@@ -1,22 +1,18 @@
 import Link from "next/link";
-import { PoolBadge, RejectedBadge, TierBadge } from "@/components/badges";
+import { OutcomeBadge, TierBadge } from "@/components/badges";
 import { ADDRESS_TYPES, ADDRESS_TYPE_LABEL } from "@/lib/labels";
 import { getBoard, type Cell } from "@/lib/queries";
 
 function CellView({ cell }: { cell: Cell }) {
   if (cell.tier === "none") return <span className="text-zinc-400">Untested</span>;
-  const outcome =
-    cell.tier === "verified"
-      ? cell.test.status === "address_rejected"
-        ? "rejected"
-        : cell.test.receivedPool
-      : cell.report.outcome === "address_rejected"
-        ? "rejected"
-        : cell.report.outcome;
+  const outcome = cell.tier === "verified" ? cell.test.receivedPool : cell.report.outcome;
   return (
     <div className="flex flex-col items-start gap-1">
-      {outcome === "rejected" ? <RejectedBadge /> : outcome ? <PoolBadge pool={outcome} /> : null}
+      {outcome && <OutcomeBadge outcome={outcome} />}
       <TierBadge tier={cell.tier} />
+      {cell.tier === "community" && cell.report.status === "unreviewed" && (
+        <span className="text-xs text-zinc-500">Pending review</span>
+      )}
     </div>
   );
 }
@@ -28,8 +24,9 @@ export default async function BoardPage() {
       <div>
         <h1 className="text-2xl font-semibold">Where do withdrawals actually land?</h1>
         <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Each cell is the latest test for that address type. On-chain verified results come from a throwaway
-          viewing key the scanner watched; its key and txid are published on the service page.
+          Each cell shows the strongest evidence for that address type. On-chain verified results come from a
+          throwaway key the scanner watched; its viewing key and txid are on the service page so you can re-check
+          them. Community reports (e.g. a form that refused the address) and unverified listings are labelled as such.
         </p>
       </div>
       <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">

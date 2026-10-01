@@ -1,8 +1,18 @@
 // Testnet-only by construction. There is deliberately no switch to mainnet.
 export const NETWORK = "testnet" as const;
 
-export const GRPC_URL = process.env.ZECPROOF_GRPC_URL ?? "https://testnet.zec.rocks:443";
+// Tried in order each cycle; the first that answers and reports chain "test"
+// is used for the whole cycle. Override with a comma-separated list.
+// Defaults: ECC lightwalletd and ZingoLabs Zaino, both run by zec.rocks.
+export const GRPC_URLS = (
+  process.env.ZECPROOF_GRPC_URLS ?? "https://testnet.zec.rocks:443,https://zaino.testnet.unsafe.zec.rocks:443"
+)
+  .split(",")
+  .map((u) => u.trim())
+  .filter(Boolean);
+
 export const POLL_INTERVAL_MS = 30_000;
+export const ENDPOINT_TIMEOUT_MS = 10_000;
 export const TEST_TTL_HOURS = Number(process.env.TEST_TTL_HOURS ?? 48);
 
 export function assertTestnetUfvk(ufvk: string) {
