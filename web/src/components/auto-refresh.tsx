@@ -1,0 +1,14 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+/** Re-renders the page's server components on an interval while mounted. */
+export function AutoRefresh({ intervalMs = 10_000 }: { intervalMs?: number }) {
+  const router = useRouter();
+  useEffect(() => {
+    const id = setInterval(() => router.refresh(), intervalMs);
+    return () => clearInterval(id);
+  }, [router, intervalMs]);
+  return null;
+}

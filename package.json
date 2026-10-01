@@ -1,0 +1,24 @@
+{
+  "name": "zecproof",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/db",
+    "worker",
+    "web"
+  ],
+  "scripts": {
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:generate": "npm run generate -w @zecproof/db",
+    "db:migrate": "npm run migrate -w @zecproof/db",
+    "db:seed": "npm run seed -w @zecproof/db",
+    "dev:web": "npm run dev -w web",
+    "dev:worker": "npm run dev -w worker",
+    "build": "npm run typecheck -w @zecproof/db -w worker && npm run build -w web",
+    "typecheck": "npm run typecheck --workspaces"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
