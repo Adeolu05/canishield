@@ -1,0 +1,3 @@
+node_modules/
+# Throwaway testnet wallet (contains a mnemonic). Never commit.
+.wallet/
