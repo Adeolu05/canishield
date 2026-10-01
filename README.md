@@ -43,7 +43,15 @@ npm run keygen -w keygen -- verify --batch <dir>/<batch>.public.json --index 0 -
 ZECPROOF_ALLOW_MAINNET=yes npm run pool:import -w worker -- <batch>.public.json
 ```
 
-Keys are derived by `@ledgerhq/zcash-utils` `testDeriveKeys` (ZIP-32 account 0 per seed); the batch file records the exact derivation. Back up each seed to your password manager with `reveal`; keep the encrypted seeds file as the offline backup. To return test funds, reveal a used seed, restore it in a wallet and send to the treasury wallet — never to a personal wallet or an exchange deposit address.
+Keys are derived by `@ledgerhq/zcash-utils` `testDeriveKeys` (ZIP-32 account 0 per seed); the batch file records the exact derivation. Use `reveal` to type each seed into Bitwarden by hand; keep the encrypted seeds file (outside the repo, not cloud-synced) as the second copy. To return test funds, reveal a used seed, restore it in a wallet and send to the treasury wallet — never to a personal wallet or an exchange deposit address.
+
+Treasury (sweep destination; Zingo, Ironwood/Orchard receiver only):
+
+```text
+u1k4cq54vwua52vle8cvqamyl9mhgzusd0p50enuq9jc3j8evra07r8zx9737wz66f9vj5tmf8wv5f66sjpmcp99s2qr630vy4wu0rf490
+```
+
+The first mainnet test, step by step on Windows: [docs/RUNBOOK-mainnet.md](docs/RUNBOOK-mainnet.md).
 
 The whole pool path can be rehearsed on testnet: generate a `--network testnet` batch, verify, import, and run the worker with `WORKER_TEST_MNEMONIC=` (empty) and `ZECPROOF_REQUIRED_CONFIRMATIONS=10 ZECPROOF_EXPLORER_CHECK=on`.
 
