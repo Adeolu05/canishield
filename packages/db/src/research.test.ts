@@ -48,6 +48,15 @@ test("every claim links its official https source and carries no em dash", () =>
   }
 });
 
+test("websites are only set from the project's own domain in orb's links", () => {
+  assert.equal(bySlug["noir-wallet"].website, "https://docs.zknoir.com");
+  assert.equal(new URL(bySlug["noir-wallet"].officialUrl).origin, bySlug["noir-wallet"].website);
+  for (const slug of ["vizor", "zkool", "ywallet", "nighthawk"]) {
+    assert.equal(bySlug[slug].website, null, `${slug} links only to an app store or GitHub`);
+    assert.match(bySlug[slug].officialUrl, /^https:\/\/(apps\.apple\.com|github\.com)\//, slug);
+  }
+});
+
 test("server-only tools never reach the board", () => {
   for (const p of ["zecd", "zcash-walletd", "Zallet"]) assert.ok("skip" in PRODUCTS[p]);
   assert.ok(!claims.some((c) => /walletd|zallet|zecd/i.test(c.slug)));

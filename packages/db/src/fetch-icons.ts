@@ -2,14 +2,19 @@
 // so the site serves logos from its own origin and visitors' browsers never
 // contact an exchange. Run by hand (npm run fetch:icons -w @zecproof/db);
 // existing icons are kept unless --force. Only each service's own website
-// (services.website_url) is contacted; no third-party favicon services.
+// (services.website_url) is contacted, plus the icon and web app manifest
+// URLs it declares; no third-party favicon services.
+//
+// Candidates: <link> icons, the site's web app manifest icons
+// (manifest.json / site.webmanifest), the conventional paths, and finally
+// .ico files, whose largest frame is converted to PNG locally.
 //
 // You can also drop a file in by hand (<slug>.png or <slug>.svg); the
 // manifest below is rebuilt from the folder on every run.
 import { mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createDb, services } from "./index";
-import { iconCandidates, sniff, svgIsSafe, type IconFormat } from "./icons";
+import { iconCandidates, icoToPng, manifestIcons, manifestUrls, mergeCandidates, sniff, svgIsSafe, type IconFormat } from "./icons";
 
 const OUT_DIR = fileURLToPath(new URL("../../../web/public/service-icons/", import.meta.url));
 const MANIFEST = fileURLToPath(new URL("../../../web/src/lib/service-icons.json", import.meta.url));
@@ -32,21 +37,46 @@ async function get(url: string): Promise<Response | null> {
   }
 }
 
+async function body(url: string): Promise<Uint8Array | null> {
+  const r = await get(url);
+  if (!r) return null;
+  const bytes = new Uint8Array(await r.arrayBuffer());
+  return bytes.length === 0 || bytes.length > MAX_BYTES ? null : bytes;
+}
+
+/** Icons from the site's web app manifest(s), if any respond with JSON. */
+async function fromManifests(html: string, base: string) {
+  const out = [];
+  for (const url of manifestUrls(html, base).slice(0, 4)) {
+    const bytes = await body(url);
+    if (!bytes) continue;
+    try {
+      out.push(...manifestIcons(JSON.parse(new TextDecoder().decode(bytes)), url));
+    } catch {
+      // Not JSON (often an HTML 404 page): ignore.
+    }
+  }
+  return out;
+}
+
 async function fetchIcon(site: string): Promise<{ bytes: Uint8Array; format: IconFormat; from: string } | { error: string }> {
   const page = await get(site);
   const html = page && (page.headers.get("content-type") ?? "").includes("html") ? await page.text() : "";
   const base = page?.url || site;
-  for (const c of iconCandidates(html, base)) {
-    const r = await get(c.url);
-    if (!r) continue;
-    const bytes = new Uint8Array(await r.arrayBuffer());
-    if (bytes.length === 0 || bytes.length > MAX_BYTES) continue;
-    const format = sniff(bytes);
-    if (!format) continue;
-    if (format === "svg" && !svgIsSafe(new TextDecoder().decode(bytes))) continue;
-    return { bytes, format, from: c.url };
+  const candidates = mergeCandidates(iconCandidates(html, base), await fromManifests(html, base));
+  for (const c of candidates) {
+    const bytes = await body(c.url);
+    if (!bytes) continue;
+    const kind = sniff(bytes);
+    if (kind === "png") return { bytes, format: "png", from: c.url };
+    if (kind === "svg" && svgIsSafe(new TextDecoder().decode(bytes))) return { bytes, format: "svg", from: c.url };
+    if (kind === "ico") {
+      // Converted locally: the largest frame, as PNG.
+      const png = icoToPng(bytes);
+      if (png && png.length <= MAX_BYTES) return { bytes: png, format: "png", from: `${c.url} (converted from .ico)` };
+    }
   }
-  return { error: page ? "no PNG or SVG icon found" : "site did not respond (blocked or down)" };
+  return { error: page ? "no usable PNG, SVG or ICO icon found" : "site did not respond (blocked or down)" };
 }
 
 const existing = () => {

@@ -28,14 +28,17 @@ async function main() {
   await db.transaction(async (tx) => {
     await tx.delete(researchClaims).where(and(eq(researchClaims.source, SOURCE), eq(researchClaims.network, NETWORK)));
     for (const c of claims) {
-      // New services join the mainnet board; existing ones keep their name, kind,
-      // website and notes, and gain "mainnet".
+      // New services join the mainnet board; existing ones keep their name, kind
+      // and notes, gain "mainnet", and get a website only if theirs is blank.
       const [svc] = await tx
         .insert(services)
         .values({ slug: c.slug, name: c.name, kind: c.kind, websiteUrl: c.website, networks: [NETWORK] })
         .onConflictDoUpdate({
           target: services.slug,
-          set: { networks: sql`(SELECT ARRAY(SELECT DISTINCT unnest(${services.networks} || ARRAY['mainnet']::text[])))` },
+          set: {
+            networks: sql`(SELECT ARRAY(SELECT DISTINCT unnest(${services.networks} || ARRAY['mainnet']::text[])))`,
+            websiteUrl: sql`COALESCE(${services.websiteUrl}, excluded.website_url)`,
+          },
         })
         .returning({ id: services.id, inserted: sql<boolean>`xmax = 0` });
       if (svc.inserted) created++;

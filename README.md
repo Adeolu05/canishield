@@ -105,7 +105,9 @@ npm run fetch:icons -w @zecproof/db -- --force   # refetch all
 npm run fetch:icons -w @zecproof/db -- --only=binance,kraken
 ```
 
-Files land in `web/public/service-icons/<slug>.png` or `.svg`. The script checks the bytes, refuses SVGs with scripts, event handlers or external references, and the folder is served with a sandboxing CSP. A file added by hand works too: the script rebuilds `web/src/lib/service-icons.json` from the folder. Services without an icon show a monogram. Review the files before committing them.
+The script looks at the page's `<link>` icons, its web app manifest (`<link rel="manifest">`, `manifest.json`, `site.webmanifest`), the usual paths (`apple-touch-icon.png`, `favicon.svg`, `favicon.png`) and, as a last resort, `.ico` files, whose largest frame is converted to PNG locally (no extra dependency). Services without a website (Vizor, ZKOOL, YWallet, Nighthawk: orb's sources are app-store or GitHub links) are skipped.
+
+Files land in `web/public/service-icons/<slug>.png` or `.svg`. The script checks the bytes, limits every download and converted file to 256 KB, refuses SVGs with scripts, event handlers or external references, and the folder is served with a sandboxing CSP. A file added by hand works too: the script rebuilds `web/src/lib/service-icons.json` from the folder. Services without an icon show a monogram. Review the files before committing them.
 
 ## Network guards
 

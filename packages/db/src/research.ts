@@ -31,7 +31,10 @@ export const PRODUCTS: Record<string, Product | Skip> = {
   Zingo: { slug: "zingo", name: "Zingo", kind: "wallet", website: "https://zingolabs.org" },
   Vizor: { slug: "vizor", name: "Vizor", kind: "wallet", website: null },
   ZKOOL: { slug: "zkool", name: "ZKOOL", kind: "wallet", website: null },
-  "Noir Wallet": { slug: "noir-wallet", name: "Noir Wallet", kind: "wallet", website: null },
+  // Websites only where orb's source link is the project's own domain (Noir: its
+  // docs domain). Vizor, ZKOOL, YWallet and Nighthawk link only to an app store
+  // or GitHub, so they stay blank.
+  "Noir Wallet": { slug: "noir-wallet", name: "Noir Wallet", kind: "wallet", website: "https://docs.zknoir.com" },
   "Mane Wallet (LeoDex)": { slug: "mane-wallet", name: "Mane Wallet", kind: "wallet", website: "https://leodex.io" },
   "Ledger Wallet Desktop": { slug: "ledger", name: "Ledger", kind: "hardware", website: "https://www.ledger.com" },
   "Keystone 3 Pro (Cypherpunk firmware)": { slug: "keystone", name: "Keystone", kind: "hardware", website: "https://keyst.one" },
