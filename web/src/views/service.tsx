@@ -4,6 +4,7 @@ import { ArrowRight, ExternalLink } from "lucide-react";
 import type { Report, Test } from "@zecproof/db";
 import { ListedClaimBadge, ListingSource, OutcomeBadge } from "@/components/badges";
 import { CopyButton } from "@/components/copy-button";
+import { ServiceIcon } from "@/components/service-icon";
 import { PendingChip, StaleChip, StatusIcon, TONE_SOFT, TONE_TEXT, TierChip } from "@/components/status";
 import { isStale, readinessOf, reportDate, testDate } from "@/lib/evidence";
 import { ADDRESS_TYPE_LABEL, POOL_LABEL } from "@/lib/labels";
@@ -225,7 +226,10 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
         </nav>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">{service.name}</h1>
+            <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight">
+              <ServiceIcon slug={service.slug} name={service.name} size={28} />
+              {service.name}
+            </h1>
             <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-muted">
               <span className="capitalize">{service.kind}</span>
               {service.websiteUrl && (

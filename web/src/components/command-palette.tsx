@@ -4,6 +4,7 @@
 // trapping, Esc and focus return; the input is an ARIA combobox over a listbox.
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { ServiceIcon } from "./service-icon";
 import { ArrowRight, Braces, CornerDownLeft, FlaskConical, LayoutGrid, Search, Send, Store } from "lucide-react";
 
 interface Item {
@@ -15,6 +16,8 @@ interface Item {
   external?: boolean;
   group: "Jump to" | "Services";
   icon: typeof Search;
+  /** Services show their own logo (or monogram) instead of `icon`. */
+  service?: { slug: string; name: string };
   keywords?: string;
 }
 
@@ -53,6 +56,7 @@ async function loadServices(): Promise<Item[]> {
       href: `${network === "testnet" ? "/testnet" : ""}/services/${s.slug}`,
       group: "Services",
       icon: Store,
+      service: { slug: s.slug, name: s.name },
       keywords: `${s.slug} ${s.kind} ${network}`,
     }));
   };
@@ -202,7 +206,13 @@ export function CommandPalette() {
                     i === active ? "bg-surface-2 text-foreground" : "text-muted"
                   }`}
                 >
-                  <Icon aria-hidden="true" className="size-4 shrink-0 text-subtle" />
+                  {item.service ? (
+                    <ServiceIcon slug={item.service.slug} name={item.service.name} />
+                  ) : (
+                    <span className="grid size-5 shrink-0 place-items-center">
+                      <Icon aria-hidden="true" className="size-4 text-subtle" />
+                    </span>
+                  )}
                   <span className="font-medium text-foreground">{item.label}</span>
                   {item.hint && <span className="truncate text-xs text-subtle">{item.hint}</span>}
                   {i === active && <CornerDownLeft aria-hidden="true" className="ml-auto size-3.5 shrink-0 text-subtle" />}

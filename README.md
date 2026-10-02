@@ -93,6 +93,54 @@ npm run dev:web                      # terminal 2 → http://localhost:3000
 
 `npm run build` typechecks every package and builds the web app. `npm test` runs the zcash, keygen and worker tests.
 
+## Service icons
+
+Logos are fetched once, by hand, from each service's own website and served from our origin; visitors' browsers never contact the services, and no third-party favicon service is used.
+
+\
+> @zecproof/db@0.1.0 fetch:icons
+> tsx --env-file-if-exists=../../.env src/fetch-icons.ts
+
+  saved  backpack.png (907 B) from https://backpack.exchange/favicon-64x64.png
+  miss   binance: no PNG or SVG icon found (monogram will show)
+  miss   bitcoinvn: site did not respond (blocked or down) (monogram will show)
+  miss   bitfinex: no PNG or SVG icon found (monogram will show)
+  saved  coinbase.png (14776 B) from https://coinbase.com/apple-touch-icon.png
+  saved  fauzec.svg (491 B) from https://fauzec.com/icon.svg?icon.9db4436e.svg
+  saved  gemini.png (18216 B) from https://www.gemini.com/apple-touch-icon.png
+  saved  huobi.png (2435 B) from https://www.huobi.com/pwa/icon-pwa-180.png
+  saved  kraken.png (5465 B) from https://www.kraken.com/_assets/icons/apple-touch-icon.png
+  saved  kucoin.png (2764 B) from https://www.kucoin.com/logo.png
+  saved  okx.png (331 B) from https://www.okx.com/cdn/assets/imgs/253/59830BB78B18A776.png
+  saved  robinhood.png (2555 B) from https://robinhood.com/us/en/rh_favicon_152.png?v=2024
+  saved  trust-wallet.svg (854 B) from https://trustwallet.com/icon.svg?d57da504207bc776
+  saved  valar-faucet.png (55340 B) from https://faucet.testnet.valargroup.dev/static/apple-touch-icon.png?v=1d40aba17988
+  saved  zingo.svg (425 B) from https://zingolabs.org/favicon.svg
+
+12 icon(s) in C:UsersUSERProjectszecproofwebpublicservice-icons. Review them, then commit web/public/service-icons and web/src/lib/service-icons.json.
+
+> @zecproof/db@0.1.0 fetch:icons
+> tsx --env-file-if-exists=../../.env src/fetch-icons.ts --force
+
+  saved  backpack.png (907 B) from https://backpack.exchange/favicon-64x64.png
+  miss   binance: no PNG or SVG icon found (monogram will show)
+  miss   bitcoinvn: site did not respond (blocked or down) (monogram will show)
+  miss   bitfinex: no PNG or SVG icon found (monogram will show)
+  saved  coinbase.png (14776 B) from https://coinbase.com/apple-touch-icon.png
+  saved  fauzec.svg (491 B) from https://fauzec.com/icon.svg?icon.9db4436e.svg
+  saved  gemini.png (18216 B) from https://www.gemini.com/apple-touch-icon.png
+  saved  huobi.png (2435 B) from https://www.huobi.com/pwa/icon-pwa-180.png
+  saved  kraken.png (5465 B) from https://www.kraken.com/_assets/icons/apple-touch-icon.png
+  saved  kucoin.png (2764 B) from https://www.kucoin.com/logo.png
+  saved  okx.png (331 B) from https://www.okx.com/cdn/assets/imgs/253/59830BB78B18A776.png
+  saved  robinhood.png (2555 B) from https://robinhood.com/us/en/rh_favicon_152.png?v=2024
+  saved  trust-wallet.svg (854 B) from https://trustwallet.com/icon.svg?d57da504207bc776
+  saved  valar-faucet.png (55340 B) from https://faucet.testnet.valargroup.dev/static/apple-touch-icon.png?v=1d40aba17988
+  saved  zingo.svg (425 B) from https://zingolabs.org/favicon.svg
+
+12 icon(s) in C:UsersUSERProjectszecproofwebpublicservice-icons. Review them, then commit web/public/service-icons and web/src/lib/service-icons.json.
+Files land in ; SVGs with scripts, event handlers or external references are refused, and the folder is served with a sandboxing CSP. A file added by hand works too: the script rebuilds  from the folder. Services without an icon show a monogram. Review the files before committing them.
+
 ## Network guards
 
 - One worker process serves one network (`ZECPROOF_NETWORK`, default `testnet`) and refuses endpoints on the other chain.

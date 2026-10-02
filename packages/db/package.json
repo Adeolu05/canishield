@@ -15,6 +15,7 @@
     "seed": "tsx --env-file-if-exists=../../.env src/seed.ts",
     "typecheck": "tsc --noEmit",
     "import:zechub": "tsx --env-file-if-exists=../../.env src/import-listings.ts",
+    "fetch:icons": "tsx --env-file-if-exists=../../.env src/fetch-icons.ts",
     "test": "tsx --test src/*.test.ts"
   },
   "dependencies": {

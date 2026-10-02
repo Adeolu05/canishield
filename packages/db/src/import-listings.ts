@@ -17,6 +17,7 @@ async function main() {
   await db.transaction(async (tx) => {
     for (const e of snap.exchanges) {
       // New services join the mainnet board; existing ones keep their data and gain "mainnet".
+      // A note this import wrote earlier is refreshed; a hand-written note is kept.
       const [svc] = await tx
         .insert(services)
         .values({
@@ -29,7 +30,10 @@ async function main() {
         })
         .onConflictDoUpdate({
           target: services.slug,
-          set: { networks: sql`(SELECT ARRAY(SELECT DISTINCT unnest(${services.networks} || ARRAY['mainnet']::text[])))` },
+          set: {
+            networks: sql`(SELECT ARRAY(SELECT DISTINCT unnest(${services.networks} || ARRAY['mainnet']::text[])))`,
+            notes: sql`CASE WHEN ${services.notes} IS NULL OR ${services.notes} LIKE 'Listed on %' THEN excluded.notes ELSE ${services.notes} END`,
+          },
         })
         .returning({ id: services.id });
 

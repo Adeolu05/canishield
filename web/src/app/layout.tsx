@@ -71,6 +71,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </a>
               . ZecProof&apos;s code is MIT.
             </p>
+            <p>ZecProof is independent and not affiliated with the services listed. Names and logos belong to their owners.</p>
             <p>
               Built by David Peluola ·{" "}
               <a href="https://x.com/0xdavee_" className="underline underline-offset-2 hover:text-foreground" rel="me noreferrer" target="_blank">

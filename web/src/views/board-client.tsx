@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { createContext, useContext, useDeferredValue, useState, type ReactNode } from "react";
 import { ArrowRight, BadgeCheck, Clock, FileText, Search, Users, X } from "lucide-react";
+import { ServiceIcon } from "@/components/service-icon";
 import type { AddressType } from "@zecproof/db";
 import type { Readiness } from "@/lib/evidence";
 import { READINESS_ORDER, READINESS_VISUAL, type CellView } from "@/lib/present";
@@ -198,10 +199,13 @@ export function TestedMatrix({ rows }: { rows: TestedRowView[] }) {
               {shown.map((r) => (
                 <tr key={r.slug} className="group transition-colors duration-150 hover:bg-surface-2/60">
                   <th scope="row" className="border-b border-line px-4 py-4 align-top font-normal group-last:border-b-0">
-                    <Link href={r.href} className="font-medium underline-offset-4 hover:underline">
-                      {r.name}
-                    </Link>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <ServiceIcon slug={r.slug} name={r.name} />
+                      <Link href={r.href} className="font-medium underline-offset-4 hover:underline">
+                        {r.name}
+                      </Link>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 pl-7">
                       <span className="text-xs capitalize text-subtle">{r.kind}</span>
                       <ReadinessTag readiness={r.readiness} />
                     </div>
@@ -221,11 +225,14 @@ export function TestedMatrix({ rows }: { rows: TestedRowView[] }) {
             {shown.map((r) => (
               <li key={r.slug} className="rounded-xl border border-line bg-surface p-4 shadow-card">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <Link href={r.href} className="font-medium underline-offset-4 hover:underline">
-                      {r.name}
-                    </Link>
-                    <div className="text-xs capitalize text-subtle">{r.kind}</div>
+                  <div className="flex items-start gap-2">
+                    <ServiceIcon slug={r.slug} name={r.name} className="mt-0.5" />
+                    <div>
+                      <Link href={r.href} className="font-medium underline-offset-4 hover:underline">
+                        {r.name}
+                      </Link>
+                      <div className="text-xs capitalize text-subtle">{r.kind}</div>
+                    </div>
                   </div>
                   <ReadinessTag readiness={r.readiness} />
                 </div>
@@ -270,7 +277,8 @@ export function UntestedList({ rows, note }: { rows: UntestedRowView[]; note?: s
               key={r.slug}
               className="grid gap-2 px-4 py-4 transition-colors duration-150 hover:bg-surface-2/60 sm:grid-cols-[minmax(10rem,14rem)_1fr_auto] sm:items-center sm:gap-6 sm:py-2"
             >
-              <div className="flex items-baseline gap-2">
+              <div className="flex items-center gap-2">
+                <ServiceIcon slug={r.slug} name={r.name} />
                 <Link href={r.href} className="font-medium underline-offset-4 hover:underline">
                   {r.name}
                 </Link>

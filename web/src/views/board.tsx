@@ -11,6 +11,7 @@ import { verdictFor } from "@/lib/present";
 import { SITE_URL } from "@/lib/site";
 import { ProofTrace } from "@/components/proof-trace";
 import { ShareProof } from "@/components/share";
+import { ServiceIcon } from "@/components/service-icon";
 import { CyclingHeadline } from "@/components/cycling-headline";
 import { ScannerWord } from "@/components/scanner-word";
 import { CopyButton } from "@/components/copy-button";
@@ -128,7 +129,8 @@ async function LatestProof({ network }: { network: NetworkId }) {
         <div className={row}>
           <dt className={label}>Service</dt>
           <dd>
-            <Link href={`${base}/services/${service.slug}`} className="font-medium underline-offset-4 hover:underline">
+            <Link href={`${base}/services/${service.slug}`} className="inline-flex items-center gap-2 font-medium underline-offset-4 hover:underline">
+              <ServiceIcon slug={service.slug} name={service.name} />
               {service.name}
             </Link>
           </dd>
