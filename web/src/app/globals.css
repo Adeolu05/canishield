@@ -1,26 +1,157 @@
 @import "tailwindcss";
 
+/*
+ * ZecProof design tokens. Neutral surfaces, one restrained accent (Zcash gold),
+ * status colours that are always paired with an icon and a word.
+ * Every text/background pair below was checked for WCAG AA in both themes.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  color-scheme: light;
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --surface-2: #f2f1ee;
+  --line: #e4e2dd;
+  --line-strong: #8a867d;
+  --fg: #18181b;
+  --muted: #52525b;
+  --subtle: #64646c;
+  --accent: #f4b728; /* fills, marks, rings */
+  --accent-ink: #8a5a00; /* accent as text on light surfaces */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --ok-fg: #166534;
+  --ok-bg: #e8f5ec;
+  --ok-solid: #166534;
+  --ok-solid-fg: #ffffff;
+  --info-fg: #3730a3;
+  --info-bg: #eef0fb;
+  --shield-fg: #1e40af;
+  --shield-bg: #e8effd;
+  --warn-fg: #9a3412;
+  --warn-bg: #fdf0e6;
+  --bad-fg: #9f1239;
+  --bad-bg: #fdecef;
+  --stale-fg: #854d0e;
+  --stale-bg: #fbf3db;
+  --listed-fg: #52525b;
+  --listed-bg: #f2f1ee;
+
+  --btn-bg: #18181b;
+  --btn-fg: #ffffff;
+  --shadow: 0 1px 2px rgb(24 24 27 / 0.04), 0 1px 1px rgb(24 24 27 / 0.03);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    color-scheme: dark;
+    --bg: #0b0b0c;
+    --surface: #131315;
+    --surface-2: #1b1b1e;
+    --line: #27272a;
+    --line-strong: #6e6e77;
+    --fg: #f4f4f5;
+    --muted: #a1a1aa;
+    --subtle: #9a9aa3;
+    --accent: #f4b728;
+    --accent-ink: #f4b728;
+
+    --ok-fg: #86efac;
+    --ok-bg: #0f2a1a;
+    --ok-solid: #4ade80;
+    --ok-solid-fg: #052e16;
+    --info-fg: #a5b4fc;
+    --info-bg: #1b1d3a;
+    --shield-fg: #93c5fd;
+    --shield-bg: #13223f;
+    --warn-fg: #fdba74;
+    --warn-bg: #33200f;
+    --bad-fg: #fda4af;
+    --bad-bg: #3a1219;
+    --stale-fg: #fcd34d;
+    --stale-bg: #33280b;
+    --listed-fg: #a1a1aa;
+    --listed-bg: #1b1b1e;
+
+    --btn-bg: #f4f4f5;
+    --btn-fg: #18181b;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
   }
 }
 
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-ok: var(--ok-fg);
+  --color-ok-soft: var(--ok-bg);
+  --color-ok-solid: var(--ok-solid);
+  --color-ok-solid-fg: var(--ok-solid-fg);
+  --color-info: var(--info-fg);
+  --color-info-soft: var(--info-bg);
+  --color-shield: var(--shield-fg);
+  --color-shield-soft: var(--shield-bg);
+  --color-warn: var(--warn-fg);
+  --color-warn-soft: var(--warn-bg);
+  --color-bad: var(--bad-fg);
+  --color-bad-soft: var(--bad-bg);
+  --color-stale: var(--stale-fg);
+  --color-stale-soft: var(--stale-bg);
+  --color-listed: var(--listed-fg);
+  --color-listed-soft: var(--listed-bg);
+  --color-btn: var(--btn-bg);
+  --color-btn-fg: var(--btn-fg);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --shadow-card: var(--shadow);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+}
+
+/* Anchored headings clear the sticky header. */
+[id] {
+  scroll-margin-top: 5rem;
+}
+
+/* Visible keyboard focus everywhere; mouse clicks stay quiet. */
+:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+/* Long hashes, keys and addresses: monospace, break anywhere, tabular digits. */
+.hash {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  word-break: break-all;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

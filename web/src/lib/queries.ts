@@ -95,3 +95,23 @@ export async function getTest(network: NetworkId, id: string) {
     .where(and(eq(tests.id, id), eq(tests.network, network)));
   return row ?? null;
 }
+
+/** Cheap existence checks, run in segment layouts before the page streams, so unknown ids get a real 404. */
+export async function serviceExists(network: NetworkId, slug: string) {
+  await connection();
+  const [row] = await getDb()
+    .select({ id: services.id })
+    .from(services)
+    .where(and(eq(services.slug, slug), arrayContains(services.networks, [network])));
+  return Boolean(row);
+}
+
+export async function testExists(network: NetworkId, id: string) {
+  await connection();
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return false;
+  const [row] = await getDb()
+    .select({ id: tests.id })
+    .from(tests)
+    .where(and(eq(tests.id, id), eq(tests.network, network)));
+  return Boolean(row);
+}

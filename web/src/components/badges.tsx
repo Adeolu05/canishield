@@ -1,63 +1,47 @@
+// Badges for single results and claims, built on the status primitives.
 import type { ReportOutcome } from "@zecproof/db";
-import { OUTCOME_LABEL, TIER_LABEL, type Tier } from "@/lib/labels";
 import { LISTED_CLAIM, sourceName } from "@/lib/evidence";
+import { OUTCOME_VISUAL } from "@/lib/present";
+import type { Tier } from "@/lib/labels";
+import { StaleChip, StatusIcon, TONE_SOFT, TierChip } from "./status";
 
-const OUTCOME_STYLE: Record<ReportOutcome, string> = {
-  ironwood: "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200",
-  orchard: "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200",
-  sapling: "bg-sky-100 text-sky-900 dark:bg-sky-900/40 dark:text-sky-200",
-  transparent: "bg-rose-100 text-rose-900 dark:bg-rose-900/40 dark:text-rose-200",
-  address_rejected: "bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100",
-  form_accepted: "bg-indigo-100 text-indigo-900 dark:bg-indigo-900/40 dark:text-indigo-200",
-};
+const pill = "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium";
 
-const TIER_STYLE: Record<Tier, string> = {
-  verified: "border-emerald-600/40 text-emerald-700 dark:text-emerald-300",
-  community: "border-zinc-500/40 text-zinc-600 dark:text-zinc-300",
-  listing: "border-dashed border-zinc-400/60 text-zinc-500 dark:text-zinc-400",
-};
-
-const base = "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium";
-
-/** A pool, or a form outcome ("Address rejected", "Form accepted"). */
+/** A pool, or a form outcome. Only for verified tests and community reports. */
 export function OutcomeBadge({ outcome }: { outcome: ReportOutcome }) {
-  return <span className={`${base} ${OUTCOME_STYLE[outcome]}`}>{OUTCOME_LABEL[outcome]}</span>;
-}
-
-export function TierBadge({ tier }: { tier: Tier }) {
-  return <span className={`${base} border ${TIER_STYLE[tier]}`}>{TIER_LABEL[tier]}</span>;
-}
-
-/** docs/SPEC.md: claims older than 30 days show as stale until retested. */
-export function StaleBadge() {
+  const v = OUTCOME_VISUAL[outcome];
   return (
-    <span
-      title="Older than 30 days; shown as stale until retested"
-      className={`${base} bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200`}
-    >
-      Stale
+    <span className={`${pill} ${TONE_SOFT[v.tone]}`}>
+      <StatusIcon icon={v.icon} className="size-3.5" />
+      {v.label}
     </span>
   );
 }
 
-/**
- * An unverified listing's claim. Deliberately neutral grey and dashed, never
- * the coloured outcome badges used for tests and community reports.
- */
+export function TierBadge({ tier }: { tier: Tier }) {
+  return <TierChip tier={tier} />;
+}
+
+export function StaleBadge() {
+  return <StaleChip />;
+}
+
+/** An unverified listing's claim: neutral, dashed, never a result colour. */
 export function ListedClaimBadge({ outcome }: { outcome: ReportOutcome }) {
   return (
-    <span className={`${base} border border-dashed border-zinc-400/70 bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300`}>
+    <span className={`${pill} border border-dashed border-line-strong bg-listed-soft text-listed`}>
+      <StatusIcon icon="file-text" className="size-3.5" />
       {LISTED_CLAIM[outcome].label}
     </span>
   );
 }
 
-/** Tier badge plus "per <source>" for a listing. */
+/** Tier chip plus "per <source>" for a listing. */
 export function ListingSource({ sourceUrl }: { sourceUrl: string | null }) {
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <TierBadge tier="listing" />
-      <span className="text-xs text-zinc-500">per {sourceName(sourceUrl)}</span>
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <TierChip tier="listing" />
+      <span className="text-xs text-subtle">per {sourceName(sourceUrl)}</span>
     </span>
   );
 }

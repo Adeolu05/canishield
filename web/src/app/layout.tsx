@@ -1,6 +1,6 @@
-import type { Metadata } from "next";
-import Link from "next/link";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,29 +13,56 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = process.env.ZECPROOF_SITE_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
-  title: "ZecProof",
-  description: "On-chain evidence of which Zcash services support shielded withdrawals.",
+  metadataBase: new URL(SITE_URL),
+  title: { default: "ZecProof — Can I send shielded ZEC to…?", template: "%s · ZecProof" },
+  description:
+    "On-chain evidence of which exchanges, wallets and services actually support shielded Zcash (Ironwood) — with txids and viewing keys anyone can re-check.",
+  openGraph: { siteName: "ZecProof", type: "website" },
+  twitter: { card: "summary_large_image" },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f7f5" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0b0c" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
-        <header className="border-b border-zinc-200 dark:border-zinc-800">
-          <nav className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-4 text-sm">
-            <Link href="/" className="font-semibold">
-              ZecProof
-            </Link>
-            <Link href="/" className="text-zinc-600 hover:text-foreground dark:text-zinc-400">
-              Mainnet board
-            </Link>
-            <Link href="/testnet" className="text-zinc-600 hover:text-foreground dark:text-zinc-400">
-              Testnet board
-            </Link>
-          </nav>
-        </header>
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</main>
+      <body className="flex min-h-full flex-col">
+        <a
+          href="#main"
+          className="sr-only z-50 rounded-md bg-btn px-3 py-2 text-sm text-btn-fg focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
+        >
+          Skip to content
+        </a>
+        <SiteHeader />
+        <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+          {children}
+        </main>
+        <footer className="border-t border-line">
+          <div className="mx-auto max-w-6xl space-y-1.5 px-4 py-6 text-xs text-subtle sm:px-6">
+            <p>
+              ZecProof results (verified tests and community reports) are licensed{" "}
+              <a href="https://creativecommons.org/licenses/by/4.0/" className="underline underline-offset-2 hover:text-foreground" rel="license noreferrer" target="_blank">
+                CC BY 4.0
+              </a>
+              .
+            </p>
+            <p>
+              Unverified listings are adapted from the ZecHub Wiki (ZecHub contributors) and stay under{" "}
+              <a href="https://creativecommons.org/licenses/by-sa/4.0/" className="underline underline-offset-2 hover:text-foreground" rel="license noreferrer" target="_blank">
+                CC BY-SA 4.0
+              </a>
+              . ZecProof&apos;s code is MIT.
+            </p>
+          </div>
+        </footer>
       </body>
     </html>
   );
