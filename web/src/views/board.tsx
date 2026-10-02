@@ -1,8 +1,17 @@
 import Link from "next/link";
-import { OutcomeBadge, TierBadge } from "@/components/badges";
+import { OutcomeBadge, StaleBadge, TierBadge } from "@/components/badges";
+import { READINESS, STALE_AFTER_DAYS, type Cell, type Readiness } from "@/lib/evidence";
 import { ADDRESS_TYPES, ADDRESS_TYPE_LABEL } from "@/lib/labels";
 import { basePath, canCreateTests, type NetworkId } from "@/lib/network";
-import { getBoard, type Cell } from "@/lib/queries";
+import { getBoard } from "@/lib/queries";
+
+const isoDate = (d: Date) => d.toISOString().slice(0, 10);
+
+const DATE_VERB: Record<"verified" | "community" | "listing", string> = {
+  verified: "Verified",
+  community: "Reported",
+  listing: "Listing read",
+};
 
 function CellView({ cell }: { cell: Cell }) {
   if (cell.tier === "none") return <span className="text-zinc-400">Untested</span>;
@@ -14,14 +23,54 @@ function CellView({ cell }: { cell: Cell }) {
       {cell.tier === "community" && cell.report.status === "unreviewed" && (
         <span className="text-xs text-zinc-500">Pending review</span>
       )}
+      <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+        {DATE_VERB[cell.tier]} {isoDate(cell.date)}
+        {cell.stale && <StaleBadge />}
+      </span>
     </div>
   );
 }
 
+const PANEL_ORDER: Readiness[] = ["ironwood", "shielded_other", "transparent_only", "rejected", "untested"];
+const PANEL_TONE: Record<Readiness, string> = {
+  ironwood: "text-emerald-700 dark:text-emerald-300",
+  shielded_other: "text-sky-700 dark:text-sky-300",
+  transparent_only: "text-rose-700 dark:text-rose-300",
+  rejected: "text-zinc-700 dark:text-zinc-200",
+  untested: "text-zinc-500 dark:text-zinc-400",
+};
+
+function ReadinessPanel({ counts, total, untestedWithListing }: { counts: Record<Readiness, number>; total: number; untestedWithListing: number }) {
+  // "Shielded, not Ironwood" only appears once something lands there.
+  const shown = PANEL_ORDER.filter((k) => k !== "shielded_other" || counts[k] > 0);
+  return (
+    <section aria-labelledby="readiness" className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+      <h2 id="readiness" className="text-sm font-semibold">
+        Ironwood readiness · {total} service{total === 1 ? "" : "s"}
+      </h2>
+      <dl className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {shown.map((k) => (
+          <div key={k} title={READINESS[k].meaning}>
+            <dt className="text-xs text-zinc-500">{READINESS[k].label}</dt>
+            <dd className={`text-2xl font-semibold tabular-nums ${PANEL_TONE[k]}`}>{counts[k]}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-3 text-xs text-zinc-500">
+        Counted from on-chain and community evidence only.
+        {untestedWithListing > 0 &&
+          ` ${untestedWithListing} of the untested services have an unverified listing, which doesn't count.`}{" "}
+        Hover a number for its definition.
+      </p>
+    </section>
+  );
+}
+
 export async function BoardView({ network }: { network: NetworkId }) {
-  const rows = await getBoard(network);
+  const { rows, counts, total, untestedWithListing } = await getBoard(network);
   const base = basePath(network);
   const testsOpen = canCreateTests(network);
+  const exportHref = `/api/results.json${network === "testnet" ? "?network=testnet" : ""}`;
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -30,9 +79,9 @@ export async function BoardView({ network }: { network: NetworkId }) {
             {network === "mainnet" ? "Where do ZEC withdrawals actually land?" : "Testnet board"}
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-            Each cell shows the strongest evidence for that address type. On-chain verified results come from a
-            throwaway key the scanner watched; its viewing key and txid are on the service page so you can re-check
-            them. Community reports (e.g. a form that refused the address) and unverified listings are labelled as such.
+            Each cell shows the strongest evidence for that address type and when it was established. On-chain verified
+            results come from a throwaway key the scanner watched; its viewing key and txid are on the service page so you
+            can re-check them. Claims older than {STALE_AFTER_DAYS} days are marked stale until retested.
           </p>
         </div>
         {testsOpen && (
@@ -41,6 +90,7 @@ export async function BoardView({ network }: { network: NetworkId }) {
           </Link>
         )}
       </div>
+      {network === "mainnet" && <ReadinessPanel counts={counts} total={total} untestedWithListing={untestedWithListing} />}
       {network === "mainnet" && !testsOpen && (
         <p className="rounded-lg border border-zinc-200 p-4 text-sm dark:border-zinc-800">
           Mainnet testing hasn&apos;t opened yet. Until it does, see the{" "}
@@ -72,7 +122,7 @@ export async function BoardView({ network }: { network: NetworkId }) {
                   <div className="text-xs capitalize text-zinc-500">{service.kind}</div>
                 </td>
                 {ADDRESS_TYPES.map((t) => (
-                  <td key={t} className="px-4 py-3">
+                  <td key={t} className="px-4 py-3 align-top">
                     <CellView cell={cells[t]} />
                   </td>
                 ))}
@@ -88,6 +138,13 @@ export async function BoardView({ network }: { network: NetworkId }) {
           </tbody>
         </table>
       </div>
+      <p className="text-xs text-zinc-500">
+        Reuse this data:{" "}
+        <a href={exportHref} className="underline">
+          {exportHref}
+        </a>{" "}
+        (JSON). Unverified listings are adapted from ZecHub, CC BY-SA 4.0.
+      </p>
     </div>
   );
 }

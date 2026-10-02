@@ -22,6 +22,13 @@
       "when": 1790854586173,
       "tag": "0002_shallow_nicolaos",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790909479488,
+      "tag": "0003_freezing_lethal_legion",
+      "breakpoints": true
     }
   ]
 }

@@ -26,3 +26,15 @@ export function OutcomeBadge({ outcome }: { outcome: ReportOutcome }) {
 export function TierBadge({ tier }: { tier: Tier }) {
   return <span className={`${base} border ${TIER_STYLE[tier]}`}>{TIER_LABEL[tier]}</span>;
 }
+
+/** docs/SPEC.md: claims older than 30 days show as stale until retested. */
+export function StaleBadge() {
+  return (
+    <span
+      title="Older than 30 days; shown as stale until retested"
+      className={`${base} bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200`}
+    >
+      Stale
+    </span>
+  );
+}

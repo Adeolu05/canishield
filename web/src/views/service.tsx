@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Report } from "@zecproof/db";
-import { OutcomeBadge, TierBadge } from "@/components/badges";
+import { OutcomeBadge, StaleBadge, TierBadge } from "@/components/badges";
+import { isStale, reportDate, testDate } from "@/lib/evidence";
 import { ADDRESS_TYPE_LABEL, POOL_LABEL } from "@/lib/labels";
 import { NETWORKS, basePath, canCreateTests, formatAmount, type NetworkId } from "@/lib/network";
 import { getServiceDetail } from "@/lib/queries";
@@ -9,7 +10,8 @@ import { getServiceDetail } from "@/lib/queries";
 const mono = "break-all font-mono text-xs";
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
-function ReportCard({ report, base }: { report: Report; base: string }) {
+function ReportCard({ report, base, now }: { report: Report; base: string; now: Date }) {
+  const date = reportDate(report);
   return (
     <article className="rounded-lg border border-zinc-200 p-4 text-sm dark:border-zinc-800">
       <div className="flex flex-wrap items-center gap-2">
@@ -17,7 +19,10 @@ function ReportCard({ report, base }: { report: Report; base: string }) {
         <OutcomeBadge outcome={report.outcome} />
         <TierBadge tier={report.tier} />
         {report.status === "unreviewed" && <span className="text-xs text-zinc-500">Pending review</span>}
-        <span className="ml-auto text-xs text-zinc-500">{isoDate(report.createdAt)}</span>
+        <span className="ml-auto flex items-center gap-1.5 text-xs text-zinc-500">
+          {report.tier === "listing" ? "Read" : "Reported"} {isoDate(date)}
+          {isStale(date, now) && <StaleBadge />}
+        </span>
       </div>
       {report.note && <p className="mt-2">{report.note}</p>}
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
@@ -50,6 +55,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
   const profile = NETWORKS[network];
   const walletKind = network === "testnet" ? "a testnet watch-only wallet" : "a watch-only wallet";
   const explorerKind = network === "testnet" ? "a testnet block explorer" : "a block explorer";
+  const now = new Date();
 
   return (
     <div className="space-y-10">
@@ -91,7 +97,10 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
               <span className="font-medium">{ADDRESS_TYPE_LABEL[t.addressType]}</span>
               {t.receivedPool && <OutcomeBadge outcome={t.receivedPool} />}
               <TierBadge tier="verified" />
-              <span className="ml-auto text-xs text-zinc-500">{isoDate(t.receivedAt ?? t.updatedAt)}</span>
+              <span className="ml-auto flex items-center gap-1.5 text-xs text-zinc-500">
+                Verified {isoDate(testDate(t))}
+                {isStale(testDate(t), now) && <StaleBadge />}
+              </span>
             </div>
             <dl className="grid grid-cols-[8rem_1fr] gap-x-4 gap-y-1 text-sm">
               <dt className="text-zinc-500">Sent to</dt>
@@ -151,7 +160,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
         <h2 className="text-lg font-semibold">Community reports</h2>
         {communityReports.length === 0 && <p className="text-sm text-zinc-500">No community reports yet.</p>}
         {communityReports.map((r) => (
-          <ReportCard key={r.id} report={r} base={base} />
+          <ReportCard key={r.id} report={r} base={base} now={now} />
         ))}
         {/* TODO: report submission form (writes a community report with status "unreviewed"). */}
       </section>
@@ -159,9 +168,12 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
       {listings.length > 0 && (
         <section className="space-y-4">
           <h2 className="text-lg font-semibold">Unverified listings</h2>
-          <p className="text-sm text-zinc-500">Imported from existing lists and never tested by ZecProof.</p>
+          <p className="text-sm text-zinc-500">
+            Imported from existing lists and never tested by ZecProof. Quotes are adapted from the source under its license
+            (ZecHub: CC BY-SA 4.0, ZecHub contributors).
+          </p>
           {listings.map((r) => (
-            <ReportCard key={r.id} report={r} base={base} />
+            <ReportCard key={r.id} report={r} base={base} now={now} />
           ))}
         </section>
       )}

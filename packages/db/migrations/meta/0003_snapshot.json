@@ -1,0 +1,915 @@
+{
+  "id": "7cea3812-77f8-48c2-8853-d32c733af805",
+  "prevId": "321e976f-47fc-44a6-aa9d-3fad104c7344",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.key_batches": {
+      "name": "key_batches",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "batch_id": {
+          "name": "batch_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "network": {
+          "name": "network",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key_count": {
+          "name": "key_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "birthday_height": {
+          "name": "birthday_height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "derivation": {
+          "name": "derivation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified_index": {
+          "name": "verified_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified_addresses": {
+          "name": "verified_addresses",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified_receivers": {
+          "name": "verified_receivers",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified_at": {
+          "name": "verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "imported_at": {
+          "name": "imported_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "key_batches_batch_id_unique": {
+          "name": "key_batches_batch_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "batch_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "key_batches_network_valid": {
+          "name": "key_batches_network_valid",
+          "value": "\"key_batches\".\"network\" IN ('mainnet', 'testnet')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.key_pool": {
+      "name": "key_pool",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "batch_id": {
+          "name": "batch_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "batch_index": {
+          "name": "batch_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "network": {
+          "name": "network",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ufvk": {
+          "name": "ufvk",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ironwood_ua": {
+          "name": "ironwood_ua",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "full_ua": {
+          "name": "full_ua",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "transparent_address": {
+          "name": "transparent_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "birthday_height": {
+          "name": "birthday_height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "key_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'available'"
+        },
+        "burned_reason": {
+          "name": "burned_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "assigned_at": {
+          "name": "assigned_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "key_pool_available_idx": {
+          "name": "key_pool_available_idx",
+          "columns": [
+            {
+              "expression": "network",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "key_pool_batch_id_key_batches_id_fk": {
+          "name": "key_pool_batch_id_key_batches_id_fk",
+          "tableFrom": "key_pool",
+          "tableTo": "key_batches",
+          "columnsFrom": [
+            "batch_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "key_pool_ufvk_unique": {
+          "name": "key_pool_ufvk_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "ufvk"
+          ]
+        },
+        "key_pool_batch_index": {
+          "name": "key_pool_batch_index",
+          "nullsNotDistinct": false,
+          "columns": [
+            "batch_id",
+            "batch_index"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "key_pool_network_valid": {
+          "name": "key_pool_network_valid",
+          "value": "\"key_pool\".\"network\" IN ('mainnet', 'testnet')"
+        },
+        "key_pool_matches_network": {
+          "name": "key_pool_matches_network",
+          "value": "(\"key_pool\".\"network\" = 'testnet' AND (\"key_pool\".\"ufvk\" IS NULL OR \"key_pool\".\"ufvk\" LIKE 'uviewtest1%') AND (\"key_pool\".\"ironwood_ua\" IS NULL OR \"key_pool\".\"ironwood_ua\" LIKE 'utest1%') AND (\"key_pool\".\"full_ua\" IS NULL OR \"key_pool\".\"full_ua\" LIKE 'utest1%') AND (\"key_pool\".\"transparent_address\" IS NULL OR \"key_pool\".\"transparent_address\" LIKE 'tm%')) OR (\"key_pool\".\"network\" = 'mainnet' AND (\"key_pool\".\"ufvk\" IS NULL OR \"key_pool\".\"ufvk\" LIKE 'uview1%') AND (\"key_pool\".\"ironwood_ua\" IS NULL OR \"key_pool\".\"ironwood_ua\" LIKE 'u1%') AND (\"key_pool\".\"full_ua\" IS NULL OR \"key_pool\".\"full_ua\" LIKE 'u1%') AND (\"key_pool\".\"transparent_address\" IS NULL OR \"key_pool\".\"transparent_address\" LIKE 't1%'))"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.reports": {
+      "name": "reports",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "network": {
+          "name": "network",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tier": {
+          "name": "tier",
+          "type": "report_tier",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'community'"
+        },
+        "test_id": {
+          "name": "test_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "address_type": {
+          "name": "address_type",
+          "type": "address_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "report_outcome",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "txid": {
+          "name": "txid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "evidence_url": {
+          "name": "evidence_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_read_at": {
+          "name": "source_read_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "report_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'unreviewed'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "reports_service_idx": {
+          "name": "reports_service_idx",
+          "columns": [
+            {
+              "expression": "network",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "service_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "reports_service_id_services_id_fk": {
+          "name": "reports_service_id_services_id_fk",
+          "tableFrom": "reports",
+          "tableTo": "services",
+          "columnsFrom": [
+            "service_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "reports_test_id_tests_id_fk": {
+          "name": "reports_test_id_tests_id_fk",
+          "tableFrom": "reports",
+          "tableTo": "tests",
+          "columnsFrom": [
+            "test_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "reports_network_valid": {
+          "name": "reports_network_valid",
+          "value": "\"reports\".\"network\" IN ('mainnet', 'testnet')"
+        },
+        "reports_listing_has_source": {
+          "name": "reports_listing_has_source",
+          "value": "\"reports\".\"tier\" <> 'listing' OR (\"reports\".\"source_url\" IS NOT NULL AND \"reports\".\"source_read_at\" IS NOT NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.services": {
+      "name": "services",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "service_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "website_url": {
+          "name": "website_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "networks": {
+          "name": "networks",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ARRAY['mainnet', 'testnet']::text[]"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "services_slug_unique": {
+          "name": "services_slug_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "slug"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "services_networks_valid": {
+          "name": "services_networks_valid",
+          "value": "cardinality(\"services\".\"networks\") > 0 AND \"services\".\"networks\" <@ ARRAY['mainnet', 'testnet']::text[]"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.tests": {
+      "name": "tests",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "address_type": {
+          "name": "address_type",
+          "type": "address_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "test_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "network": {
+          "name": "network",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_index": {
+          "name": "account_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "key_id": {
+          "name": "key_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ufvk": {
+          "name": "ufvk",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "receive_address": {
+          "name": "receive_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "transparent_address": {
+          "name": "transparent_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "birthday_height": {
+          "name": "birthday_height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scanned_to_height": {
+          "name": "scanned_to_height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "received_pool": {
+          "name": "received_pool",
+          "type": "pool",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "received_txid": {
+          "name": "received_txid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "received_height": {
+          "name": "received_height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "received_block_hash": {
+          "name": "received_block_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "received_amount_zat": {
+          "name": "received_amount_zat",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "received_memo": {
+          "name": "received_memo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "explorer_name": {
+          "name": "explorer_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "explorer_confirmed_at": {
+          "name": "explorer_confirmed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tester_note": {
+          "name": "tester_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "assigned_at": {
+          "name": "assigned_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "received_at": {
+          "name": "received_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "tests_status_idx": {
+          "name": "tests_status_idx",
+          "columns": [
+            {
+              "expression": "network",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "tests_service_idx": {
+          "name": "tests_service_idx",
+          "columns": [
+            {
+              "expression": "network",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "service_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "address_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "tests_service_id_services_id_fk": {
+          "name": "tests_service_id_services_id_fk",
+          "tableFrom": "tests",
+          "tableTo": "services",
+          "columnsFrom": [
+            "service_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "tests_key_id_key_pool_id_fk": {
+          "name": "tests_key_id_key_pool_id_fk",
+          "tableFrom": "tests",
+          "tableTo": "key_pool",
+          "columnsFrom": [
+            "key_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "tests_key_id_unique": {
+          "name": "tests_key_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "key_id"
+          ]
+        },
+        "tests_network_account_index": {
+          "name": "tests_network_account_index",
+          "nullsNotDistinct": false,
+          "columns": [
+            "network",
+            "account_index"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "tests_network_valid": {
+          "name": "tests_network_valid",
+          "value": "\"tests\".\"network\" IN ('mainnet', 'testnet')"
+        },
+        "tests_matches_network": {
+          "name": "tests_matches_network",
+          "value": "(\"tests\".\"network\" = 'testnet' AND (\"tests\".\"ufvk\" IS NULL OR \"tests\".\"ufvk\" LIKE 'uviewtest1%') AND (\"tests\".\"receive_address\" IS NULL OR \"tests\".\"receive_address\" LIKE 'utest1%' OR \"tests\".\"receive_address\" LIKE 'tm%') AND (\"tests\".\"transparent_address\" IS NULL OR \"tests\".\"transparent_address\" LIKE 'tm%')) OR (\"tests\".\"network\" = 'mainnet' AND (\"tests\".\"ufvk\" IS NULL OR \"tests\".\"ufvk\" LIKE 'uview1%') AND (\"tests\".\"receive_address\" IS NULL OR \"tests\".\"receive_address\" LIKE 'u1%' OR \"tests\".\"receive_address\" LIKE 't1%') AND (\"tests\".\"transparent_address\" IS NULL OR \"tests\".\"transparent_address\" LIKE 't1%'))"
+        },
+        "tests_mainnet_uses_pool": {
+          "name": "tests_mainnet_uses_pool",
+          "value": "\"tests\".\"network\" <> 'mainnet' OR \"tests\".\"account_index\" IS NULL"
+        },
+        "tests_one_key_source": {
+          "name": "tests_one_key_source",
+          "value": "\"tests\".\"account_index\" IS NULL OR \"tests\".\"key_id\" IS NULL"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.address_type": {
+      "name": "address_type",
+      "schema": "public",
+      "values": [
+        "ironwood_ua",
+        "full_ua",
+        "transparent"
+      ]
+    },
+    "public.key_status": {
+      "name": "key_status",
+      "schema": "public",
+      "values": [
+        "available",
+        "assigned",
+        "burned"
+      ]
+    },
+    "public.pool": {
+      "name": "pool",
+      "schema": "public",
+      "values": [
+        "ironwood",
+        "orchard",
+        "sapling",
+        "transparent"
+      ]
+    },
+    "public.report_outcome": {
+      "name": "report_outcome",
+      "schema": "public",
+      "values": [
+        "ironwood",
+        "orchard",
+        "sapling",
+        "transparent",
+        "address_rejected",
+        "form_accepted"
+      ]
+    },
+    "public.report_status": {
+      "name": "report_status",
+      "schema": "public",
+      "values": [
+        "unreviewed",
+        "accepted",
+        "rejected"
+      ]
+    },
+    "public.report_tier": {
+      "name": "report_tier",
+      "schema": "public",
+      "values": [
+        "community",
+        "listing"
+      ]
+    },
+    "public.service_kind": {
+      "name": "service_kind",
+      "schema": "public",
+      "values": [
+        "exchange",
+        "wallet",
+        "swap",
+        "faucet",
+        "other"
+      ]
+    },
+    "public.test_status": {
+      "name": "test_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "awaiting_payment",
+        "received",
+        "address_rejected",
+        "expired",
+        "failed",
+        "confirming"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {
+    "public.test_account_index_seq": {
+      "name": "test_account_index_seq",
+      "schema": "public",
+      "increment": "1",
+      "startWith": "1",
+      "minValue": "1",
+      "maxValue": "2147483647",
+      "cache": "1",
+      "cycle": false
+    }
+  },
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "format": "zecproof-listing-snapshot/1",
+  "source": {
+    "name": "ZecHub Wiki — Custodial Exchanges",
+    "url": "https://zechub.wiki/using-zcash/custodial-exchanges",
+    "file": "https://github.com/ZecHub/zechub/blob/31decdb815ed62ef8fef58ffa6aee6d8f546cf14/site/Using_Zcash/Custodial_Exchanges.md",
+    "commit": "31decdb815ed62ef8fef58ffa6aee6d8f546cf14",
+    "committedAt": "2026-09-20T17:43:22Z",
+    "readAt": "2026-10-02",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attribution": "Adapted from the ZecHub Wiki (ZecHub contributors), CC BY-SA 4.0. Quotes are verbatim; the per-address-type claims below are ZecProof's reading of them."
+  },
+  "mapping": {
+    "transparent": "\"Supports\" names transparent addresses → claim the service pays a transparent address.",
+    "ironwood_ua / full_ua (rejected)": "\"Ironwood: Not applicable, transparent addresses only\" → claim the service does not accept unified addresses.",
+    "ironwood_ua / full_ua (accepted)": "\"Supports\" names unified withdrawals (and Orchard) → claim the form accepts the address. Which pool a payment lands in is not stated.",
+    "no claim": "\"Not stated\", or shielded support limited to Sapling z-addresses (not in the MVP matrix) → the cell stays Untested."
+  },
+  "exchanges": [
+    {
+      "slug": "backpack",
+      "name": "Backpack",
+      "website": "https://backpack.exchange",
+      "supports": "Deposits and withdrawals enabled. Address types not stated",
+      "ironwood": "Not stated",
+      "claims": {}
+    },
+    {
+      "slug": "binance",
+      "name": "Binance",
+      "website": "https://binance.com",
+      "supports": "Transparent (TEX Address Deposit)",
+      "ironwood": "Not applicable, transparent addresses only",
+      "claims": { "transparent": "transparent", "ironwood_ua": "address_rejected", "full_ua": "address_rejected" }
+    },
+    {
+      "slug": "bitcoinvn",
+      "name": "BitcoinVN",
+      "website": "https://bitcoinvn.io",
+      "supports": "Transparent | Shielded (z-address Deposit & Withdrawal)",
+      "ironwood": "Not stated",
+      "claims": { "transparent": "transparent" }
+    },
+    {
+      "slug": "bitfinex",
+      "name": "Bitfinex",
+      "website": "https://bitfinex.com",
+      "supports": "Transparent",
+      "ironwood": "Not applicable, transparent addresses only",
+      "claims": { "transparent": "transparent", "ironwood_ua": "address_rejected", "full_ua": "address_rejected" }
+    },
+    {
+      "slug": "coinbase",
+      "name": "Coinbase",
+      "website": "https://coinbase.com",
+      "supports": "Transparent",
+      "ironwood": "Not applicable, transparent addresses only",
+      "claims": { "transparent": "transparent", "ironwood_ua": "address_rejected", "full_ua": "address_rejected" }
+    },
+    {
+      "slug": "gemini",
+      "name": "Gemini",
+      "website": "https://gemini.com",
+      "supports": "Transparent | Shielded and unified withdrawals, Orchard since November 2025",
+      "ironwood": "Shielded withdrawals supported, pool not stated",
+      "claims": { "transparent": "transparent", "ironwood_ua": "form_accepted", "full_ua": "form_accepted" }
+    },
+    {
+      "slug": "huobi",
+      "name": "Huobi",
+      "website": "https://huobi.com",
+      "supports": "Transparent",
+      "ironwood": "Not applicable, transparent addresses only",
+      "claims": { "transparent": "transparent", "ironwood_ua": "address_rejected", "full_ua": "address_rejected" }
+    },
+    {
+      "slug": "kraken",
+      "name": "Kraken",
+      "website": "https://kraken.com",
+      "supports": "Transparent",
+      "ironwood": "Not applicable, transparent addresses only",
+      "claims": { "transparent": "transparent", "ironwood_ua": "address_rejected", "full_ua": "address_rejected" }
+    },
+    {
+      "slug": "kucoin",
+      "name": "KuCoin",
+      "website": "https://kucoin.com",
+      "supports": "Transparent",
+      "ironwood": "Not applicable, transparent addresses only",
+      "claims": { "transparent": "transparent", "ironwood_ua": "address_rejected", "full_ua": "address_rejected" }
+    },
+    {
+      "slug": "okx",
+      "name": "OKX",
+      "website": "https://www.okx.com",
+      "supports": "Transparent",
+      "ironwood": "Not applicable, transparent addresses only",
+      "claims": { "transparent": "transparent", "ironwood_ua": "address_rejected", "full_ua": "address_rejected" }
+    },
+    {
+      "slug": "robinhood",
+      "name": "Robinhood",
+      "website": "https://robinhood.com",
+      "supports": "Withdrawals to transparent t-addresses only. ZEC deposits are not supported",
+      "ironwood": "Not applicable, transparent addresses only",
+      "claims": { "transparent": "transparent", "ironwood_ua": "address_rejected", "full_ua": "address_rejected" }
+    }
+  ]
+}

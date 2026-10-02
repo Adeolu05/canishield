@@ -1,31 +1,12 @@
 import "server-only";
 import { connection } from "next/server";
 import { and, arrayContains, asc, desc, eq, ne } from "drizzle-orm";
-import { reports, services, tests, type AddressType, type Report, type Test } from "@zecproof/db";
+import { reports, services, tests } from "@zecproof/db";
+import { summarize } from "./evidence";
 import { getDb } from "./db";
 import type { NetworkId } from "./network";
 
 // Every query takes the network explicitly; nothing defaults to one.
-
-/**
- * A board cell: the strongest evidence for one service × address type.
- * On-chain verified beats community reported beats unverified listing; within
- * a tier, the newest wins.
- */
-export type Cell =
-  | { tier: "verified"; test: Test }
-  | { tier: "community" | "listing"; report: Report }
-  | { tier: "none" };
-
-function bestCell(verified: Test[], serviceReports: Report[], type: AddressType): Cell {
-  const test = verified.find((t) => t.addressType === type);
-  if (test) return { tier: "verified", test };
-  for (const tier of ["community", "listing"] as const) {
-    const report = serviceReports.find((r) => r.tier === tier && r.addressType === type);
-    if (report) return { tier, report };
-  }
-  return { tier: "none" };
-}
 
 type Db = ReturnType<typeof getDb>;
 
@@ -61,7 +42,13 @@ const visibleReports = (db: Db, network: NetworkId, serviceId?: string) =>
 const servicesOn = (db: Db, network: NetworkId) =>
   db.select().from(services).where(arrayContains(services.networks, [network])).orderBy(asc(services.name));
 
+/** Board rows (cells + readiness) and the readiness counts for one network. */
 export async function getBoard(network: NetworkId) {
+  return (await getResults(network)).summary;
+}
+
+/** Everything the board and /api/results.json are built from. */
+export async function getResults(network: NetworkId) {
   await connection(); // request-time data
   const db = getDb();
   const [allServices, verified, visible] = await Promise.all([
@@ -69,18 +56,7 @@ export async function getBoard(network: NetworkId) {
     verifiedTests(db, network),
     visibleReports(db, network),
   ]);
-  return allServices.map((service) => {
-    const st = verified.filter((t) => t.serviceId === service.id);
-    const sr = visible.filter((r) => r.serviceId === service.id);
-    return {
-      service,
-      cells: {
-        ironwood_ua: bestCell(st, sr, "ironwood_ua"),
-        full_ua: bestCell(st, sr, "full_ua"),
-        transparent: bestCell(st, sr, "transparent"),
-      } satisfies Record<AddressType, Cell>,
-    };
-  });
+  return { services: allServices, verified, visible, summary: summarize(allServices, verified, visible) };
 }
 
 export async function getServiceDetail(network: NetworkId, slug: string) {

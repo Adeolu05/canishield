@@ -19,7 +19,7 @@
     "dev:worker": "npm run dev -w worker",
     "build": "npm run typecheck -w @zecproof/db -w @zecproof/zcash -w keygen -w worker && npm run build -w web",
     "typecheck": "npm run typecheck --workspaces",
-    "test": "npm test -w @zecproof/zcash -w keygen -w worker"
+    "test": "npm test -w @zecproof/db -w @zecproof/zcash -w keygen -w worker -w web"
   },
   "engines": {
     "node": ">=20"

@@ -1,6 +1,6 @@
 import type { AddressType, Pool, ReportOutcome, TestStatus } from "@zecproof/db";
 
-export const ADDRESS_TYPES: AddressType[] = ["ironwood_ua", "full_ua", "transparent"];
+export { ADDRESS_TYPES } from "./evidence";
 
 export const ADDRESS_TYPE_LABEL: Record<AddressType, string> = {
   ironwood_ua: "Ironwood-only UA",

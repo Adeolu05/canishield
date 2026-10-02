@@ -260,6 +260,7 @@ export const reports = pgTable(
     txid: text("txid"),
     evidenceUrl: text("evidence_url"), // screenshot link; no upload storage yet
     sourceUrl: text("source_url"), // where an unverified listing was imported from
+    sourceReadAt: timestamp("source_read_at", { withTimezone: true }), // when that source was read
     note: text("note"),
     status: reportStatus("status").notNull().default("unreviewed"),
     ...timestamps,
@@ -267,7 +268,10 @@ export const reports = pgTable(
   (t) => [
     index("reports_service_idx").on(t.network, t.serviceId),
     check("reports_network_valid", sql`${t.network} IN ${NETWORK_LIST}`),
-    check("reports_listing_has_source", sql`${t.tier} <> 'listing' OR ${t.sourceUrl} IS NOT NULL`),
+    check(
+      "reports_listing_has_source",
+      sql`${t.tier} <> 'listing' OR (${t.sourceUrl} IS NOT NULL AND ${t.sourceReadAt} IS NOT NULL)`,
+    ),
   ],
 );
 

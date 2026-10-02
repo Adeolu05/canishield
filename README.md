@@ -20,6 +20,13 @@ Each test gets a throwaway key of its own. The tester withdraws from the service
 - **Community reported** — observed but not provable on-chain (e.g. the service's form rejected the address). Shown as "pending review" until an admin accepts or rejects it.
 - **Unverified listing** — imported from an existing list, never tested; must carry a `source_url`.
 
+Claims older than 30 days show as **Stale** until retested. The mainnet board opens with an Ironwood readiness panel (verified Ironwood / transparent only / rejected / untested), counted from on-chain and community evidence only.
+
+## Data export and listings
+
+- `GET /api/results.json` (mainnet) or `?network=testnet`: readiness counts, every service's cells with dates and staleness, verified tests with txid and viewing key, community reports and listings. CORS-open and cached for a minute, format `zecproof-results/1`.
+- `npm run import:zechub -w @zecproof/db` loads [`packages/db/data/zechub-custodial-exchanges.json`](packages/db/data/zechub-custodial-exchanges.json), a dated snapshot of ZecHub's custodial exchanges page (commit `31decdb815`, read 2026-10-02), as **Unverified listing** claims. Re-running replaces only that source's listings. ZecHub content is CC BY-SA 4.0; the snapshot, the listing pages and the export carry that attribution.
+
 ## Chain endpoints
 
 Each network has its own list, tried in order each cycle; the worker stops if an endpoint it reaches is on the wrong chain.
