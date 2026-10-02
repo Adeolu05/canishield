@@ -10,6 +10,8 @@ import { ADDRESS_TYPE_LABEL, POOL_LABEL } from "@/lib/labels";
 import { NETWORKS, basePath, canCreateTests, formatAmount, type NetworkId } from "@/lib/network";
 import { isoDay, shortDate, verdictFor } from "@/lib/present";
 import { getServiceDetail } from "@/lib/queries";
+import { SITE_URL } from "@/lib/site";
+import { ShareProof } from "@/components/share";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -35,12 +37,12 @@ function HashField({ label, value, copyLabel }: { label: string; value: string |
   );
 }
 
-function EvidenceCard({ t, network, now }: { t: Test; network: NetworkId; now: Date }) {
+function EvidenceCard({ t, network, now, service }: { t: Test; network: NetworkId; now: Date; service: { name: string; slug: string } }) {
   const profile = NETWORKS[network];
   const date = testDate(t);
   const walletKind = network === "testnet" ? "a testnet watch-only wallet" : "a watch-only wallet";
   return (
-    <article className="overflow-hidden rounded-xl border border-line bg-surface shadow-card">
+    <article id={`test-${t.id}`} className="overflow-hidden rounded-xl border border-line bg-surface shadow-card">
       <header className="flex flex-wrap items-center gap-2 border-b border-line bg-surface-2 px-4 py-4">
         <h3 className="text-sm font-semibold">{ADDRESS_TYPE_LABEL[t.addressType]}</h3>
         {t.receivedPool && <OutcomeBadge outcome={t.receivedPool} />}
@@ -122,6 +124,14 @@ function EvidenceCard({ t, network, now }: { t: Test; network: NetworkId; now: D
           <li>Only the viewing key shows which address was paid; the explorer confirms the transaction and its block.</li>
         </ol>
       </section>
+      {t.receivedPool && t.receivedHeight != null && (
+        <div className="border-t border-line px-4 py-2">
+          <ShareProof
+            url={`${SITE_URL}${basePath(network)}/services/${service.slug}#test-${t.id}`}
+            text={`${service.name} ${ADDRESS_TYPE_LABEL[t.addressType]} → landed in ${POOL_LABEL[t.receivedPool]}. Verified on-chain, block ${t.receivedHeight.toLocaleString("en-US")}.`}
+          />
+        </div>
+      )}
     </article>
   );
 }
@@ -258,7 +268,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
         ) : (
           <div className="space-y-4">
             {tests.map((t) => (
-              <EvidenceCard key={t.id} t={t} network={network} now={now} />
+              <EvidenceCard key={t.id} t={t} network={network} now={now} service={service} />
             ))}
           </div>
         )}

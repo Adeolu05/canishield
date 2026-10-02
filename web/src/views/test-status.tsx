@@ -12,6 +12,8 @@ import { Stepper } from "@/components/stepper";
 import { ADDRESS_TYPE_LABEL, POOL_LABEL, STATUS_LABEL } from "@/lib/labels";
 import { NETWORKS, basePath, formatAmount, type NetworkId } from "@/lib/network";
 import { zip321Uri } from "@/lib/present";
+import { SITE_URL } from "@/lib/site";
+import { VerifiedReceipt, WatchMarker } from "@/components/verified-receipt";
 import { getTest } from "@/lib/queries";
 
 const POLL_SECONDS = 10;
@@ -21,7 +23,7 @@ const STEP: Record<string, number> = { pending: 1, awaiting_payment: 2, confirmi
 
 function Panel({ tone, icon, title, children }: { tone: "ok" | "bad" | "warn" | "neutral"; icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-line bg-surface p-6 shadow-card">
+    <section className="zp-fade rounded-xl border border-line bg-surface p-6 shadow-card">
       <div className="flex items-start gap-4">
         <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${TONE_SOFT[tone]}`}>{icon}</span>
         <div className="min-w-0 flex-1 space-y-4">
@@ -45,6 +47,7 @@ export async function TestStatusView({ network, id }: { network: NetworkId; id: 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       {live && <AutoRefresh intervalMs={POLL_SECONDS * 1000} />}
+      {live && <WatchMarker testId={test.id} />}
       <div className="space-y-6">
         <Stepper current={STEP[test.status] ?? 1} done={test.status === "received"} failed={ended} />
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -159,23 +162,20 @@ export async function TestStatusView({ network, id }: { network: NetworkId; id: 
         </Panel>
       )}
 
-      {test.status === "received" && test.receivedPool && (
-        <Panel tone="ok" icon={<StatusIcon icon="badge-check" className="size-5" />} title={`Verified: landed in ${POOL_LABEL[test.receivedPool]}`}>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <OutcomeBadge outcome={test.receivedPool} />
-            <TierChip tier="verified" />
-            {test.receivedAmountZat != null && <span className="text-muted">{formatAmount(test.receivedAmountZat, network)}</span>}
-            <span className="text-muted">· block {test.receivedHeight}</span>
-            {test.explorerName && <span className="text-muted">· confirmed on {test.explorerName}</span>}
-          </div>
-          <div className="flex items-start gap-2">
-            <p className="hash min-w-0 flex-1 rounded-md bg-surface-2 px-2 py-1">{test.receivedTxid}</p>
-            {test.receivedTxid && <CopyButton value={test.receivedTxid} label="txid" />}
-          </div>
-          <Link href={`${base}/services/${service.slug}`} className="inline-flex items-center gap-1 text-sm font-medium text-accent-ink hover:underline">
-            See it on {service.name}&apos;s evidence page <ArrowRight aria-hidden="true" className="size-4" />
-          </Link>
-        </Panel>
+      {test.status === "received" && test.receivedPool && test.receivedTxid && (
+        <VerifiedReceipt
+          testId={test.id}
+          serviceName={service.name}
+          serviceHref={`${base}/services/${service.slug}`}
+          addressTypeLabel={ADDRESS_TYPE_LABEL[test.addressType]}
+          pool={test.receivedPool}
+          amount={test.receivedAmountZat != null ? formatAmount(test.receivedAmountZat, network) : null}
+          txid={test.receivedTxid}
+          height={test.receivedHeight?.toLocaleString("en-US") ?? "—"}
+          explorerName={test.explorerName}
+          shareUrl={`${SITE_URL}${base}/test/${test.id}`}
+          shareText={`${service.name} ${ADDRESS_TYPE_LABEL[test.addressType]} → landed in ${POOL_LABEL[test.receivedPool]}. Verified on-chain, block ${test.receivedHeight?.toLocaleString("en-US")}.`}
+        />
       )}
 
       {test.status === "address_rejected" && (

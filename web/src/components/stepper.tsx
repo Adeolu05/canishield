@@ -18,7 +18,7 @@ export function Stepper({ current, done = false, failed = false }: { current: nu
           <li key={label} className="flex flex-1 items-center gap-2 last:flex-none sm:gap-4" aria-current={active ? "step" : undefined}>
             <span className="flex items-center gap-2">
               <span
-                className={`grid size-6 shrink-0 place-items-center rounded-full border text-[11px] font-semibold tabular-nums ${
+                className={`grid size-6 shrink-0 place-items-center rounded-full border text-[11px] font-semibold tabular-nums transition-colors duration-500 ${
                   state === "complete"
                     ? "border-transparent bg-ok-solid text-ok-solid-fg"
                     : state === "current"
@@ -41,7 +41,7 @@ export function Stepper({ current, done = false, failed = false }: { current: nu
                 <span className="sr-only"> ({state})</span>
               </span>
             </span>
-            {i < TEST_STEPS.length - 1 && <span aria-hidden="true" className={`h-px flex-1 ${complete ? "bg-ok-solid" : "bg-line"}`} />}
+            {i < TEST_STEPS.length - 1 && <span aria-hidden="true" className={`h-px flex-1 transition-colors duration-500 ${complete ? "bg-ok-solid" : "bg-line"}`} />}
           </li>
         );
       })}

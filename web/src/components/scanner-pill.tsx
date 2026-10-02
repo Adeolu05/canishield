@@ -13,9 +13,8 @@ interface Status {
 const POLL_MS = 15_000;
 const ONLINE_WITHIN_SECONDS = 90;
 
-/** "Scanner online · block N · 12s ago", or a muted "Scanner offline". Reads the worker's heartbeat. */
-export function ScannerPill() {
-  const network = (usePathname() ?? "/").startsWith("/testnet") ? "testnet" : "mainnet";
+/** Polls the worker heartbeat for a network; liveness is recomputed every second. */
+export function useScannerStatus(network: "mainnet" | "testnet") {
   const [status, setStatus] = useState<Status | null>(null);
   const now = useNow();
 
@@ -39,8 +38,15 @@ export function ScannerPill() {
   }, [network]);
 
   const age = status?.seenAt && now !== null ? Math.max(0, Math.round((now - new Date(status.seenAt).getTime()) / 1000)) : null;
-  // Recompute liveness locally so the pill turns grey even between polls.
+  // Recompute liveness locally so the state turns offline even between polls.
   const online = age !== null && age <= ONLINE_WITHIN_SECONDS;
+  return { status, age, online, known: status !== null };
+}
+
+/** "Scanner online · block N · 12s ago", or a muted "Scanner offline". Reads the worker's heartbeat. */
+export function ScannerPill() {
+  const network = (usePathname() ?? "/").startsWith("/testnet") ? "testnet" : "mainnet";
+  const { status, age, online } = useScannerStatus(network);
   const label = online ? "Scanner online" : "Scanner offline";
   const detail = online && status?.tip ? `block ${status.tip.toLocaleString("en-US")} · ${age}s ago` : null;
   const lastSeen = status?.seenAt ? `Last heartbeat ${new Date(status.seenAt).toUTCString()}` : "No heartbeat recorded yet";
@@ -48,7 +54,7 @@ export function ScannerPill() {
   return (
     <span
       title={`${network === "testnet" ? "Testnet" : "Mainnet"} scanner. ${lastSeen}.`}
-      className={`inline-flex h-7 items-center gap-2 rounded-full border px-2 text-xs sm:px-4 ${
+      className={`inline-flex h-7 min-w-7 items-center justify-center gap-2 rounded-full border px-2 text-xs sm:px-4 ${
         online ? "border-ok/30 text-foreground" : "border-line text-subtle"
       }`}
     >
@@ -58,9 +64,9 @@ export function ScannerPill() {
         {network === "testnet" ? "Testnet" : "Mainnet"} {label.toLowerCase()}
         {online && status?.tip ? `, block ${status.tip.toLocaleString("en-US")}` : ""}
       </span>
-      <span aria-hidden="true" className="font-medium">
-        <span className="sm:hidden">{online ? "Online" : "Offline"}</span>
-        <span className="hidden sm:inline">{label}</span>
+      {/* Phones show only the dot; the label is in the sr-only text and the tooltip. */}
+      <span aria-hidden="true" className="hidden font-medium sm:inline">
+        {label}
       </span>
       {detail && (
         <span aria-hidden="true" className="hidden tabular-nums text-subtle sm:inline">

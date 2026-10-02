@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Wordmark } from "./logo";
 import { ScannerPill } from "./scanner-pill";
 import { ThemeToggle } from "./theme-toggle";
+import { CommandPalette } from "./command-palette";
 
 const NAV = [
   { href: "/", label: "Board", match: (p: string) => !p.startsWith("/testnet") && !p.startsWith("/test") },
@@ -40,6 +41,7 @@ export function SiteHeader() {
         </nav>
         <div className="ml-auto flex items-center gap-2">
           <ScannerPill />
+          <CommandPalette />
           <ThemeToggle />
         </div>
       </div>

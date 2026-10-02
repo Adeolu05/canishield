@@ -1,11 +1,18 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Braces, Clock, FileText, Users } from "lucide-react";
+import { ArrowDown, ArrowRight, BadgeCheck, Braces, Clock, FileText, KeyRound, ScanSearch, Send, Users } from "lucide-react";
 import type { Readiness } from "@/lib/evidence";
 import { LISTED_CLAIM, STALE_AFTER_DAYS } from "@/lib/evidence";
 import { ADDRESS_TYPE_LABEL } from "@/lib/labels";
 import { NETWORKS, basePath, canCreateTests, type NetworkId } from "@/lib/network";
 import { OUTCOME_VISUAL, READINESS_ORDER, READINESS_VISUAL, cellView, shortDate, strongestTier, type Tone } from "@/lib/present";
-import { getBoard, getLatestProof } from "@/lib/queries";
+import { getBoard, getLatestProof, getServiceDetail } from "@/lib/queries";
+import { readinessOf } from "@/lib/evidence";
+import { verdictFor } from "@/lib/present";
+import { SITE_URL } from "@/lib/site";
+import { ProofTrace } from "@/components/proof-trace";
+import { ShareProof } from "@/components/share";
+import { CyclingHeadline } from "@/components/cycling-headline";
+import { ScannerWord } from "@/components/scanner-word";
 import { CopyButton } from "@/components/copy-button";
 import { RelativeTime } from "@/components/live";
 import { StatusIcon, StatusLabel, TONE_TEXT } from "@/components/status";
@@ -87,11 +94,25 @@ async function LatestProof({ network }: { network: NetworkId }) {
   }
   const { test, service } = proof;
   const v = OUTCOME_VISUAL[pool];
+  // The same service's other address types that a form refused: drawn as stubs ending in ✕.
+  const detail = await getServiceDetail(network, service.slug);
+  const visible = detail ? [...detail.communityReports, ...detail.listings] : [];
+  const rejected = [
+    ...new Set(
+      (detail?.communityReports ?? [])
+        .filter((r) => r.outcome === "address_rejected" && r.addressType && r.addressType !== test.addressType)
+        .map((r) => r.addressType!),
+    ),
+  ];
+  const verdict = verdictFor(readinessOf(detail?.tests ?? [], visible), detail?.tests ?? [], visible);
+  const pageUrl = `${SITE_URL}${base}/services/${service.slug}`;
+  const height = test.receivedHeight?.toLocaleString("en-US");
+  const shareText = `${service.name} → ${verdict.title.toLowerCase()}. Verified on-chain, block ${height}.`;
   const when = test.receivedAt ?? test.updatedAt;
   const row = "flex items-baseline justify-between gap-4 py-2";
   const label = "font-mono text-[11px] uppercase tracking-[0.14em] text-subtle";
   return (
-    <aside aria-labelledby="latest-proof" className="rounded-2xl border border-line bg-surface p-6 shadow-card [box-shadow:var(--shadow-card),var(--shadow-glow)]">
+    <aside aria-labelledby="latest-proof" className="rounded-2xl border border-line bg-surface p-4 shadow-card sm:p-6 [box-shadow:var(--shadow-card),var(--shadow-glow)]">
       <div className="flex items-baseline justify-between gap-4">
         <h2 id="latest-proof" className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">
           Latest proof
@@ -99,6 +120,9 @@ async function LatestProof({ network }: { network: NetworkId }) {
         <span className="text-xs text-subtle">
           <RelativeTime iso={when.toISOString()} fallback={shortDate(when)} />
         </span>
+      </div>
+      <div className="mt-4">
+        <ProofTrace serviceName={service.name} proof={{ addressType: test.addressType, pool }} rejected={rejected} />
       </div>
       <dl className="mt-4 divide-y divide-dashed divide-line-strong/60 border-y border-dashed border-line-strong/60 text-sm">
         <div className={row}>
@@ -145,9 +169,61 @@ async function LatestProof({ network }: { network: NetworkId }) {
           View evidence <ArrowRight aria-hidden="true" className="size-3.5" />
         </Link>
       </div>
+      <div className="mt-4 border-t border-dashed border-line-strong/60 pt-4">
+        <ShareProof url={pageUrl} text={shareText} />
+      </div>
     </aside>
   );
 }
+
+const STEPS = [
+  {
+    icon: KeyRound,
+    title: "Fresh address",
+    body: "We derive a brand-new address of the type being tested, used once and never shown anywhere else.",
+  },
+  {
+    icon: Send,
+    title: "Service pays it",
+    body: "A tester withdraws a small amount from the service to that address, exactly as any user would.",
+  },
+  {
+    icon: ScanSearch,
+    title: "Scanner proves the pool",
+    body: "Our scanner finds the payment on-chain and records the pool it landed in, with a txid anyone can check.",
+  },
+];
+
+function HowItWorks() {
+  return (
+    <section id="how-it-works" aria-labelledby="how-title" className="space-y-6 border-t border-line pt-12">
+      <div>
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">Method</p>
+        <h2 id="how-title" className="mt-2 text-2xl font-semibold tracking-tight">
+          How verification works
+        </h2>
+      </div>
+      <ol className="grid gap-4 sm:grid-cols-3">
+        {STEPS.map((step, i) => (
+          <li key={step.title} className="rounded-2xl border border-line bg-surface p-6">
+            <div className="flex items-center gap-2">
+              <span className="grid size-8 place-items-center rounded-full border border-line-strong font-mono text-xs font-semibold tabular-nums text-accent-ink">
+                {i + 1}
+              </span>
+              <step.icon aria-hidden="true" className="size-4 text-subtle" />
+            </div>
+            <h3 className="mt-4 font-semibold">{step.title}</h3>
+            <p className="mt-2 text-sm text-muted">{step.body}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+// Names the headline cycles through, best known first; anything else on the board follows.
+const POPULAR = ["binance", "trust-wallet", "coinbase", "kraken", "gemini", "okx", "kucoin", "robinhood", "zingo"];
+const CHIPS = ["binance", "coinbase", "kraken", "trust-wallet"];
 
 function Legend() {
   const item = "inline-flex items-center gap-2";
@@ -197,6 +273,7 @@ export async function BoardView({ network }: { network: NetworkId }) {
 
   const tested: TestedRowView[] = [];
   const untested: UntestedRowView[] = [];
+  let verifiedCount = 0;
   for (const { service, cells, readiness } of rows) {
     const c = {
       ironwood_ua: cellView(cells.ironwood_ua, now),
@@ -205,6 +282,7 @@ export async function BoardView({ network }: { network: NetworkId }) {
     };
     const common = { id: service.id, slug: service.slug, name: service.name, kind: service.kind, href: `${base}/services/${service.slug}` };
     const strongest = strongestTier(Object.values(c));
+    if (strongest === "verified") verifiedCount++;
     if (strongest === "verified" || strongest === "community") {
       tested.push({ ...common, readiness, cells: c });
     } else {
@@ -222,32 +300,75 @@ export async function BoardView({ network }: { network: NetworkId }) {
   }
 
   const unit = NETWORKS[network].unit;
+  const bySlug = new Map(rows.map((r) => [r.service.slug, r.service.name]));
+  const headlineNames = [
+    ...POPULAR.filter((slug) => bySlug.has(slug)).map((slug) => bySlug.get(slug)!),
+    ...rows.map((r) => r.service.name).filter((n) => !POPULAR.some((p) => bySlug.get(p) === n)),
+  ].slice(0, 8);
+  const chips = CHIPS.filter((slug) => bySlug.has(slug)).map((slug) => ({ slug, name: bySlug.get(slug)! }));
   const exportHref = `/api/results.json${network === "testnet" ? "?network=testnet" : ""}`;
 
   return (
     <BoardSearchProvider>
       <div className="space-y-12">
-        <section className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
-          <div className="space-y-6">
+        <section className="relative isolate grid gap-8 pt-8 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-center lg:gap-12 lg:pt-16">
+          {/* Faint dot grid, fading downward. Decoration only; sits under everything. */}
+          <div aria-hidden="true" className="zp-dots pointer-events-none absolute inset-x-0 -top-10 bottom-0 -z-10" />
+          <div className="space-y-8">
             <div>
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">
                 {network === "mainnet" ? "Zcash · Ironwood readiness" : "Testnet · rehearsal board"}
               </p>
-              <h1 className="mt-2 text-balance text-4xl font-semibold tracking-tight sm:text-5xl">Can I send shielded {unit} to…</h1>
-              <p className="mt-4 max-w-xl text-pretty text-muted">
+              <div className="mt-4">
+                <CyclingHeadline unit={unit} names={headlineNames} />
+              </div>
+              <p className="mt-6 max-w-xl text-pretty text-lg text-muted">
                 Every result carries its proof: a txid and a published viewing key you can check yourself. Claims we haven&apos;t
                 tested are labelled as someone else&apos;s.
               </p>
             </div>
-            <BoardSearch placeholder="Search Binance, Zingo, Trust Wallet…" />
-            {testsOpen && (
+            <div className="max-w-xl space-y-4">
+              <BoardSearch placeholder="Search Binance, Zingo, Trust Wallet…" />
+              {chips.length > 0 && (
+                <ul aria-label="Popular services" className="flex flex-wrap gap-2">
+                  {chips.map((c) => (
+                    <li key={c.slug}>
+                      <Link
+                        href={`${base}/services/${c.slug}`}
+                        className="inline-flex h-8 items-center rounded-full border border-line bg-surface px-4 text-xs font-medium text-muted transition-colors duration-150 hover:border-line-strong hover:text-foreground"
+                      >
+                        {c.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-4">
               <Link
-                href={`${base}/test`}
-                className="inline-flex items-center gap-1 text-sm font-medium text-accent-ink underline-offset-4 hover:underline"
+                href={testsOpen ? `${base}/test` : "/testnet/test"}
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-accent px-6 text-sm font-semibold text-[#18181b] transition-[filter] duration-150 hover:brightness-105"
               >
-                Run a test <ArrowRight aria-hidden="true" className="size-4" />
+                {testsOpen ? "Run a test" : "Try a test on testnet"} <ArrowRight aria-hidden="true" className="size-4" />
               </Link>
-            )}
+              <a
+                href="#how-it-works"
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-line-strong px-6 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-surface-2"
+              >
+                How verification works <ArrowDown aria-hidden="true" className="size-4" />
+              </a>
+            </div>
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-subtle">
+              <span>
+                <span className="tabular-nums">{total}</span> services tracked
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>
+                <span className="tabular-nums">{verifiedCount}</span> verified on-chain
+              </span>
+              <span aria-hidden="true">·</span>
+              <ScannerWord network={network} />
+            </p>
           </div>
           <LatestProof network={network} />
         </section>
@@ -260,6 +381,8 @@ export async function BoardView({ network }: { network: NetworkId }) {
           rows={untested}
           note={network === "mainnet" && !testsOpen ? "Mainnet tests aren't open yet; the flow can be tried on testnet" : undefined}
         />
+
+        <HowItWorks />
 
         <Legend />
 
