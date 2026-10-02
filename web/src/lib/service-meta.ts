@@ -11,5 +11,5 @@ export async function serviceMetadata(network: NetworkId, slug: string): Promise
   const visible = [...detail.communityReports, ...detail.listings];
   const v = verdictFor(readinessOf(detail.tests, visible), detail.tests, visible);
   const title = network === "testnet" ? `${detail.service.name} (testnet)` : detail.service.name;
-  return { title, description: `${v.title} — ${v.detail}. On-chain evidence with txids and viewing keys.` };
+  return { title, description: `${v.title}: ${v.detail}. On-chain evidence with txids and viewing keys.` };
 }

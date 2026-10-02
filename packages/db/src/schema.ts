@@ -197,8 +197,8 @@ export const tests = pgTable(
     network: text("network").notNull(), // no default: callers must say which network
 
     // Set by the worker when it assigns the test's address. At most one of:
-    //   accountIndex — testnet dev mode, derived from the worker's test seed
-    //   keyId        — a key-pool entry (the only option on mainnet)
+    //   accountIndex: testnet dev mode, derived from the worker's test seed
+    //   keyId:        a key-pool entry (the only option on mainnet)
     accountIndex: integer("account_index"),
     keyId: uuid("key_id")
       .unique()

@@ -1,8 +1,8 @@
 // Independent confirmation of a receipt's txid and block, by explorers not run
 // by the lightwalletd operator (zec.rocks).
 //
-//   ZecBlock   (zecblock.com; same API on testnet and mainnet) — primary
-//   Blockchair (mainnet only) — fallback. Its fee/value fields are wrong for
+//   ZecBlock   (zecblock.com; same API on testnet and mainnet): primary
+//   Blockchair (mainnet only): fallback. Its fee/value fields are wrong for
 //              v6 (Ironwood) transactions, so only txid and height are used.
 //
 // Any explorer that answers and DISAGREES (other block, not canonical) stops

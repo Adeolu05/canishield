@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
+import { ArrowRight, ExternalLink } from "lucide-react";
 import type { Report, Test } from "@zecproof/db";
 import { ListedClaimBadge, ListingSource, OutcomeBadge } from "@/components/badges";
 import { CopyButton } from "@/components/copy-button";
@@ -31,7 +31,7 @@ function HashField({ label, value, copyLabel }: { label: string; value: string |
           <CopyButton value={value} label={copyLabel} />
         </div>
       ) : (
-        <span className="text-subtle">—</span>
+        <span className="text-subtle">Not recorded</span>
       )}
     </Field>
   );
@@ -54,10 +54,10 @@ function EvidenceCard({ t, network, now, service }: { t: Test; network: NetworkI
       </header>
       <dl className="divide-y divide-line px-4">
         <HashField label="Sent to" value={t.receiveAddress} copyLabel="address" />
-        <Field label="Landed in">{t.receivedPool ? POOL_LABEL[t.receivedPool] : "—"}</Field>
-        <Field label="Amount">{t.receivedAmountZat != null ? formatAmount(t.receivedAmountZat, network) : "—"}</Field>
+        <Field label="Landed in">{t.receivedPool ? POOL_LABEL[t.receivedPool] : "Not recorded"}</Field>
+        <Field label="Amount">{t.receivedAmountZat != null ? formatAmount(t.receivedAmountZat, network) : "Not recorded"}</Field>
         <Field label="Block">
-          <span className="hash">{t.receivedHeight?.toLocaleString("en-US") ?? "—"}</span>
+          <span className="hash">{t.receivedHeight?.toLocaleString("en-US") ?? "Not recorded"}</span>
         </Field>
         {t.receivedBlockHash || t.receivedPool !== "transparent" ? (
           <HashField label="Block hash" value={t.receivedBlockHash} copyLabel="block hash" />
@@ -83,7 +83,7 @@ function EvidenceCard({ t, network, now, service }: { t: Test; network: NetworkI
               </a>
             </div>
           ) : (
-            "—"
+            <span className="text-subtle">Not recorded</span>
           )}
         </Field>
         {t.explorerName && (
@@ -206,9 +206,23 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
   return (
     <div className="space-y-10">
       <div className="space-y-4">
-        <Link href={base || "/"} className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground">
-          <ArrowLeft aria-hidden="true" className="size-4" /> Board
-        </Link>
+        <nav aria-label="Breadcrumb">
+          <ol className="flex min-w-0 items-center gap-2 text-sm">
+            <li>
+              <Link href={base || "/"} className="text-muted underline-offset-4 transition-colors duration-150 hover:text-foreground hover:underline">
+                {network === "testnet" ? "Testnet board" : "Board"}
+              </Link>
+            </li>
+            <li aria-hidden="true" className="text-subtle">
+              /
+            </li>
+            <li className="min-w-0 truncate">
+              <span aria-current="page" className="font-medium text-foreground">
+                {service.name}
+              </span>
+            </li>
+          </ol>
+        </nav>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">{service.name}</h1>
@@ -242,7 +256,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
           <div>
             <p className="text-lg font-semibold leading-snug">
               <span className={TONE_TEXT[verdict.tone]}>{verdict.title}</span>
-              <span className="font-normal text-muted"> — {verdict.detail}</span>
+              <span className="font-normal text-muted">: {verdict.detail}</span>
             </p>
             {service.notes && <p className="mt-1 text-sm text-subtle">{service.notes}</p>}
           </div>

@@ -88,7 +88,7 @@ export async function TestStatusView({ network, id }: { network: NetworkId; id: 
                 <dl className="grid grid-cols-2 gap-4 text-sm">
                   <div className="rounded-lg border border-line p-4">
                     <dt className="text-xs text-subtle">Expires in</dt>
-                    <dd className="mt-0.5 font-semibold">{test.expiresAt ? <Countdown until={test.expiresAt.toISOString()} /> : "—"}</dd>
+                    <dd className="mt-0.5 font-semibold">{test.expiresAt ? <Countdown until={test.expiresAt.toISOString()} /> : "No expiry"}</dd>
                   </div>
                   <div className="rounded-lg border border-line p-4">
                     <dt className="text-xs text-subtle">Watching from block</dt>
@@ -147,7 +147,7 @@ export async function TestStatusView({ network, id }: { network: NetworkId; id: 
       )}
 
       {test.status === "confirming" && test.receivedPool && (
-        <Panel tone="neutral" icon={<Hourglass aria-hidden="true" className="size-5" />} title="Payment seen — confirming">
+        <Panel tone="neutral" icon={<Hourglass aria-hidden="true" className="size-5" />} title="Payment seen: confirming">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             Landed in <OutcomeBadge outcome={test.receivedPool} />
             {test.receivedAmountZat != null && <span className="text-muted">· {formatAmount(test.receivedAmountZat, network)}</span>}
@@ -171,7 +171,7 @@ export async function TestStatusView({ network, id }: { network: NetworkId; id: 
           pool={test.receivedPool}
           amount={test.receivedAmountZat != null ? formatAmount(test.receivedAmountZat, network) : null}
           txid={test.receivedTxid}
-          height={test.receivedHeight?.toLocaleString("en-US") ?? "—"}
+          height={test.receivedHeight?.toLocaleString("en-US") ?? "Not recorded"}
           explorerName={test.explorerName}
           shareUrl={`${SITE_URL}${base}/test/${test.id}`}
           shareText={`${service.name} ${ADDRESS_TYPE_LABEL[test.addressType]} → landed in ${POOL_LABEL[test.receivedPool]}. Verified on-chain, block ${test.receivedHeight?.toLocaleString("en-US")}.`}
@@ -194,7 +194,7 @@ export async function TestStatusView({ network, id }: { network: NetworkId; id: 
       )}
 
       {test.status === "expired" && (
-        <Panel tone="warn" icon={<Hourglass aria-hidden="true" className="size-5" />} title="Expired — nothing arrived in time">
+        <Panel tone="warn" icon={<Hourglass aria-hidden="true" className="size-5" />} title="Expired: nothing arrived in time">
           <p className="text-sm text-muted">
             Tests wait 48 hours for a payment. If you still want to test {service.name}, start a new one; a late payment to this address
             isn&apos;t recorded.

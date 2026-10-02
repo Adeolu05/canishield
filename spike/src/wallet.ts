@@ -22,7 +22,7 @@ export interface Wallet {
 
 // BIP32 version bytes for testnet extended keys (tpub/tprv).
 const TESTNET_VERSIONS = { private: 0x04358394, public: 0x043587cf };
-// Zcash testnet P2PKH prefix — encodes to addresses starting "tm".
+// Zcash testnet P2PKH prefix: encodes to addresses starting "tm".
 const TESTNET_P2PKH_PREFIX = Uint8Array.of(0x1d, 0x25);
 
 const base58check = createBase58check(sha256);

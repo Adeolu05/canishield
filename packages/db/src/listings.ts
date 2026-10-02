@@ -31,4 +31,4 @@ export function parseSnapshot(json: unknown): Snapshot {
 
 /** The note shown with each claim: ZecHub's own words, plus where and when they were read. */
 export const listingNote = (s: Snapshot, e: Snapshot["exchanges"][number]) =>
-  `ZecHub lists — Supports: "${e.supports}". Ironwood: "${e.ironwood}". (Read ${s.source.readAt}; source commit ${s.source.commit.slice(0, 10)}; ${s.source.license}.)`;
+  `ZecHub lists it. Supports: "${e.supports}". Ironwood: "${e.ironwood}". (Read ${s.source.readAt}; source commit ${s.source.commit.slice(0, 10)}; ${s.source.license}.)`;

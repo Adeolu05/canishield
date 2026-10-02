@@ -29,7 +29,7 @@ export function CyclingHeadline({ unit, names }: { unit: string; names: string[]
   }, [motionOk, names.length]);
 
   return (
-    <h1 className="text-balance text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
+    <h1 className="text-balance text-[clamp(3rem,2rem+2.5vw,5rem)] font-semibold leading-[1.05] tracking-tight">
       <span className="sr-only">Can I send shielded {unit} to this service?</span>
       <span aria-hidden="true">
         <span className="block">Can I send shielded {unit} to</span>

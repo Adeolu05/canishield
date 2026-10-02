@@ -1,7 +1,7 @@
 {
   "format": "zecproof-listing-snapshot/1",
   "source": {
-    "name": "ZecHub Wiki — Custodial Exchanges",
+    "name": "ZecHub Wiki: Custodial Exchanges",
     "url": "https://zechub.wiki/using-zcash/custodial-exchanges",
     "file": "https://github.com/ZecHub/zechub/blob/31decdb815ed62ef8fef58ffa6aee6d8f546cf14/site/Using_Zcash/Custodial_Exchanges.md",
     "commit": "31decdb815ed62ef8fef58ffa6aee6d8f546cf14",

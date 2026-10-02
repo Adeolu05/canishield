@@ -107,7 +107,7 @@ export interface Verdict {
 const UA_TYPES: AddressType[] = ["ironwood_ua", "full_ua"];
 const latest = <T>(xs: T[], date: (x: T) => Date) => xs.map(date).sort((a, b) => b.getTime() - a.getTime())[0];
 
-/** Plain-language verdict for a service page, e.g. "Transparent only — rejected unified addresses, Oct 2". */
+/** Plain-language verdict for a service page, e.g. "Transparent only: rejected unified addresses, Oct 2". */
 export function verdictFor(readiness: Readiness, verified: Test[], visible: Report[], now = new Date()): Verdict {
   const v = READINESS_VISUAL[readiness];
   const d = (x: Date | undefined) => (x ? shortDate(x, now) : "");

@@ -1,6 +1,6 @@
-# ZecProof spike — which pool did a payment land in?
+# ZecProof spike: which pool did a payment land in?
 
-Testnet only. Uses [`@ledgerhq/zcash-utils`](https://www.npmjs.com/package/@ledgerhq/zcash-utils) 2.5.0 (Apache-2.0) for shielded scanning and the lightwalletd gRPC API ([lightwallet-protocol](https://github.com/zcash/lightwallet-protocol), MIT — `proto/`) for transparent UTXOs.
+Testnet only. Uses [`@ledgerhq/zcash-utils`](https://www.npmjs.com/package/@ledgerhq/zcash-utils) 2.5.0 (Apache-2.0) for shielded scanning and the lightwalletd gRPC API ([lightwallet-protocol](https://github.com/zcash/lightwallet-protocol), MIT, in `proto/`) for transparent UTXOs.
 
 ```bash
 npm install
@@ -8,7 +8,7 @@ npm run spike            # one pass: birthday → tip
 npm run spike -- --watch # poll every 30 s
 ```
 
-First run creates a throwaway testnet wallet in `.wallet/` (gitignored — it holds a mnemonic) and prints a shielded UA and a transparent `tm…` address. Fund either from a testnet faucet, wait for a block, and the scan prints `IRONWOOD`, `SAPLING`, `TRANSPARENT` (or `ORCHARD (!)`, which should not happen after NU6.3).
+First run creates a throwaway testnet wallet in `.wallet/` (gitignored, since it holds a mnemonic) and prints a shielded UA and a transparent `tm…` address. Fund either from a testnet faucet, wait for a block, and the scan prints `IRONWOOD`, `SAPLING`, `TRANSPARENT` (or `ORCHARD (!)`, which should not happen after NU6.3).
 
 View-only mode: `ZECPROOF_UFVK=uviewtest1… ZECPROOF_BIRTHDAY=<height> npm run spike` (no transparent check in this mode).
 

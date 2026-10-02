@@ -19,9 +19,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: "ZecProof — Can I send shielded ZEC to…?", template: "%s · ZecProof" },
+  title: { default: "ZecProof · Can I send shielded ZEC to…?", template: "%s · ZecProof" },
   description:
-    "On-chain evidence of which exchanges, wallets and services actually support shielded Zcash (Ironwood) — with txids and viewing keys anyone can re-check.",
+    "On-chain evidence of which exchanges, wallets and services actually support shielded Zcash (Ironwood), with txids and viewing keys anyone can re-check.",
   openGraph: { siteName: "ZecProof", type: "website" },
   twitter: { card: "summary_large_image" },
 };
@@ -48,11 +48,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to content
         </a>
         <SiteHeader />
-        <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-          {children}
-        </main>
+        {/* Full-bleed backgrounds inside main use 100vw; clip them here (not on body,
+            which would hand the overflow to the viewport) so nothing scrolls sideways. */}
+        <div className="flex-1 overflow-x-clip">
+          <main id="main" className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
+            {children}
+          </main>
+        </div>
         <footer className="border-t border-line">
-          <div className="mx-auto max-w-6xl space-y-2 px-4 py-6 text-xs text-subtle sm:px-6">
+          <div className="mx-auto max-w-7xl space-y-2 px-4 py-6 text-xs text-subtle sm:px-6">
             <p>
               ZecProof results (verified tests and community reports) are licensed{" "}
               <a href="https://creativecommons.org/licenses/by/4.0/" className="underline underline-offset-2 hover:text-foreground" rel="license noreferrer" target="_blank">
@@ -66,6 +70,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 CC BY-SA 4.0
               </a>
               . ZecProof&apos;s code is MIT.
+            </p>
+            <p>
+              Built by David Peluola ·{" "}
+              <a href="https://x.com/0xdavee_" className="underline underline-offset-2 hover:text-foreground" rel="me noreferrer" target="_blank">
+                X @0xdavee_
+              </a>
             </p>
           </div>
         </footer>

@@ -7,8 +7,9 @@ import { ScannerPill } from "./scanner-pill";
 import { ThemeToggle } from "./theme-toggle";
 import { CommandPalette } from "./command-palette";
 
+// Board stays highlighted on mainnet service pages, Testnet on testnet ones.
 const NAV = [
-  { href: "/", label: "Board", match: (p: string) => !p.startsWith("/testnet") && !p.startsWith("/test") },
+  { href: "/", label: "Board", match: (p: string) => p === "/" || p.startsWith("/services/") },
   { href: "/testnet", label: "Testnet", match: (p: string) => p.startsWith("/testnet") },
   { href: "/api/results.json", label: "API", match: () => false },
 ];
@@ -17,7 +18,7 @@ export function SiteHeader() {
   const pathname = usePathname() ?? "/";
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:gap-8 sm:px-6">
+      <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4 sm:gap-8 sm:px-6">
         <Link href="/" aria-label="ZecProof home" className="rounded-md">
           <Wordmark />
         </Link>
@@ -28,7 +29,7 @@ export function SiteHeader() {
               <Link
                 key={item.href}
                 href={item.href}
-                aria-current={active ? "page" : undefined}
+                aria-current={active ? (pathname === item.href ? "page" : "true") : undefined}
                 className={`relative rounded-md px-2 py-1 transition-colors duration-150 ${
                   active ? "text-foreground" : "text-muted hover:text-foreground"
                 }`}

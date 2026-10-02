@@ -1,4 +1,4 @@
-// ZecProof mark: a gold shield with a check — proof that a payment landed.
+// ZecProof mark: a gold shield with a check, for proof that a payment landed.
 export function LogoMark({ className = "size-6" }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 32" aria-hidden="true" className={className}>

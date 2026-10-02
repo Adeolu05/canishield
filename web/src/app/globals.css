@@ -39,6 +39,7 @@
   --btn-fg: #ffffff;
   --shadow: 0 1px 2px rgb(24 24 27 / 0.04), 0 1px 1px rgb(24 24 27 / 0.03);
   --glow: none; /* the only "gradient": a faint gold glow behind the proof card, dark mode only */
+  --hero-glow: none; /* on wide screens the same glow, as a full-bleed wash behind the hero */
 }
 
 /* Dark tokens: used when the OS prefers dark (unless the user picked light),
@@ -78,6 +79,7 @@
     --btn-fg: #18181b;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
     --glow: 0 0 80px -12px rgb(244 183 40 / 0.28);
+    --hero-glow: radial-gradient(ellipse 36rem 26rem at calc(50% + 25rem) 55%, rgb(244 183 40 / 0.11), transparent 70%);
   }
 }
 
@@ -115,6 +117,7 @@
   --btn-fg: #18181b;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
   --glow: 0 0 80px -12px rgb(244 183 40 / 0.28);
+  --hero-glow: radial-gradient(ellipse 36rem 26rem at calc(50% + 25rem) 55%, rgb(244 183 40 / 0.11), transparent 70%);
 }
 
 :root[data-theme="light"] {
@@ -175,6 +178,10 @@ body {
 /* Visible keyboard focus everywhere; mouse clicks stay quiet. In the base layer,
    so a component can deliberately replace it (e.g. the palette input). */
 @layer base {
+  /* Comfortable measure even when the container is wide. */
+  main p {
+    max-width: 65ch;
+  }
   :focus-visible {
     outline: 2px solid var(--accent-ink);
     outline-offset: 2px;
@@ -304,4 +311,31 @@ body {
     transform: none;
     animation: none;
   }
+}
+
+/* Full-bleed layers: span the viewport while content stays in the container. */
+.zp-bleed {
+  position: absolute;
+  left: 50%;
+  width: 100vw;
+  margin-left: -50vw;
+}
+.zp-hero-glow {
+  background: var(--hero-glow);
+}
+/* A full-bleed tinted band behind a section. */
+.zp-band {
+  position: relative;
+  isolation: isolate;
+}
+.zp-band::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 50%;
+  width: 100vw;
+  margin-left: -50vw;
+  z-index: -1;
+  background: color-mix(in oklab, var(--surface-2) 55%, transparent);
+  border-block: 1px solid var(--line);
 }

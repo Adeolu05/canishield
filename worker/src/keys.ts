@@ -1,5 +1,5 @@
 // Testnet dev mode: per-test keys derived from the worker's own test seed
-// (one ZIP-32 account per test). Never used on mainnet — see pool.ts.
+// (one ZIP-32 account per test). Never used on mainnet; see pool.ts.
 import zcash from "@ledgerhq/zcash-utils";
 import type { AddressType } from "@zecproof/db";
 import { testAddresses } from "@zecproof/zcash";

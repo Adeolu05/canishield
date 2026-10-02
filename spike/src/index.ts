@@ -24,7 +24,7 @@ interface Receipt {
 
 const POOL_LABEL: Record<Pool, string> = {
   ironwood: "IRONWOOD   ",
-  orchard: "ORCHARD (!)", // sealed at NU6.3 — a new deposit here would be anomalous
+  orchard: "ORCHARD (!)", // sealed at NU6.3, so a new deposit here would be anomalous
   sapling: "SAPLING    ",
   transparent: "TRANSPARENT",
 };
@@ -90,7 +90,7 @@ async function main() {
   console.log("\nSend testnet TAZ to either address:");
   console.log(`  Shielded UA (Orchard receiver → lands in Ironwood post-NU6.3):\n    ${shieldedAddr}`);
   console.log(tAddr ? `  Transparent:\n    ${tAddr}` : "  Transparent: n/a (view-only UFVK mode)");
-  console.log("  Sapling: no address — this package cannot derive Sapling receivers (scan still detects them).\n");
+  console.log("  Sapling: no address. This package cannot derive Sapling receivers (scan still detects them).\n");
 
   let from = wallet.birthdayHeight;
   for (;;) {
@@ -110,7 +110,7 @@ async function main() {
     await sleep(POLL_INTERVAL_MS);
   }
   if (seen.size === 0) {
-    console.log("\nNo incoming payment yet. Mined blocks only — mempool is not checked.");
+    console.log("\nNo incoming payment yet. Mined blocks only; the mempool is not checked.");
   }
   client.close();
 }

@@ -16,9 +16,9 @@ Each test gets a throwaway key of its own. The tester withdraws from the service
 
 ## Evidence tiers
 
-- **On-chain verified** — a test whose payment the worker found. Its txid and viewing key are published so anyone can re-check.
-- **Community reported** — observed but not provable on-chain (e.g. the service's form rejected the address). Shown as "pending review" until an admin accepts or rejects it.
-- **Unverified listing** — imported from an existing list, never tested; must carry a `source_url`.
+- **On-chain verified**: a test whose payment the worker found. Its txid and viewing key are published so anyone can re-check.
+- **Community reported**: observed but not provable on-chain (e.g. the service's form rejected the address). Shown as "pending review" until an admin accepts or rejects it.
+- **Unverified listing**: imported from an existing list, never tested; must carry a `source_url`.
 
 Claims older than 30 days show as **Stale** until retested. The mainnet board opens with an Ironwood readiness panel (verified Ironwood / transparent only / rejected / untested), counted from on-chain and community evidence only.
 
@@ -54,7 +54,7 @@ npm run keygen -w keygen -- verify --batch <dir>/<batch>.public.json --index 0 -
 ZECPROOF_ALLOW_MAINNET=yes npm run pool:import -w worker -- <batch>.public.json
 ```
 
-Keys are derived by `@ledgerhq/zcash-utils` `testDeriveKeys` (ZIP-32 account 0 per seed); the batch file records the exact derivation. Use `reveal` to type each seed into Bitwarden by hand; keep the encrypted seeds file (outside the repo, not cloud-synced) as the second copy. To return test funds, reveal a used seed, restore it in a wallet and send to the treasury wallet — never to a personal wallet or an exchange deposit address.
+Keys are derived by `@ledgerhq/zcash-utils` `testDeriveKeys` (ZIP-32 account 0 per seed); the batch file records the exact derivation. Use `reveal` to type each seed into Bitwarden by hand; keep the encrypted seeds file (outside the repo, not cloud-synced) as the second copy. To return test funds, reveal a used seed, restore it in a wallet and send to the treasury wallet. Never send to a personal wallet or an exchange deposit address.
 
 Treasury (sweep destination; Zingo, Ironwood/Orchard receiver only):
 
@@ -104,3 +104,7 @@ npm run dev:web                      # terminal 2 → http://localhost:3000
 - **Code:** MIT (see [LICENSE](LICENSE)).
 - **ZecProof results** (verified tests, community reports, readiness counts): [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Credit "ZecProof" with a link.
 - **Unverified listings** adapted from the ZecHub Wiki (ZecHub contributors) stay under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), their source's license, and are marked separately on the board and in `/api/results.json` (`license` vs `listingsLicense`).
+
+## Author
+
+Built by David Peluola · X [@0xdavee_](https://x.com/0xdavee_)

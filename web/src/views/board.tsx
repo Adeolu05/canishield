@@ -112,7 +112,7 @@ async function LatestProof({ network }: { network: NetworkId }) {
   const row = "flex items-baseline justify-between gap-4 py-2";
   const label = "font-mono text-[11px] uppercase tracking-[0.14em] text-subtle";
   return (
-    <aside aria-labelledby="latest-proof" className="rounded-2xl border border-line bg-surface p-4 shadow-card sm:p-6 [box-shadow:var(--shadow-card),var(--shadow-glow)]">
+    <aside aria-labelledby="latest-proof" className="rounded-2xl border border-line bg-surface p-4 shadow-card sm:p-6 [box-shadow:var(--shadow-card),var(--shadow-glow)] lg:[box-shadow:var(--shadow-card)]">
       <div className="flex items-baseline justify-between gap-4">
         <h2 id="latest-proof" className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">
           Latest proof
@@ -196,7 +196,7 @@ const STEPS = [
 
 function HowItWorks() {
   return (
-    <section id="how-it-works" aria-labelledby="how-title" className="space-y-6 border-t border-line pt-12">
+    <section id="how-it-works" aria-labelledby="how-title" className="zp-band space-y-6 py-12">
       <div>
         <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">Method</p>
         <h2 id="how-title" className="mt-2 text-2xl font-semibold tracking-tight">
@@ -228,7 +228,7 @@ const CHIPS = ["binance", "coinbase", "kraken", "trust-wallet"];
 function Legend() {
   const item = "inline-flex items-center gap-2";
   return (
-    <section aria-labelledby="legend-title" className="space-y-2 border-t border-line pt-6 text-xs text-muted">
+    <section aria-labelledby="legend-title" className="space-y-2 text-xs text-muted">
       <h2 id="legend-title" className="font-semibold text-foreground">
         Reading the icons
       </h2>
@@ -312,8 +312,12 @@ export async function BoardView({ network }: { network: NetworkId }) {
     <BoardSearchProvider>
       <div className="space-y-12">
         <section className="relative isolate grid gap-8 pt-8 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-center lg:gap-12 lg:pt-16">
-          {/* Faint dot grid, fading downward. Decoration only; sits under everything. */}
-          <div aria-hidden="true" className="zp-dots pointer-events-none absolute inset-x-0 -top-10 bottom-0 -z-10" />
+          {/* Full-bleed backdrop: a faint dot grid fading downward and, in dark mode on wide
+              screens, the gold glow behind the receipt. Decoration only; under everything. */}
+          <div aria-hidden="true" className="zp-bleed pointer-events-none -top-10 bottom-0 -z-10">
+            <div className="zp-dots absolute inset-0" />
+            <div className="zp-hero-glow absolute inset-0 hidden lg:block" />
+          </div>
           <div className="space-y-8">
             <div>
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">
@@ -322,7 +326,7 @@ export async function BoardView({ network }: { network: NetworkId }) {
               <div className="mt-4">
                 <CyclingHeadline unit={unit} names={headlineNames} />
               </div>
-              <p className="mt-6 max-w-xl text-pretty text-lg text-muted">
+              <p className="mt-6 max-w-[65ch] text-pretty text-lg text-muted">
                 Every result carries its proof: a txid and a published viewing key you can check yourself. Claims we haven&apos;t
                 tested are labelled as someone else&apos;s.
               </p>
