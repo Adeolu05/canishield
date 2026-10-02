@@ -1,14 +1,1 @@
-{
-  "backpack": "/service-icons/backpack.png",
-  "coinbase": "/service-icons/coinbase.png",
-  "fauzec": "/service-icons/fauzec.svg",
-  "gemini": "/service-icons/gemini.png",
-  "huobi": "/service-icons/huobi.png",
-  "kraken": "/service-icons/kraken.png",
-  "kucoin": "/service-icons/kucoin.png",
-  "okx": "/service-icons/okx.png",
-  "robinhood": "/service-icons/robinhood.png",
-  "trust-wallet": "/service-icons/trust-wallet.svg",
-  "valar-faucet": "/service-icons/valar-faucet.png",
-  "zingo": "/service-icons/zingo.svg"
-}
+{}
