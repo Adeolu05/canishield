@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Report } from "@zecproof/db";
-import { OutcomeBadge, StaleBadge, TierBadge } from "@/components/badges";
+import { ListedClaimBadge, ListingSource, OutcomeBadge, StaleBadge, TierBadge } from "@/components/badges";
 import { isStale, reportDate, testDate } from "@/lib/evidence";
 import { ADDRESS_TYPE_LABEL, POOL_LABEL } from "@/lib/labels";
 import { NETWORKS, basePath, canCreateTests, formatAmount, type NetworkId } from "@/lib/network";
@@ -16,8 +16,17 @@ function ReportCard({ report, base, now }: { report: Report; base: string; now: 
     <article className="rounded-lg border border-zinc-200 p-4 text-sm dark:border-zinc-800">
       <div className="flex flex-wrap items-center gap-2">
         {report.addressType && <span className="font-medium">{ADDRESS_TYPE_LABEL[report.addressType]}</span>}
-        <OutcomeBadge outcome={report.outcome} />
-        <TierBadge tier={report.tier} />
+        {report.tier === "listing" ? (
+          <>
+            <ListedClaimBadge outcome={report.outcome} />
+            <ListingSource sourceUrl={report.sourceUrl} />
+          </>
+        ) : (
+          <>
+            <OutcomeBadge outcome={report.outcome} />
+            <TierBadge tier={report.tier} />
+          </>
+        )}
         {report.status === "unreviewed" && <span className="text-xs text-zinc-500">Pending review</span>}
         <span className="ml-auto flex items-center gap-1.5 text-xs text-zinc-500">
           {report.tier === "listing" ? "Read" : "Reported"} {isoDate(date)}

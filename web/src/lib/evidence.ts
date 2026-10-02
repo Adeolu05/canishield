@@ -1,7 +1,7 @@
 // How evidence turns into board cells, staleness and Ironwood readiness.
 // Pure functions: the board, the readiness panel and /api/results.json all
 // use these, so they always agree.
-import type { AddressType, Report, Service, Test } from "@zecproof/db";
+import type { AddressType, Report, ReportOutcome, Service, Test } from "@zecproof/db";
 
 /** docs/SPEC.md: a claim older than this shows as stale until retested. */
 export const STALE_AFTER_DAYS = 30;
@@ -102,4 +102,28 @@ export function summarize(allServices: Service[], verified: Test[], visible: Rep
     total: rows.length,
     untestedWithListing: rows.filter((r) => r.readiness === "untested" && r.hasListing).length,
   };
+}
+
+// Unverified listings are claims, not results. They get their own wording and
+// export codes so they can never be read as a test outcome.
+export const LISTED_CLAIM: Record<ReportOutcome, { code: string; label: string }> = {
+  transparent: { code: "transparent_supported", label: "Listed: transparent supported" },
+  address_rejected: { code: "transparent_only", label: "Listed: transparent only" },
+  form_accepted: { code: "shielded_ua_accepted", label: "Listed: shielded/UA accepted" },
+  ironwood: { code: "lands_in_ironwood", label: "Listed: lands in Ironwood" },
+  sapling: { code: "lands_in_sapling", label: "Listed: lands in Sapling" },
+  orchard: { code: "lands_in_orchard", label: "Listed: lands in Orchard" },
+};
+
+const SOURCE_NAMES: Record<string, string> = { "zechub.wiki": "ZecHub" };
+
+/** "ZecHub" for zechub.wiki, otherwise the source's hostname. */
+export function sourceName(url: string | null | undefined): string {
+  if (!url) return "unknown source";
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    return SOURCE_NAMES[host] ?? host;
+  } catch {
+    return "unknown source";
+  }
 }

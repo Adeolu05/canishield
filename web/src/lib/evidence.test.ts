@@ -51,3 +51,21 @@ test("summary counts every service exactly once", () => {
   assert.equal(s.counts.untested, 2);
   assert.equal(s.untestedWithListing, 1);
 });
+
+test("listing claims can never be mistaken for results", async () => {
+  const { LISTED_CLAIM, sourceName } = await import("./evidence");
+  const { reportOutcome } = await import("@zecproof/db/schema");
+  const outcomes = reportOutcome.enumValues as readonly string[];
+  const codes = outcomes.map((o) => LISTED_CLAIM[o as keyof typeof LISTED_CLAIM].code);
+  assert.equal(new Set(codes).size, codes.length, "codes are unique");
+  for (const o of outcomes) {
+    const claim = LISTED_CLAIM[o as keyof typeof LISTED_CLAIM];
+    assert.match(claim.label, /^Listed: /, o);
+    assert.ok(!outcomes.includes(claim.code), `code ${claim.code} must not reuse an outcome value`);
+    assert.ok(!/Address rejected|Form accepted/.test(claim.label), "result wording is reserved for tests and reports");
+  }
+  assert.equal(LISTED_CLAIM.address_rejected.label, "Listed: transparent only");
+  assert.equal(LISTED_CLAIM.form_accepted.label, "Listed: shielded/UA accepted");
+  assert.equal(sourceName("https://zechub.wiki/using-zcash/custodial-exchanges"), "ZecHub");
+  assert.equal(sourceName("https://www.example.org/x"), "example.org");
+});

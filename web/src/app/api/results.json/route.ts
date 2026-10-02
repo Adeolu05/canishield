@@ -5,7 +5,7 @@
 import { type NextRequest } from "next/server";
 import { isNetworkId } from "@zecproof/zcash/networks";
 import type { Report, Test } from "@zecproof/db";
-import { READINESS, STALE_AFTER_DAYS, reportDate, testDate, type Cell } from "@/lib/evidence";
+import { LISTED_CLAIM, READINESS, STALE_AFTER_DAYS, isStale, reportDate, sourceName, testDate, type Cell } from "@/lib/evidence";
 import { NETWORKS, basePath } from "@/lib/network";
 import { getResults } from "@/lib/queries";
 
@@ -15,21 +15,41 @@ const HEADERS = {
   "Cache-Control": "public, max-age=60, s-maxage=300",
 };
 
-const ZECHUB = {
+/** ZecProof's own results: verified tests, community reports and readiness counts. */
+const RESULTS_LICENSE = {
+  name: "CC BY 4.0",
+  url: "https://creativecommons.org/licenses/by/4.0/",
+  appliesTo: ["tests", "communityReports", "readiness", "services[].cells with tier verified or community"],
+  attribution: "ZecProof",
+  note: "Unverified listings are licensed separately; see listingsLicense. ZecProof's code is MIT.",
+};
+
+/** Third-party listings keep their source's license, separate from the above. */
+const LISTINGS_LICENSE = {
+  name: "CC BY-SA 4.0",
+  url: "https://creativecommons.org/licenses/by-sa/4.0/",
+  appliesTo: ["listings", "services[].cells with tier listing"],
   source: "https://zechub.wiki/using-zcash/custodial-exchanges",
-  license: "CC BY-SA 4.0",
-  licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/",
-  attribution: "Unverified listings are adapted from the ZecHub Wiki (ZecHub contributors), CC BY-SA 4.0.",
+  attribution: "Adapted from the ZecHub Wiki (ZecHub contributors), CC BY-SA 4.0.",
 };
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
+// Listings never share a field name with results: tests and community reports
+// carry `outcome`; listings carry `listedClaim` (see LISTED_CLAIM codes).
 function cellJson(cell: Cell) {
   if (cell.tier === "none") return { tier: "none" as const };
   const base = { tier: cell.tier, date: iso(cell.date), stale: cell.stale };
-  return cell.tier === "verified"
-    ? { ...base, outcome: cell.test.receivedPool, testId: cell.test.id }
-    : { ...base, outcome: cell.report.outcome, reportId: cell.report.id, reviewStatus: cell.report.status };
+  if (cell.tier === "verified") return { ...base, outcome: cell.test.receivedPool, testId: cell.test.id };
+  if (cell.tier === "community") {
+    return { ...base, outcome: cell.report.outcome, reportId: cell.report.id, reviewStatus: cell.report.status };
+  }
+  return {
+    ...base,
+    listedClaim: LISTED_CLAIM[cell.report.outcome].code,
+    source: sourceName(cell.report.sourceUrl),
+    listingId: cell.report.id,
+  };
 }
 
 function testJson(t: Test, slug: string, origin: string, network: "mainnet" | "testnet") {
@@ -52,7 +72,7 @@ function testJson(t: Test, slug: string, origin: string, network: "mainnet" | "t
   };
 }
 
-function reportJson(r: Report, slug: string) {
+function communityJson(r: Report, slug: string) {
   return {
     id: r.id,
     service: slug,
@@ -64,7 +84,21 @@ function reportJson(r: Report, slug: string) {
     txid: r.txid,
     evidenceUrl: r.evidenceUrl,
     testId: r.testId,
-    ...(r.tier === "listing" ? { sourceUrl: r.sourceUrl, sourceReadAt: iso(r.sourceReadAt) } : {}),
+  };
+}
+
+function listingJson(r: Report, slug: string, now: Date) {
+  return {
+    id: r.id,
+    service: slug,
+    addressType: r.addressType,
+    listedClaim: LISTED_CLAIM[r.outcome].code,
+    listedClaimLabel: LISTED_CLAIM[r.outcome].label,
+    source: sourceName(r.sourceUrl),
+    sourceUrl: r.sourceUrl,
+    sourceReadAt: iso(r.sourceReadAt),
+    stale: isStale(reportDate(r), now),
+    note: r.note,
   };
 }
 
@@ -87,7 +121,7 @@ export async function GET(request: NextRequest) {
     tiers: {
       verified: "The scanner saw the payment land; txid and the test address's viewing key are published.",
       community: "Observed but not provable on-chain (e.g. a form rejected the address). reviewStatus shows admin review.",
-      listing: "Imported from an existing list, never tested. sourceUrl and sourceReadAt say where and when it was read.",
+      listing: "Imported from an existing list, never tested. Carries listedClaim (not outcome); sourceUrl and sourceReadAt say where and when it was read.",
     },
     readiness: {
       total: summary.total,
@@ -104,9 +138,11 @@ export async function GET(request: NextRequest) {
       cells: Object.fromEntries(Object.entries(cells).map(([type, cell]) => [type, cellJson(cell)])),
     })),
     tests: verified.map((t) => testJson(t, slugOf.get(t.serviceId)!, origin, network)),
-    communityReports: visible.filter((r) => r.tier === "community").map((r) => reportJson(r, slugOf.get(r.serviceId)!)),
-    listings: visible.filter((r) => r.tier === "listing").map((r) => reportJson(r, slugOf.get(r.serviceId)!)),
-    attribution: { listings: ZECHUB },
+    communityReports: visible.filter((r) => r.tier === "community").map((r) => communityJson(r, slugOf.get(r.serviceId)!)),
+    listings: visible.filter((r) => r.tier === "listing").map((r) => listingJson(r, slugOf.get(r.serviceId)!, now)),
+    listedClaimCodes: Object.fromEntries(Object.values(LISTED_CLAIM).map((c) => [c.code, c.label])),
+    license: { ...RESULTS_LICENSE, attribution: `ZecProof (${origin})` },
+    listingsLicense: LISTINGS_LICENSE,
   };
   return Response.json(body, { headers: HEADERS });
 }

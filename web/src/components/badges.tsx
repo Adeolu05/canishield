@@ -1,5 +1,6 @@
 import type { ReportOutcome } from "@zecproof/db";
 import { OUTCOME_LABEL, TIER_LABEL, type Tier } from "@/lib/labels";
+import { LISTED_CLAIM, sourceName } from "@/lib/evidence";
 
 const OUTCOME_STYLE: Record<ReportOutcome, string> = {
   ironwood: "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200",
@@ -35,6 +36,28 @@ export function StaleBadge() {
       className={`${base} bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200`}
     >
       Stale
+    </span>
+  );
+}
+
+/**
+ * An unverified listing's claim. Deliberately neutral grey and dashed, never
+ * the coloured outcome badges used for tests and community reports.
+ */
+export function ListedClaimBadge({ outcome }: { outcome: ReportOutcome }) {
+  return (
+    <span className={`${base} border border-dashed border-zinc-400/70 bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300`}>
+      {LISTED_CLAIM[outcome].label}
+    </span>
+  );
+}
+
+/** Tier badge plus "per <source>" for a listing. */
+export function ListingSource({ sourceUrl }: { sourceUrl: string | null }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <TierBadge tier="listing" />
+      <span className="text-xs text-zinc-500">per {sourceName(sourceUrl)}</span>
     </span>
   );
 }

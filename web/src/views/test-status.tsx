@@ -58,7 +58,8 @@ export async function TestStatusView({ network, id }: { network: NetworkId; id: 
           <form action={markAddressRejected.bind(null, test.id)} className="space-y-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
             <p className="text-sm font-medium">Did the service refuse this address?</p>
             <p className="text-xs text-zinc-500">
-              This can&apos;t be proven on-chain, so it is filed as a community report and reviewed.
+              This can&apos;t be proven on-chain, so it is filed as a community report and reviewed. Reports are
+              published under CC BY 4.0.
             </p>
             <input
               name="note"

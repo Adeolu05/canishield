@@ -25,7 +25,7 @@ Claims older than 30 days show as **Stale** until retested. The mainnet board op
 ## Data export and listings
 
 - `GET /api/results.json` (mainnet) or `?network=testnet`: readiness counts, every service's cells with dates and staleness, verified tests with txid and viewing key, community reports and listings. CORS-open and cached for a minute, format `zecproof-results/1`.
-- `npm run import:zechub -w @zecproof/db` loads [`packages/db/data/zechub-custodial-exchanges.json`](packages/db/data/zechub-custodial-exchanges.json), a dated snapshot of ZecHub's custodial exchanges page (commit `31decdb815`, read 2026-10-02), as **Unverified listing** claims. Re-running replaces only that source's listings. ZecHub content is CC BY-SA 4.0; the snapshot, the listing pages and the export carry that attribution.
+- `npm run import:zechub -w @zecproof/db` loads [`packages/db/data/zechub-custodial-exchanges.json`](packages/db/data/zechub-custodial-exchanges.json), a dated snapshot of ZecHub's custodial exchanges page (commit `31decdb815`, read 2026-10-02), as **Unverified listing** claims. Re-running replaces only that source's listings. Listing claims read as claims ("Listed: transparent only", "Listed: shielded/UA accepted", always "per ZecHub") and use `listedClaim` in the export, never the `outcome` values of tests and community reports.
 
 ## Chain endpoints
 
@@ -94,3 +94,9 @@ npm run dev:web                      # terminal 2 → http://localhost:3000
 - One worker process serves one network (`ZECPROOF_NETWORK`, default `testnet`) and refuses endpoints on the other chain.
 - Every `tests`, `reports` and `key_pool` row has a `network` with no default; DB `CHECK` constraints tie each viewing key (`uviewtest1`/`uview1`) and address (`utest1`/`tm` vs `u1`/`t1`) to it, and reject mainnet tests that use a worker-derived key.
 - The worker imports no send/sign function. On testnet, dev-mode keys come from `WORKER_TEST_MNEMONIC` via `testDeriveKeys` (TEST-ONLY in the package; acceptable for throwaway testnet keys only).
+
+## License
+
+- **Code:** MIT (see [LICENSE](LICENSE)).
+- **ZecProof results** (verified tests, community reports, readiness counts): [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Credit "ZecProof" with a link.
+- **Unverified listings** adapted from the ZecHub Wiki (ZecHub contributors) stay under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), their source's license, and are marked separately on the board and in `/api/results.json` (`license` vs `listingsLicense`).

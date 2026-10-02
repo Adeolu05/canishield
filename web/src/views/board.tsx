@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { OutcomeBadge, StaleBadge, TierBadge } from "@/components/badges";
+import { ListedClaimBadge, ListingSource, OutcomeBadge, StaleBadge, TierBadge } from "@/components/badges";
 import { READINESS, STALE_AFTER_DAYS, type Cell, type Readiness } from "@/lib/evidence";
 import { ADDRESS_TYPES, ADDRESS_TYPE_LABEL } from "@/lib/labels";
 import { basePath, canCreateTests, type NetworkId } from "@/lib/network";
@@ -15,6 +15,19 @@ const DATE_VERB: Record<"verified" | "community" | "listing", string> = {
 
 function CellView({ cell }: { cell: Cell }) {
   if (cell.tier === "none") return <span className="text-zinc-400">Untested</span>;
+  if (cell.tier === "listing") {
+    // A claim from someone else's list, never styled like a result.
+    return (
+      <div className="flex flex-col items-start gap-1">
+        <ListedClaimBadge outcome={cell.report.outcome} />
+        <ListingSource sourceUrl={cell.report.sourceUrl} />
+        <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+          {DATE_VERB.listing} {isoDate(cell.date)}
+          {cell.stale && <StaleBadge />}
+        </span>
+      </div>
+    );
+  }
   const outcome = cell.tier === "verified" ? cell.test.receivedPool : cell.report.outcome;
   return (
     <div className="flex flex-col items-start gap-1">
@@ -138,13 +151,29 @@ export async function BoardView({ network }: { network: NetworkId }) {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-zinc-500">
-        Reuse this data:{" "}
-        <a href={exportHref} className="underline">
-          {exportHref}
-        </a>{" "}
-        (JSON). Unverified listings are adapted from ZecHub, CC BY-SA 4.0.
-      </p>
+      <footer className="space-y-1 border-t border-zinc-200 pt-4 text-xs text-zinc-500 dark:border-zinc-800">
+        <p>
+          Reuse this data:{" "}
+          <a href={exportHref} className="underline">
+            {exportHref}
+          </a>{" "}
+          (JSON).
+        </p>
+        <p>
+          ZecProof results (verified tests and community reports) are licensed{" "}
+          <a href="https://creativecommons.org/licenses/by/4.0/" className="underline" rel="license noreferrer" target="_blank">
+            CC BY 4.0
+          </a>
+          .
+        </p>
+        <p>
+          Unverified listings are adapted from the ZecHub Wiki (ZecHub contributors) and stay under{" "}
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/" className="underline" rel="license noreferrer" target="_blank">
+            CC BY-SA 4.0
+          </a>
+          . ZecProof&apos;s code is MIT.
+        </p>
+      </footer>
     </div>
   );
 }
