@@ -10,7 +10,7 @@ export function BoardSkeleton() {
         <div className={`${bar} h-4 w-full max-w-2xl`} />
         <div className={`${bar} h-12 w-full max-w-xl rounded-xl`} />
       </div>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
           <div key={i} className="h-32 animate-pulse rounded-xl border border-line bg-surface" />
         ))}

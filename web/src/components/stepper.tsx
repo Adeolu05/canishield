@@ -9,13 +9,13 @@ export const TEST_STEPS = ["Choose", "Address", "Send", "Verified"] as const;
 export function Stepper({ current, done = false, failed = false }: { current: number; done?: boolean; failed?: boolean }) {
   return (
     <div className="space-y-2">
-      <ol aria-label="Test progress" className="flex w-full items-center gap-2 text-xs sm:gap-3">
+      <ol aria-label="Test progress" className="flex w-full items-center gap-2 text-xs sm:gap-4">
       {TEST_STEPS.map((label, i) => {
         const complete = done || i < current;
         const active = !done && i === current;
         const state = complete ? "complete" : active ? (failed ? "stopped" : "current") : "upcoming";
         return (
-          <li key={label} className="flex flex-1 items-center gap-2 last:flex-none sm:gap-3" aria-current={active ? "step" : undefined}>
+          <li key={label} className="flex flex-1 items-center gap-2 last:flex-none sm:gap-4" aria-current={active ? "step" : undefined}>
             <span className="flex items-center gap-2">
               <span
                 className={`grid size-6 shrink-0 place-items-center rounded-full border text-[11px] font-semibold tabular-nums ${

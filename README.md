@@ -27,6 +27,10 @@ Claims older than 30 days show as **Stale** until retested. The mainnet board op
 - `GET /api/results.json` (mainnet) or `?network=testnet`: readiness counts, every service's cells with dates and staleness, verified tests with txid and viewing key, community reports and listings. CORS-open and cached for a minute, format `zecproof-results/1`.
 - `npm run import:zechub -w @zecproof/db` loads [`packages/db/data/zechub-custodial-exchanges.json`](packages/db/data/zechub-custodial-exchanges.json), a dated snapshot of ZecHub's custodial exchanges page (commit `31decdb815`, read 2026-10-02), as **Unverified listing** claims. Re-running replaces only that source's listings. Listing claims read as claims ("Listed: transparent only", "Listed: shielded/UA accepted", always "per ZecHub") and use `listedClaim` in the export, never the `outcome` values of tests and community reports.
 
+## Scanner status
+
+Each cycle that reaches an endpoint, the worker upserts one row per network into `worker_heartbeats` (tip, endpoint, time). The header pill reads it via `GET /api/scanner-status?network=…`: **Scanner online** if the last heartbeat is under 90 s old, otherwise a grey **Scanner offline**. Heartbeats are not evidence. After pulling this change, run `npm run db:migrate` and **restart any running worker** (testnet and mainnet) so it starts writing heartbeats.
+
 ## Chain endpoints
 
 Each network has its own list, tried in order each cycle; the worker stops if an endpoint it reaches is on the wrong chain.

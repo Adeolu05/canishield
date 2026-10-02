@@ -56,14 +56,14 @@ export function StatusIcon({ icon, className = "size-4" }: { icon: IconKey; clas
 /** Icon + word in the tone's colour. The main way a result is shown. */
 export function StatusLabel({ icon, tone, label, className = "" }: { icon: IconKey; tone: Tone; label: string; className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 font-medium ${TONE_TEXT[tone]} ${className}`}>
+    <span className={`inline-flex items-center gap-2 font-medium ${TONE_TEXT[tone]} ${className}`}>
       <StatusIcon icon={icon} />
       {label}
     </span>
   );
 }
 
-const chip = "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4 whitespace-nowrap";
+const chip = "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium leading-4 whitespace-nowrap";
 
 /**
  * Evidence tier. Distinct by shape as well as colour:

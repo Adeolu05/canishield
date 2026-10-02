@@ -10,7 +10,7 @@ const subscribeToClock = (tick: () => void) => {
   const id = setInterval(tick, 1000);
   return () => clearInterval(id);
 };
-const useNow = () =>
+export const useNow = () =>
   useSyncExternalStore(
     subscribeToClock,
     () => Math.floor(Date.now() / 1000) * 1000,
@@ -37,12 +37,26 @@ export function Countdown({ until }: { until: string }) {
 /** Small "Live" indicator shown while the page polls for status. */
 export function LiveDot({ intervalSeconds }: { intervalSeconds: number }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-subtle">
+    <span className="inline-flex items-center gap-2 text-xs text-subtle">
       <span className="relative flex size-2">
         <span className="absolute inline-flex size-full animate-ping rounded-full bg-ok-solid opacity-60" />
         <span className="relative inline-flex size-2 rounded-full bg-ok-solid" />
       </span>
       Live · checks every {intervalSeconds} s
     </span>
+  );
+}
+
+const ago = (seconds: number) =>
+  seconds < 60 ? `${seconds}s ago` : seconds < 3600 ? `${Math.floor(seconds / 60)} min ago` : seconds < 86_400 ? `${Math.floor(seconds / 3600)} h ago` : `${Math.floor(seconds / 86_400)} d ago`;
+
+/** "12s ago" / "3 h ago", ticking. Renders `fallback` (e.g. an absolute date) on the server. */
+export function RelativeTime({ iso, fallback }: { iso: string; fallback: string }) {
+  const now = useNow();
+  const text = now === null ? fallback : ago(Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000)));
+  return (
+    <time dateTime={iso} title={new Date(iso).toUTCString()} className="tabular-nums">
+      {text}
+    </time>
   );
 }

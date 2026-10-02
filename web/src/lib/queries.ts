@@ -1,7 +1,7 @@
 import "server-only";
 import { connection } from "next/server";
 import { and, arrayContains, asc, desc, eq, ne } from "drizzle-orm";
-import { reports, services, tests } from "@zecproof/db";
+import { reports, services, tests, workerHeartbeats } from "@zecproof/db";
 import { summarize } from "./evidence";
 import { getDb } from "./db";
 import type { NetworkId } from "./network";
@@ -114,4 +114,24 @@ export async function testExists(network: NetworkId, id: string) {
     .from(tests)
     .where(and(eq(tests.id, id), eq(tests.network, network)));
   return Boolean(row);
+}
+
+/** The newest verified test on a network, with its service: the hero's "Latest proof". */
+export async function getLatestProof(network: NetworkId) {
+  await connection();
+  const [row] = await getDb()
+    .select({ test: tests, service: services })
+    .from(tests)
+    .innerJoin(services, eq(services.id, tests.serviceId))
+    .where(and(eq(tests.network, network), eq(tests.status, "received")))
+    .orderBy(desc(tests.receivedAt))
+    .limit(1);
+  return row ?? null;
+}
+
+/** The worker's last heartbeat for a network, if any. */
+export async function getScannerHeartbeat(network: NetworkId) {
+  await connection();
+  const [row] = await getDb().select().from(workerHeartbeats).where(eq(workerHeartbeats.network, network));
+  return row ?? null;
 }

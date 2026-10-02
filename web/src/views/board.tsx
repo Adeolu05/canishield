@@ -1,43 +1,63 @@
 import Link from "next/link";
-import { ArrowRight, Braces } from "lucide-react";
-import { STALE_AFTER_DAYS, type Readiness } from "@/lib/evidence";
-import { basePath, canCreateTests, type NetworkId } from "@/lib/network";
-import { READINESS_ORDER, READINESS_VISUAL, cellView, strongestTier } from "@/lib/present";
-import { getBoard } from "@/lib/queries";
-import { StaleChip, StatusIcon, StatusLabel, TONE_SOFT, TierChip } from "@/components/status";
-import { BoardExplorer, type BoardRowView } from "./board-explorer";
+import { ArrowRight, BadgeCheck, Braces, Clock, FileText, Users } from "lucide-react";
+import type { Readiness } from "@/lib/evidence";
+import { LISTED_CLAIM, STALE_AFTER_DAYS } from "@/lib/evidence";
+import { ADDRESS_TYPE_LABEL } from "@/lib/labels";
+import { NETWORKS, basePath, canCreateTests, type NetworkId } from "@/lib/network";
+import { OUTCOME_VISUAL, READINESS_ORDER, READINESS_VISUAL, cellView, shortDate, strongestTier, type Tone } from "@/lib/present";
+import { getBoard, getLatestProof } from "@/lib/queries";
+import { CopyButton } from "@/components/copy-button";
+import { RelativeTime } from "@/components/live";
+import { StatusIcon, StatusLabel, TONE_TEXT } from "@/components/status";
+import { BoardSearch, BoardSearchProvider, TestedMatrix, UntestedList, type TestedRowView, type UntestedRowView } from "./board-client";
 
-function ReadinessTiles({ counts, total, untestedWithListing }: { counts: Record<Readiness, number>; total: number; untestedWithListing: number }) {
-  // "Shielded, not Ironwood" only appears once something lands there.
+const BAR_FILL: Record<Tone, string> = {
+  ok: "bg-[var(--ok-fg)]",
+  shield: "bg-[var(--shield-fg)]",
+  warn: "bg-[var(--warn-fg)]",
+  bad: "bg-[var(--bad-fg)]",
+  info: "bg-[var(--info-fg)]",
+  listed: "bg-line-strong",
+  neutral: "bg-line",
+};
+
+function ReadinessBar({ counts, total, tested }: { counts: Record<Readiness, number>; total: number; tested: number }) {
   const shown = READINESS_ORDER.filter((k) => k !== "shielded_other" || counts[k] > 0);
+  const summary = shown.map((k) => `${counts[k]} ${READINESS_VISUAL[k].label.toLowerCase()}`).join(", ");
   return (
-    <section aria-labelledby="readiness-title" className="space-y-3">
+    <section aria-labelledby="readiness-title" className="space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="readiness-title" className="text-base font-semibold">
-          Ironwood readiness
+        <h2 id="readiness-title" className="text-lg font-semibold tracking-tight">
+          <span className="tabular-nums">{tested}</span> of <span className="tabular-nums">{total}</span> services tested
         </h2>
-        <p className="text-xs text-subtle">{total} services · counted from on-chain and community evidence only</p>
+        <p className="text-xs text-subtle">Ironwood readiness, from on-chain and community evidence</p>
       </div>
-      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {shown.map((k) => {
-          const v = READINESS_VISUAL[k];
-          return (
-            <div key={k} className="rounded-xl border border-line bg-surface p-3.5 shadow-card sm:p-4">
-              <dt className="flex items-center gap-2 text-sm font-medium">
-                <span className={`grid size-7 place-items-center rounded-lg ${TONE_SOFT[v.tone]}`}>
-                  <StatusIcon icon={v.icon} className="size-4" />
-                </span>
-                {v.label}
-              </dt>
-              <dd className="mt-2 text-3xl font-semibold tabular-nums tracking-tight sm:mt-3">{counts[k]}</dd>
-              <dd className="mt-1 hidden text-xs leading-relaxed text-subtle sm:block">{v.meaning}</dd>
-            </div>
-          );
-        })}
-      </dl>
-      <details className="rounded-xl border border-line bg-surface px-4 py-3 text-sm sm:hidden">
-        <summary className="cursor-pointer font-medium">What do these mean?</summary>
-        <dl className="mt-2 space-y-2">
+      <div role="img" aria-label={`Ironwood readiness: ${summary}`} className="flex h-2 w-full gap-0.5 overflow-hidden rounded-full bg-surface-2">
+        {shown
+          .filter((k) => counts[k] > 0)
+          .map((k) => (
+            <span
+              key={k}
+              title={`${READINESS_VISUAL[k].label}: ${counts[k]}`}
+              className={`h-full ${BAR_FILL[READINESS_VISUAL[k].tone]}`}
+              style={{ width: `${(counts[k] / Math.max(total, 1)) * 100}%` }}
+            />
+          ))}
+      </div>
+      <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+        {shown.map((k) => (
+          <li key={k} className="inline-flex items-center gap-2">
+            <StatusIcon icon={READINESS_VISUAL[k].icon} className={`size-4 ${TONE_TEXT[READINESS_VISUAL[k].tone]}`} />
+            <span className="text-muted">{READINESS_VISUAL[k].label}</span>
+            <span className="font-semibold tabular-nums">{counts[k]}</span>
+          </li>
+        ))}
+      </ul>
+      <details className="group text-sm">
+        <summary className="cursor-pointer text-xs font-medium text-subtle transition-colors duration-150 hover:text-foreground">
+          What do these mean?
+        </summary>
+        <dl className="mt-2 grid gap-2 sm:grid-cols-2">
           {shown.map((k) => (
             <div key={k}>
               <dt className="font-medium">{READINESS_VISUAL[k].label}</dt>
@@ -46,141 +66,211 @@ function ReadinessTiles({ counts, total, untestedWithListing }: { counts: Record
           ))}
         </dl>
       </details>
-      {untestedWithListing > 0 && (
-        <p className="text-xs text-subtle">
-          {untestedWithListing} of the untested services appear in an unverified listing; listings don&apos;t count toward
-          readiness.
-        </p>
-      )}
     </section>
   );
 }
 
-function Legend() {
+const shortTxid = (txid: string) => `${txid.slice(0, 10)}…${txid.slice(-8)}`;
+
+async function LatestProof({ network }: { network: NetworkId }) {
+  const proof = await getLatestProof(network);
+  const base = basePath(network);
+  const pool = proof?.test.receivedPool;
+  const txid = proof?.test.receivedTxid;
+  if (!proof || !pool || !txid) {
+    return (
+      <aside className="rounded-2xl border border-dashed border-line-strong bg-surface p-6 text-sm text-muted">
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-subtle">Latest proof</p>
+        <p className="mt-4">No verified payment on this board yet. The first one will appear here with its txid.</p>
+      </aside>
+    );
+  }
+  const { test, service } = proof;
+  const v = OUTCOME_VISUAL[pool];
+  const when = test.receivedAt ?? test.updatedAt;
+  const row = "flex items-baseline justify-between gap-4 py-2";
+  const label = "font-mono text-[11px] uppercase tracking-[0.14em] text-subtle";
   return (
-    <section aria-labelledby="legend-title" className="rounded-xl border border-line bg-surface p-4 text-sm shadow-card">
-      <h2 id="legend-title" className="text-sm font-semibold">
-        How to read a cell
-      </h2>
-      <div className="mt-3 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-subtle">Evidence tier</p>
-          <ul className="space-y-2">
-            <li className="flex flex-wrap items-center gap-2">
-              <TierChip tier="verified" />
-              <span className="text-muted">the scanner saw the payment land</span>
-            </li>
-            <li className="flex flex-wrap items-center gap-2">
-              <TierChip tier="community" />
-              <span className="text-muted">observed, not provable on-chain</span>
-            </li>
-            <li className="flex flex-wrap items-center gap-2">
-              <TierChip tier="listing" />
-              <span className="text-muted">someone else&apos;s claim, untested</span>
-            </li>
-          </ul>
-        </div>
-        <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-subtle">Result</p>
-          <ul className="space-y-2">
-            <li>
-              <StatusLabel icon="shield-check" tone="ok" label="Ironwood" /> <span className="text-muted">— landed shielded, current pool</span>
-            </li>
-            <li>
-              <StatusLabel icon="eye" tone="warn" label="Transparent" /> <span className="text-muted">— landed in public view</span>
-            </li>
-            <li>
-              <StatusLabel icon="x-circle" tone="bad" label="Address rejected" /> <span className="text-muted">— the form refused it</span>
-            </li>
-          </ul>
-        </div>
-        <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-subtle">Claims and age</p>
-          <p className="text-muted">
-            <StatusLabel icon="file-text" tone="listed" label="Listed: …" /> always names whose list it comes from.
-          </p>
-          <p className="flex flex-wrap items-center gap-2 text-muted">
-            <StaleChip /> older than {STALE_AFTER_DAYS} days, shown until retested.
-          </p>
-        </div>
+    <aside aria-labelledby="latest-proof" className="rounded-2xl border border-line bg-surface p-6 shadow-card [box-shadow:var(--shadow-card),var(--shadow-glow)]">
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 id="latest-proof" className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">
+          Latest proof
+        </h2>
+        <span className="text-xs text-subtle">
+          <RelativeTime iso={when.toISOString()} fallback={shortDate(when)} />
+        </span>
       </div>
+      <dl className="mt-4 divide-y divide-dashed divide-line-strong/60 border-y border-dashed border-line-strong/60 text-sm">
+        <div className={row}>
+          <dt className={label}>Service</dt>
+          <dd>
+            <Link href={`${base}/services/${service.slug}`} className="font-medium underline-offset-4 hover:underline">
+              {service.name}
+            </Link>
+          </dd>
+        </div>
+        <div className={row}>
+          <dt className={label}>Sent to</dt>
+          <dd>{ADDRESS_TYPE_LABEL[test.addressType]}</dd>
+        </div>
+        <div className={row}>
+          <dt className={label}>Result</dt>
+          <dd>
+            <StatusLabel icon={v.icon} tone={v.tone} label={v.label} />
+          </dd>
+        </div>
+        <div className={row}>
+          <dt className={label}>Txid</dt>
+          <dd className="flex items-center gap-2">
+            <span className="font-mono text-xs tabular-nums" title={txid}>
+              {shortTxid(txid)}
+            </span>
+            <CopyButton value={txid} label="txid" />
+          </dd>
+        </div>
+        <div className={row}>
+          <dt className={label}>Block</dt>
+          <dd className="font-mono text-xs tabular-nums">{test.receivedHeight?.toLocaleString("en-US")}</dd>
+        </div>
+      </dl>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="inline-flex items-center gap-1 text-ok">
+          <BadgeCheck aria-hidden="true" className="size-4" />
+          {test.explorerName ? `Confirmed on ${test.explorerName}` : "Verified on-chain"}
+        </span>
+        <Link
+          href={`${base}/services/${service.slug}`}
+          className="inline-flex items-center gap-1 font-medium text-accent-ink underline-offset-4 hover:underline"
+        >
+          View evidence <ArrowRight aria-hidden="true" className="size-3.5" />
+        </Link>
+      </div>
+    </aside>
+  );
+}
+
+function Legend() {
+  const item = "inline-flex items-center gap-2";
+  return (
+    <section aria-labelledby="legend-title" className="space-y-2 border-t border-line pt-6 text-xs text-muted">
+      <h2 id="legend-title" className="font-semibold text-foreground">
+        Reading the icons
+      </h2>
+      <ul className="flex flex-wrap gap-x-6 gap-y-2">
+        <li className={item}>
+          <StatusLabel icon="shield-check" tone="ok" label="Ironwood" className="font-normal" />
+        </li>
+        <li className={item}>
+          <StatusLabel icon="eye" tone="warn" label="Transparent" className="font-normal" /> landed in public view
+        </li>
+        <li className={item}>
+          <StatusLabel icon="x-circle" tone="bad" label="Address rejected" className="font-normal" />
+        </li>
+        <li className={item}>
+          <StatusLabel icon="file-text" tone="listed" label="Listed: …" className="font-normal" /> someone else&apos;s claim
+        </li>
+      </ul>
+      <ul className="flex flex-wrap gap-x-6 gap-y-2">
+        <li className={item}>
+          <BadgeCheck aria-hidden="true" className="size-4 text-ok" /> on-chain verified
+        </li>
+        <li className={item}>
+          <Users aria-hidden="true" className="size-4 text-info" /> community reported
+        </li>
+        <li className={item}>
+          <FileText aria-hidden="true" className="size-4 text-listed" /> unverified listing
+        </li>
+        <li className={item}>
+          <Clock aria-hidden="true" className="size-4 text-stale" /> stale: older than {STALE_AFTER_DAYS} days
+        </li>
+        <li className="text-subtle">Hover or focus a tier icon for its date and review state.</li>
+      </ul>
     </section>
   );
 }
 
 export async function BoardView({ network }: { network: NetworkId }) {
-  const { rows, counts, total, untestedWithListing } = await getBoard(network);
+  const { rows, counts, total } = await getBoard(network);
   const base = basePath(network);
   const testsOpen = canCreateTests(network);
   const now = new Date();
-  const view: BoardRowView[] = rows.map(({ service, cells, readiness }) => {
+
+  const tested: TestedRowView[] = [];
+  const untested: UntestedRowView[] = [];
+  for (const { service, cells, readiness } of rows) {
     const c = {
       ironwood_ua: cellView(cells.ironwood_ua, now),
       full_ua: cellView(cells.full_ua, now),
       transparent: cellView(cells.transparent, now),
     };
-    return {
-      slug: service.slug,
-      name: service.name,
-      kind: service.kind,
-      href: `${base}/services/${service.slug}`,
-      readiness,
-      strongestTier: strongestTier(Object.values(c)),
-      cells: c,
-    };
-  });
+    const common = { id: service.id, slug: service.slug, name: service.name, kind: service.kind, href: `${base}/services/${service.slug}` };
+    const strongest = strongestTier(Object.values(c));
+    if (strongest === "verified" || strongest === "community") {
+      tested.push({ ...common, readiness, cells: c });
+    } else {
+      // One phrase per service: the UA claim if listed, else the t-address claim.
+      const claim = [cells.ironwood_ua, cells.full_ua, cells.transparent].find((x) => x.tier === "listing");
+      untested.push({
+        ...common,
+        testHref: `${base}/test?service=${service.id}`,
+        listing:
+          claim && claim.tier === "listing"
+            ? { label: LISTED_CLAIM[claim.report.outcome].label, source: c.ironwood_ua.source ?? c.transparent.source ?? "a listing", readOn: shortDate(claim.date, now) }
+            : null,
+      });
+    }
+  }
+
+  const unit = NETWORKS[network].unit;
   const exportHref = `/api/results.json${network === "testnet" ? "?network=testnet" : ""}`;
-  const unit = network === "mainnet" ? "ZEC" : "TAZ";
-
-  const heading = (
-    <div className="flex flex-wrap items-end justify-between gap-4">
-      <div className="max-w-3xl">
-        <p className="text-xs font-medium uppercase tracking-[0.14em] text-accent-ink">
-          {network === "mainnet" ? "Zcash · Ironwood readiness" : "Testnet · rehearsal board"}
-        </p>
-        <h1 className="mt-2 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">Can I send shielded {unit} to…</h1>
-        <p className="mt-3 text-pretty text-muted">
-          Each result comes with its proof: a txid and a published viewing key you can check yourself. Claims we haven&apos;t
-          tested are labelled as someone else&apos;s.
-        </p>
-      </div>
-      {testsOpen && (
-        <Link
-          href={`${base}/test`}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-btn px-3.5 py-2 text-sm font-medium text-btn-fg shadow-card hover:opacity-90"
-        >
-          Run a test <ArrowRight aria-hidden="true" className="size-4" />
-        </Link>
-      )}
-    </div>
-  );
-
-  const between = (
-    <>
-      {network === "mainnet" && <ReadinessTiles counts={counts} total={total} untestedWithListing={untestedWithListing} />}
-      {network === "mainnet" && !testsOpen && (
-        <p className="rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm text-muted">
-          Mainnet testing hasn&apos;t opened yet.{" "}
-          <Link href="/testnet" className="font-medium text-foreground underline underline-offset-2">
-            Try the flow on testnet
-          </Link>
-          .
-        </p>
-      )}
-    </>
-  );
 
   return (
-    <div className="space-y-8">
-      <BoardExplorer rows={view} heading={heading} between={between} placeholder="Search Binance, Zingo, Trust Wallet…" />
-      <Legend />
-      <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
-        <Braces aria-hidden="true" className="size-4 text-subtle" />
-        Reuse this data:
-        <a href={exportHref} className="hash text-foreground underline underline-offset-2">
-          {exportHref}
-        </a>
-      </p>
-    </div>
+    <BoardSearchProvider>
+      <div className="space-y-12">
+        <section className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
+          <div className="space-y-6">
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">
+                {network === "mainnet" ? "Zcash · Ironwood readiness" : "Testnet · rehearsal board"}
+              </p>
+              <h1 className="mt-2 text-balance text-4xl font-semibold tracking-tight sm:text-5xl">Can I send shielded {unit} to…</h1>
+              <p className="mt-4 max-w-xl text-pretty text-muted">
+                Every result carries its proof: a txid and a published viewing key you can check yourself. Claims we haven&apos;t
+                tested are labelled as someone else&apos;s.
+              </p>
+            </div>
+            <BoardSearch placeholder="Search Binance, Zingo, Trust Wallet…" />
+            {testsOpen && (
+              <Link
+                href={`${base}/test`}
+                className="inline-flex items-center gap-1 text-sm font-medium text-accent-ink underline-offset-4 hover:underline"
+              >
+                Run a test <ArrowRight aria-hidden="true" className="size-4" />
+              </Link>
+            )}
+          </div>
+          <LatestProof network={network} />
+        </section>
+
+        <ReadinessBar counts={counts} total={total} tested={tested.length} />
+
+        <TestedMatrix rows={tested} />
+
+        <UntestedList
+          rows={untested}
+          note={network === "mainnet" && !testsOpen ? "Mainnet tests aren't open yet; the flow can be tried on testnet" : undefined}
+        />
+
+        <Legend />
+
+        <p className="flex flex-wrap items-center gap-2 text-xs text-subtle">
+          <Braces aria-hidden="true" className="size-4" />
+          Reuse this data:
+          <a href={exportHref} className="font-mono text-foreground underline underline-offset-4">
+            {exportHref}
+          </a>
+        </p>
+      </div>
+    </BoardSearchProvider>
   );
 }

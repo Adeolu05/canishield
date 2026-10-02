@@ -285,3 +285,18 @@ export type Pool = (typeof pool.enumValues)[number];
 export type TestStatus = (typeof testStatus.enumValues)[number];
 export type ReportOutcome = (typeof reportOutcome.enumValues)[number];
 export type ReportTier = (typeof reportTier.enumValues)[number];
+
+// One row per network, upserted by the worker each cycle it reaches an
+// endpoint. Read-only for the web app's "Scanner online" pill; not evidence.
+export const workerHeartbeats = pgTable(
+  "worker_heartbeats",
+  {
+    network: text("network").primaryKey(),
+    tip: integer("tip").notNull(),
+    endpoint: text("endpoint").notNull(),
+    seenAt: timestamp("seen_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [check("worker_heartbeats_network_valid", sql`${t.network} IN ${NETWORK_LIST}`)],
+);
+
+export type WorkerHeartbeat = typeof workerHeartbeats.$inferSelect;

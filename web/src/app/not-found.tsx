@@ -12,7 +12,7 @@ export default function NotFound() {
         That service or test doesn&apos;t exist here. Mainnet and testnet are separate: a testnet test lives under{" "}
         <span className="hash">/testnet</span>.
       </p>
-      <Link href="/" className="inline-flex items-center gap-1 rounded-lg border border-line-strong px-3 py-1.5 text-sm hover:bg-surface-2">
+      <Link href="/" className="inline-flex items-center gap-1 rounded-lg border border-line-strong px-4 py-2 text-sm transition-colors duration-150 hover:bg-surface-2">
         <ArrowLeft aria-hidden="true" className="size-4" /> Back to the board
       </Link>
     </div>

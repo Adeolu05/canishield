@@ -13,7 +13,7 @@ import { getServiceDetail } from "@/lib/queries";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid gap-1 py-2.5 sm:grid-cols-[9rem_1fr] sm:gap-4">
+    <div className="grid gap-1 py-2 sm:grid-cols-[9rem_1fr] sm:gap-4">
       <dt className="text-xs font-medium text-subtle">{label}</dt>
       <dd className="min-w-0 text-sm">{children}</dd>
     </div>
@@ -41,11 +41,11 @@ function EvidenceCard({ t, network, now }: { t: Test; network: NetworkId; now: D
   const walletKind = network === "testnet" ? "a testnet watch-only wallet" : "a watch-only wallet";
   return (
     <article className="overflow-hidden rounded-xl border border-line bg-surface shadow-card">
-      <header className="flex flex-wrap items-center gap-2 border-b border-line bg-surface-2 px-4 py-3">
+      <header className="flex flex-wrap items-center gap-2 border-b border-line bg-surface-2 px-4 py-4">
         <h3 className="text-sm font-semibold">{ADDRESS_TYPE_LABEL[t.addressType]}</h3>
         {t.receivedPool && <OutcomeBadge outcome={t.receivedPool} />}
         <TierChip tier="verified" />
-        <span className="ml-auto flex items-center gap-1.5 text-xs text-subtle">
+        <span className="ml-auto flex items-center gap-2 text-xs text-subtle">
           Verified <time dateTime={isoDay(date)}>{shortDate(date, now)}</time>
           {isStale(date, now) && <StaleChip />}
         </span>
@@ -66,7 +66,7 @@ function EvidenceCard({ t, network, now }: { t: Test; network: NetworkId; now: D
         )}
         <Field label="Txid">
           {t.receivedTxid ? (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <div className="flex items-start gap-2">
                 <span className="hash min-w-0 flex-1 rounded-md bg-surface-2 px-2 py-1">{t.receivedTxid}</span>
                 <CopyButton value={t.receivedTxid} label="txid" />
@@ -97,14 +97,14 @@ function EvidenceCard({ t, network, now }: { t: Test; network: NetworkId; now: D
         )}
         <Field label="Viewing key">
           {t.ufvk ? (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <div className="flex items-start gap-2">
                 <span className="hash min-w-0 flex-1 truncate rounded-md bg-surface-2 px-2 py-1">{t.ufvk}</span>
                 <CopyButton value={t.ufvk} label="viewing key" />
               </div>
               <details>
                 <summary className="cursor-pointer text-xs font-medium text-accent-ink">Show the full key</summary>
-                <p className="hash mt-1.5 rounded-md bg-surface-2 px-2 py-1">{t.ufvk}</p>
+                <p className="hash mt-2 rounded-md bg-surface-2 px-2 py-1">{t.ufvk}</p>
               </details>
               <p className="text-xs text-subtle">Published on purpose: this throwaway wallet holds nothing else.</p>
             </div>
@@ -114,11 +114,11 @@ function EvidenceCard({ t, network, now }: { t: Test; network: NetworkId; now: D
         </Field>
         {t.testerNote && <Field label="Tester note">{t.testerNote}</Field>}
       </dl>
-      <section aria-label="Re-check it yourself" className="border-t border-line bg-surface-2/60 px-4 py-3">
+      <section aria-label="Re-check it yourself" className="border-t border-line bg-surface-2/60 px-4 py-4">
         <h4 className="text-xs font-semibold uppercase tracking-wide text-subtle">Re-check it yourself</h4>
-        <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-muted">
+        <ol className="mt-2 list-decimal space-y-1 pl-6 text-sm text-muted">
           {t.ufvk && <li>Import the viewing key into {walletKind} (e.g. Zingo) and look for this payment.</li>}
-          {t.receivedTxid && <li>Open the txid in a block explorer and check it is in block {t.receivedHeight}.</li>}
+          {t.receivedTxid && <li>Open the txid in a block explorer and check it is in block <span className="tabular-nums">{t.receivedHeight?.toLocaleString("en-US")}</span>.</li>}
           <li>Only the viewing key shows which address was paid; the explorer confirms the transaction and its block.</li>
         </ol>
       </section>
@@ -145,7 +145,7 @@ function ReportCard({ report, base, now }: { report: Report; base: string; now: 
             {report.status === "unreviewed" && <PendingChip />}
           </>
         )}
-        <span className="ml-auto flex items-center gap-1.5 text-xs text-subtle">
+        <span className="ml-auto flex items-center gap-2 text-xs text-subtle">
           {listing ? "Read" : "Reported"} <time dateTime={isoDay(date)}>{shortDate(date, now)}</time>
           {isStale(date, now) && <StaleChip />}
         </span>
@@ -218,14 +218,14 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
           {testsOpen && (
             <Link
               href={`${base}/test?service=${service.id}`}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-btn px-3.5 py-2 text-sm font-medium text-btn-fg shadow-card hover:opacity-90"
+              className="inline-flex items-center gap-2 rounded-lg bg-btn px-4 py-2 text-sm font-medium text-btn-fg shadow-card transition-opacity duration-150 hover:opacity-90"
             >
               Run a test <ArrowRight aria-hidden="true" className="size-4" />
             </Link>
           )}
         </div>
 
-        <div role="status" className="flex items-start gap-3 rounded-xl border border-line bg-surface p-4 shadow-card">
+        <div role="status" className="flex items-start gap-4 rounded-xl border border-line bg-surface p-4 shadow-card">
           <span className={`grid size-9 shrink-0 place-items-center rounded-lg ${TONE_SOFT[verdict.tone]}`}>
             <StatusIcon icon={verdict.icon} className="size-5" />
           </span>
@@ -250,7 +250,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
                 : "Verified results appear here once a test payment lands."}
             </p>
             {testsOpen && (
-              <Link href={`${base}/test?service=${service.id}`} className="mt-4 inline-flex rounded-lg border border-line-strong px-3 py-1.5 text-sm hover:bg-surface-2">
+              <Link href={`${base}/test?service=${service.id}`} className="mt-4 inline-flex rounded-lg border border-line-strong px-4 py-2 text-sm transition-colors duration-150 hover:bg-surface-2">
                 Start a test
               </Link>
             )}
@@ -271,7 +271,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
             No community reports {nothing ? "or tests " : ""}yet.
           </p>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {communityReports.map((r) => (
               <ReportCard key={r.id} report={r} base={base} now={now} />
             ))}
@@ -283,7 +283,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
       {listings.length > 0 && (
         <section className="space-y-4">
           <SectionTitle title="Unverified listings" hint="someone else's claims; never tested by ZecProof" />
-          <div className="space-y-3">
+          <div className="space-y-4">
             {listings.map((r) => (
               <ReportCard key={r.id} report={r} base={base} now={now} />
             ))}

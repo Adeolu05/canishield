@@ -26,7 +26,7 @@ export async function RunTestView({ network, preselected }: { network: NetworkId
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
-      <div className="space-y-5">
+      <div className="space-y-6">
         <Stepper current={0} />
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Run a test</h1>
@@ -37,7 +37,7 @@ export async function RunTestView({ network, preselected }: { network: NetworkId
         </div>
       </div>
 
-      <form action={createTest} className="space-y-6 rounded-xl border border-line bg-surface p-5 shadow-card sm:p-6">
+      <form action={createTest} className="space-y-6 rounded-xl border border-line bg-surface p-6 shadow-card">
         <input type="hidden" name="network" value={network} />
         <div className="space-y-2">
           <label htmlFor="serviceId" className="text-sm font-medium">
@@ -48,7 +48,7 @@ export async function RunTestView({ network, preselected }: { network: NetworkId
             name="serviceId"
             required
             defaultValue={preselected ?? ""}
-            className="h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm"
+            className="h-11 w-full rounded-lg border border-line-strong bg-surface px-4 text-sm"
           >
             <option value="" disabled>
               Choose a service…
@@ -68,7 +68,7 @@ export async function RunTestView({ network, preselected }: { network: NetworkId
             {ADDRESS_TYPES.map((t, i) => (
               <label
                 key={t}
-                className="flex cursor-pointer flex-col gap-1 rounded-lg border border-line p-3 has-[:checked]:border-accent-ink has-[:checked]:bg-surface-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent-ink"
+                className="flex cursor-pointer flex-col gap-1 rounded-lg border border-line p-4 has-[:checked]:border-accent-ink has-[:checked]:bg-surface-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent-ink"
               >
                 <span className="flex items-center gap-2 text-sm font-medium">
                   <input type="radio" name="addressType" value={t} defaultChecked={i === 0} className="accent-[var(--accent-ink)]" />
@@ -83,7 +83,7 @@ export async function RunTestView({ network, preselected }: { network: NetworkId
 
         <button
           type="submit"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-btn px-4 py-2.5 text-sm font-medium text-btn-fg shadow-card hover:opacity-90"
+          className="inline-flex items-center gap-2 rounded-lg bg-btn px-4 py-2 text-sm font-medium text-btn-fg shadow-card transition-opacity duration-150 hover:opacity-90"
         >
           Generate test address <ArrowRight aria-hidden="true" className="size-4" />
         </button>

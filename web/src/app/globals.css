@@ -38,10 +38,13 @@
   --btn-bg: #18181b;
   --btn-fg: #ffffff;
   --shadow: 0 1px 2px rgb(24 24 27 / 0.04), 0 1px 1px rgb(24 24 27 / 0.03);
+  --glow: none; /* the only "gradient": a faint gold glow behind the proof card, dark mode only */
 }
 
+/* Dark tokens: used when the OS prefers dark (unless the user picked light),
+   or when the user picked dark. Keep the two copies identical. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --bg: #0b0b0c;
     --surface: #131315;
@@ -74,7 +77,48 @@
     --btn-bg: #f4f4f5;
     --btn-fg: #18181b;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    --glow: 0 0 80px -12px rgb(244 183 40 / 0.28);
   }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b0b0c;
+  --surface: #131315;
+  --surface-2: #1b1b1e;
+  --line: #27272a;
+  --line-strong: #6e6e77;
+  --fg: #f4f4f5;
+  --muted: #a1a1aa;
+  --subtle: #9a9aa3;
+  --accent: #f4b728;
+  --accent-ink: #f4b728;
+
+  --ok-fg: #86efac;
+  --ok-bg: #0f2a1a;
+  --ok-solid: #4ade80;
+  --ok-solid-fg: #052e16;
+  --info-fg: #a5b4fc;
+  --info-bg: #1b1d3a;
+  --shield-fg: #93c5fd;
+  --shield-bg: #13223f;
+  --warn-fg: #fdba74;
+  --warn-bg: #33200f;
+  --bad-fg: #fda4af;
+  --bad-bg: #3a1219;
+  --stale-fg: #fcd34d;
+  --stale-bg: #33280b;
+  --listed-fg: #a1a1aa;
+  --listed-bg: #1b1b1e;
+
+  --btn-bg: #f4f4f5;
+  --btn-fg: #18181b;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  --glow: 0 0 80px -12px rgb(244 183 40 / 0.28);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 @theme inline {
@@ -109,6 +153,7 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   --shadow-card: var(--shadow);
+  --shadow-glow: var(--glow);
 }
 
 html {

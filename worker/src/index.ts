@@ -6,7 +6,7 @@
 //   expire unpaid tests
 import { setTimeout as sleep } from "node:timers/promises";
 import { and, asc, eq, lt, sql } from "drizzle-orm";
-import { createDb, keyPool, tests, type Db } from "@zecproof/db";
+import { createDb, keyPool, tests, workerHeartbeats, type Db } from "@zecproof/db";
 import { ConfigError, POLL_INTERVAL_MS, loadConfig, requireTestMnemonic, type WorkerConfig } from "./config";
 import { WrongChainError, closeEndpoints, openEndpoints, pickEndpoint, type HealthyEndpoint } from "./endpoints";
 import { confirmOnExplorer } from "./explorer";
@@ -63,6 +63,16 @@ async function assignPending(db: Db, cfg: WorkerConfig, endpoint: HealthyEndpoin
       console.log(`assigned  ${test.id}  ${test.addressType}  ${label}  ${keys.receiveAddress}`);
     }
   });
+}
+
+/** Liveness for the web app's scanner pill. Never allowed to stop a cycle. */
+async function heartbeat(db: Db, cfg: WorkerConfig, endpoint: HealthyEndpoint) {
+  const row = { network: cfg.network, tip: endpoint.tip, endpoint: endpoint.url, seenAt: new Date() };
+  try {
+    await db.insert(workerHeartbeats).values(row).onConflictDoUpdate({ target: workerHeartbeats.network, set: row });
+  } catch (err) {
+    console.warn(`heartbeat ${err instanceof Error ? err.message : err}`);
+  }
 }
 
 /** Pending tests that never got an address (e.g. the worker was down). */
@@ -194,6 +204,7 @@ async function main() {
     if (endpoint) {
       if (endpoint.url !== lastUrl) console.log(`using     ${endpoint.url} (tip ${endpoint.tip})`);
       lastUrl = endpoint.url;
+      await heartbeat(db, cfg, endpoint);
       await assignPending(db, cfg, endpoint, mnemonic);
       await scanAwaiting(db, cfg, endpoint);
       await confirmSeen(db, cfg, endpoint);

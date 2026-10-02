@@ -21,10 +21,10 @@ const STEP: Record<string, number> = { pending: 1, awaiting_payment: 2, confirmi
 
 function Panel({ tone, icon, title, children }: { tone: "ok" | "bad" | "warn" | "neutral"; icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-line bg-surface p-5 shadow-card sm:p-6">
-      <div className="flex items-start gap-3">
+    <section className="rounded-xl border border-line bg-surface p-6 shadow-card">
+      <div className="flex items-start gap-4">
         <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${TONE_SOFT[tone]}`}>{icon}</span>
-        <div className="min-w-0 flex-1 space-y-3">
+        <div className="min-w-0 flex-1 space-y-4">
           <h2 className="text-lg font-semibold leading-snug">{title}</h2>
           {children}
         </div>
@@ -45,9 +45,9 @@ export async function TestStatusView({ network, id }: { network: NetworkId; id: 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       {live && <AutoRefresh intervalMs={POLL_SECONDS * 1000} />}
-      <div className="space-y-5">
+      <div className="space-y-6">
         <Stepper current={STEP[test.status] ?? 1} done={test.status === "received"} failed={ended} />
-        <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm text-muted">
               {service.name} · {ADDRESS_TYPE_LABEL[test.addressType]}
@@ -68,26 +68,26 @@ export async function TestStatusView({ network, id }: { network: NetworkId; id: 
 
       {test.status === "awaiting_payment" && test.receiveAddress && (
         <>
-          <section className="rounded-xl border border-line bg-surface p-5 shadow-card sm:p-6">
+          <section className="rounded-xl border border-line bg-surface p-6 shadow-card">
             <h2 className="text-sm font-semibold">
               Withdraw from {service.name} to this address
             </h2>
-            <div className="mt-4 flex flex-col gap-5 sm:flex-row sm:items-start">
+            <div className="mt-4 flex flex-col gap-6 sm:flex-row sm:items-start">
               <div className="shrink-0 self-center rounded-xl border border-line bg-white p-2 sm:self-start">
                 <QrCode value={zip321Uri(test.receiveAddress)} label={`QR code for the test address, ${ADDRESS_TYPE_LABEL[test.addressType]}`} />
               </div>
-              <div className="min-w-0 flex-1 space-y-3">
-                <p className="hash rounded-lg bg-surface-2 p-3 text-sm">{test.receiveAddress}</p>
+              <div className="min-w-0 flex-1 space-y-4">
+                <p className="hash rounded-lg bg-surface-2 p-4 text-sm">{test.receiveAddress}</p>
                 <div className="flex flex-wrap items-center gap-2">
                   <CopyButton value={test.receiveAddress} label="address" />
                   <span className="text-xs text-subtle">QR encodes a ZIP-321 payment URI, no amount.</span>
                 </div>
-                <dl className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-lg border border-line p-3">
+                <dl className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="rounded-lg border border-line p-4">
                     <dt className="text-xs text-subtle">Expires in</dt>
                     <dd className="mt-0.5 font-semibold">{test.expiresAt ? <Countdown until={test.expiresAt.toISOString()} /> : "—"}</dd>
                   </div>
-                  <div className="rounded-lg border border-line p-3">
+                  <div className="rounded-lg border border-line p-4">
                     <dt className="text-xs text-subtle">Watching from block</dt>
                     <dd className="hash mt-0.5 font-semibold">{test.birthdayHeight?.toLocaleString("en-US")}</dd>
                   </div>
@@ -118,7 +118,7 @@ export async function TestStatusView({ network, id }: { network: NetworkId; id: 
 
           <details className="rounded-xl border border-line bg-surface p-4 shadow-card">
             <summary className="cursor-pointer text-sm font-semibold">Did the service refuse this address?</summary>
-            <form action={markAddressRejected.bind(null, test.id)} className="mt-3 space-y-3">
+            <form action={markAddressRejected.bind(null, test.id)} className="mt-4 space-y-4">
               <p className="text-xs text-subtle">
                 This can&apos;t be proven on-chain, so it is filed as a community report and reviewed. Reports are published under CC BY
                 4.0.
@@ -127,15 +127,15 @@ export async function TestStatusView({ network, id }: { network: NetworkId; id: 
                 <label htmlFor="note" className="text-xs font-medium">
                   Error message (optional)
                 </label>
-                <input id="note" name="note" placeholder="e.g. “Enter a valid address”" className="h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm" />
+                <input id="note" name="note" placeholder="e.g. “Enter a valid address”" className="h-10 w-full rounded-lg border border-line-strong bg-surface px-4 text-sm" />
               </div>
               <div className="space-y-1">
                 <label htmlFor="evidenceUrl" className="text-xs font-medium">
                   Screenshot link (optional)
                 </label>
-                <input id="evidenceUrl" name="evidenceUrl" type="url" placeholder="https://…" className="h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm" />
+                <input id="evidenceUrl" name="evidenceUrl" type="url" placeholder="https://…" className="h-10 w-full rounded-lg border border-line-strong bg-surface px-4 text-sm" />
               </div>
-              <button type="submit" className="rounded-lg border border-line-strong px-3 py-1.5 text-sm font-medium hover:bg-surface-2">
+              <button type="submit" className="rounded-lg border border-line-strong px-4 py-2 text-sm font-medium transition-colors duration-150 hover:bg-surface-2">
                 Mark address as rejected
               </button>
             </form>

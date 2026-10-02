@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
+import { InlineScript } from "@/components/inline-script";
+import { THEME_INIT_SCRIPT } from "@/components/theme-toggle";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,11 +35,15 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        {/* Applies a saved light/dark choice before first paint (no flash). */}
+        <InlineScript html={THEME_INIT_SCRIPT} />
+      </head>
       <body className="flex min-h-full flex-col">
         <a
           href="#main"
-          className="sr-only z-50 rounded-md bg-btn px-3 py-2 text-sm text-btn-fg focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
+          className="sr-only z-50 rounded-md bg-btn px-4 py-2 text-sm text-btn-fg focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
         >
           Skip to content
         </a>
@@ -46,7 +52,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
         <footer className="border-t border-line">
-          <div className="mx-auto max-w-6xl space-y-1.5 px-4 py-6 text-xs text-subtle sm:px-6">
+          <div className="mx-auto max-w-6xl space-y-2 px-4 py-6 text-xs text-subtle sm:px-6">
             <p>
               ZecProof results (verified tests and community reports) are licensed{" "}
               <a href="https://creativecommons.org/licenses/by/4.0/" className="underline underline-offset-2 hover:text-foreground" rel="license noreferrer" target="_blank">

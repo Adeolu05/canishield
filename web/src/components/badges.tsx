@@ -5,7 +5,7 @@ import { OUTCOME_VISUAL } from "@/lib/present";
 import type { Tier } from "@/lib/labels";
 import { StaleChip, StatusIcon, TONE_SOFT, TierChip } from "./status";
 
-const pill = "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium";
+const pill = "inline-flex items-center gap-2 rounded-md px-2 py-0.5 text-xs font-medium";
 
 /** A pool, or a form outcome. Only for verified tests and community reports. */
 export function OutcomeBadge({ outcome }: { outcome: ReportOutcome }) {
@@ -39,7 +39,7 @@ export function ListedClaimBadge({ outcome }: { outcome: ReportOutcome }) {
 /** Tier chip plus "per <source>" for a listing. */
 export function ListingSource({ sourceUrl }: { sourceUrl: string | null }) {
   return (
-    <span className="inline-flex flex-wrap items-center gap-1.5">
+    <span className="inline-flex flex-wrap items-center gap-2">
       <TierChip tier="listing" />
       <span className="text-xs text-subtle">per {sourceName(sourceUrl)}</span>
     </span>
