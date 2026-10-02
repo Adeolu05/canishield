@@ -9,7 +9,7 @@ export async function serviceMetadata(network: NetworkId, slug: string): Promise
   const detail = await getServiceDetail(network, slug);
   if (!detail) return { title: "Not found" };
   const visible = [...detail.communityReports, ...detail.listings];
-  const v = verdictFor(readinessOf(detail.tests, visible), detail.tests, visible);
+  const v = verdictFor(readinessOf(detail.tests, visible), detail.tests, visible, new Date(), detail.research);
   const title = network === "testnet" ? `${detail.service.name} (testnet)` : detail.service.name;
   return { title, description: `${v.title}: ${v.detail}. On-chain evidence with txids and viewing keys.` };
 }

@@ -8,6 +8,7 @@ import type { Report, Test } from "@zecproof/db";
 import { LISTED_CLAIM, READINESS, STALE_AFTER_DAYS, isStale, reportDate, sourceName, testDate, type Cell } from "@/lib/evidence";
 import { NETWORKS, basePath } from "@/lib/network";
 import { getResults } from "@/lib/queries";
+import { RESEARCH_CLAIM, RESEARCH_SOURCES, researchJson } from "@/lib/research";
 
 const HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -32,6 +33,11 @@ const LISTINGS_LICENSE = {
   source: "https://zechub.wiki/using-zcash/custodial-exchanges",
   attribution: "Adapted from the ZecHub Wiki (ZecHub contributors), CC BY-SA 4.0.",
 };
+
+/** Community research: contributed claims, credited to their researcher. Not covered by either license above. */
+const RESEARCH_CREDIT = Object.fromEntries(
+  Object.entries(RESEARCH_SOURCES).map(([key, s]) => [key, { name: s.name, credit: s.credit, url: s.url, secondaryUrl: s.secondary?.url ?? null }]),
+);
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
@@ -110,7 +116,7 @@ export async function GET(request: NextRequest) {
   const network = param;
   const origin = request.nextUrl.origin;
   const now = new Date();
-  const { services, verified, visible, summary } = await getResults(network);
+  const { services, verified, visible, research, summary } = await getResults(network);
   const slugOf = new Map(services.map((s) => [s.id, s.slug]));
 
   const body = {
@@ -122,6 +128,8 @@ export async function GET(request: NextRequest) {
       verified: "The scanner saw the payment land; txid and the test address's viewing key are published.",
       community: "Observed but not provable on-chain (e.g. a form rejected the address). reviewStatus shows admin review.",
       listing: "Imported from an existing list, never tested. Carries listedClaim (not outcome); sourceUrl and sourceReadAt say where and when it was read.",
+      research:
+        "Community research: a product-level claim read from the product's official page by a contributor. Never tested, never in cells or readiness. Carries researchClaim (not outcome or listedClaim) and officialUrl; see the research field.",
     },
     readiness: {
       total: summary.total,
@@ -140,7 +148,10 @@ export async function GET(request: NextRequest) {
     tests: verified.map((t) => testJson(t, slugOf.get(t.serviceId)!, origin, network)),
     communityReports: visible.filter((r) => r.tier === "community").map((r) => communityJson(r, slugOf.get(r.serviceId)!)),
     listings: visible.filter((r) => r.tier === "listing").map((r) => listingJson(r, slugOf.get(r.serviceId)!, now)),
+    research: research.map((r) => researchJson(r, slugOf.get(r.serviceId)!, now)),
     listedClaimCodes: Object.fromEntries(Object.values(LISTED_CLAIM).map((c) => [c.code, c.label])),
+    researchClaimCodes: Object.fromEntries(Object.entries(RESEARCH_CLAIM).map(([code, c]) => [code, c.label])),
+    researchCredit: RESEARCH_CREDIT,
     license: { ...RESULTS_LICENSE, attribution: `ZecProof (${origin})` },
     listingsLicense: LISTINGS_LICENSE,
   };

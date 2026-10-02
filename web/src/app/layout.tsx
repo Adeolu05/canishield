@@ -71,6 +71,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </a>
               . ZecProof&apos;s code is MIT.
             </p>
+            <p>
+              Wallet and exchange claims marked &ldquo;per community research (orb)&rdquo;:{" "}
+              <a href="https://x.com/ArtofOrb" className="underline underline-offset-2 hover:text-foreground" rel="noreferrer" target="_blank">
+                Community research by orb
+              </a>{" "}
+              ·{" "}
+              <a href="https://zec-os.com" className="underline underline-offset-2 hover:text-foreground" rel="noreferrer" target="_blank">
+                zec-os.com
+              </a>
+              . Read from official pages; not tested by ZecProof.
+            </p>
             <p>ZecProof is independent and not affiliated with the services listed. Names and logos belong to their owners.</p>
             <p>
               Built by David Peluola ·{" "}

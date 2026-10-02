@@ -9,6 +9,7 @@ import { getBoard, getLatestProof, getServiceDetail } from "@/lib/queries";
 import { readinessOf } from "@/lib/evidence";
 import { verdictFor } from "@/lib/present";
 import { SITE_URL } from "@/lib/site";
+import { RESEARCH_CLAIM, inactiveLast, isInactive, researchSource, type ClaimLine } from "@/lib/research";
 import { ProofTrace } from "@/components/proof-trace";
 import { ShareProof } from "@/components/share";
 import { ServiceIcon } from "@/components/service-icon";
@@ -268,7 +269,8 @@ function Legend() {
 }
 
 export async function BoardView({ network }: { network: NetworkId }) {
-  const { rows, counts, total } = await getBoard(network);
+  const { rows, counts, total, research } = await getBoard(network);
+  const researchBy = Map.groupBy(research, (r) => r.serviceId);
   const base = basePath(network);
   const testsOpen = canCreateTests(network);
   const now = new Date();
@@ -288,16 +290,19 @@ export async function BoardView({ network }: { network: NetworkId }) {
     if (strongest === "verified" || strongest === "community") {
       tested.push({ ...common, readiness, cells: c });
     } else {
-      // One phrase per service: the UA claim if listed, else the t-address claim.
-      const claim = [cells.ironwood_ua, cells.full_ua, cells.transparent].find((x) => x.tier === "listing");
-      untested.push({
-        ...common,
-        testHref: `${base}/test?service=${service.id}`,
-        listing:
-          claim && claim.tier === "listing"
-            ? { label: LISTED_CLAIM[claim.report.outcome].label, source: c.ironwood_ua.source ?? c.transparent.source ?? "a listing", readOn: shortDate(claim.date, now) }
-            : null,
-      });
+      // One line per source. ZecHub: the UA claim if listed, else the t-address claim.
+      const claims: ClaimLine[] = [];
+      const listed = [cells.ironwood_ua, cells.full_ua, cells.transparent].find((x) => x.tier === "listing");
+      if (listed && listed.tier === "listing") {
+        const source = c.ironwood_ua.source ?? c.transparent.source ?? "a listing";
+        claims.push({ kind: "listing", label: LISTED_CLAIM[listed.report.outcome].label, source, title: `Unverified listing per ${source}, read ${shortDate(listed.date, now)}`, inactive: false });
+      }
+      const found = researchBy.get(service.id) ?? [];
+      for (const r of found) {
+        const source = researchSource(r.source).name;
+        claims.push({ kind: "research", label: RESEARCH_CLAIM[r.claim].label, source, title: `Per ${source}, read ${shortDate(r.readAt, now)} from the official page`, inactive: !!RESEARCH_CLAIM[r.claim].inactive });
+      }
+      untested.push({ ...common, testHref: `${base}/test?service=${service.id}`, claims, inactive: isInactive(found) });
     }
   }
 
@@ -384,7 +389,7 @@ export async function BoardView({ network }: { network: NetworkId }) {
         <TestedMatrix rows={tested} />
 
         <UntestedList
-          rows={untested}
+          rows={inactiveLast(untested)}
           note={network === "mainnet" && !testsOpen ? "Mainnet tests aren't open yet; the flow can be tried on testnet" : undefined}
         />
 

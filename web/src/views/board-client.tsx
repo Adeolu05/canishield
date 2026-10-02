@@ -4,10 +4,11 @@
 // so the server can render everything else and pass it in only as `children`.
 import Link from "next/link";
 import { createContext, useContext, useDeferredValue, useState, type ReactNode } from "react";
-import { ArrowRight, BadgeCheck, Clock, FileText, Search, Users, X } from "lucide-react";
+import { ArrowRight, BadgeCheck, Ban, Clock, FileSearch, FileText, Search, Users, X } from "lucide-react";
 import { ServiceIcon } from "@/components/service-icon";
 import type { AddressType } from "@zecproof/db";
 import type { Readiness } from "@/lib/evidence";
+import type { ClaimLine } from "@/lib/research";
 import { READINESS_ORDER, READINESS_VISUAL, type CellView } from "@/lib/present";
 import { StatusIcon, StatusLabel, TONE_TEXT } from "@/components/status";
 
@@ -28,8 +29,10 @@ export interface UntestedRowView {
   kind: string;
   href: string;
   testHref: string;
-  /** e.g. "Listed: transparent only", or null when no list mentions it. */
-  listing: { label: string; source: string; readOn: string } | null;
+  /** Every source's claim, one line each: ZecHub listings and community research, never merged. */
+  claims: ClaimLine[];
+  /** Research says the service dropped ZEC; sorted last. */
+  inactive: boolean;
 }
 
 const QueryContext = createContext<{ query: string; setQuery: (q: string) => void }>({ query: "", setQuery: () => {} });
@@ -264,7 +267,7 @@ export function UntestedList({ rows, note }: { rows: UntestedRowView[]; note?: s
         <h2 id="untested-title" className="text-lg font-semibold tracking-tight">
           Not yet tested <span className="font-normal text-subtle tabular-nums">· {shown.length}</span>
         </h2>
-        <p className="text-xs text-subtle">{note ?? "Listings are other people's claims; a test turns them into evidence"}</p>
+        <p className="text-xs text-subtle">{note ?? "Listings and research are other people's claims; a test turns them into evidence"}</p>
       </div>
       {shown.length === 0 ? (
         <p className="rounded-xl border border-dashed border-line-strong px-6 py-8 text-center text-sm text-muted">
@@ -284,16 +287,26 @@ export function UntestedList({ rows, note }: { rows: UntestedRowView[]; note?: s
                 </Link>
                 <span className="text-xs capitalize text-subtle">{r.kind}</span>
               </div>
-              <p className="flex items-center gap-2 text-sm text-listed" title={r.listing ? `Unverified listing per ${r.listing.source}, read ${r.listing.readOn}` : undefined}>
-                <FileText aria-hidden="true" className="size-4 shrink-0" />
-                {r.listing ? (
-                  <span>
-                    {r.listing.label} <span className="text-subtle">· per {r.listing.source}</span>
-                  </span>
-                ) : (
-                  <span className="text-subtle">Not in any listing</span>
-                )}
-              </p>
+              {r.claims.length ? (
+                <ul className="space-y-1 text-sm">
+                  {r.claims.map((c) => {
+                    const Icon = c.inactive ? Ban : c.kind === "research" ? FileSearch : FileText;
+                    return (
+                      <li key={`${c.kind}-${c.source}`} title={c.title} className={`flex items-start gap-2 ${c.inactive ? "text-muted" : "text-listed"}`}>
+                        <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                        <span>
+                          {c.label} <span className="text-subtle">· per {c.source}</span>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="flex items-center gap-2 text-sm text-subtle">
+                  <FileText aria-hidden="true" className="size-4 shrink-0" />
+                  Not in any listing or research
+                </p>
+              )}
               <Link
                 href={r.testHref}
                 className="inline-flex items-center gap-1 justify-self-start text-sm font-medium text-accent-ink underline-offset-4 transition-colors duration-150 hover:underline sm:justify-self-end"

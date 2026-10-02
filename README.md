@@ -19,6 +19,7 @@ Each test gets a throwaway key of its own. The tester withdraws from the service
 - **On-chain verified**: a test whose payment the worker found. Its txid and viewing key are published so anyone can re-check.
 - **Community reported**: observed but not provable on-chain (e.g. the service's form rejected the address). Shown as "pending review" until an admin accepts or rejects it.
 - **Unverified listing**: imported from an existing list, never tested; must carry a `source_url`.
+- **Community research**: a product-level claim (e.g. "Ironwood supported") that a contributor read from the product's official page, stored apart in `research_claims`. Never tested, never fills a matrix cell, never counts toward readiness. Shown as "Claimed: … · per community research (orb)" with the official link, side by side with any ZecHub listing for the same service, never merged with it.
 
 Claims older than 30 days show as **Stale** until retested. The mainnet board opens with an Ironwood readiness panel (verified Ironwood / transparent only / rejected / untested), counted from on-chain and community evidence only.
 
@@ -26,6 +27,7 @@ Claims older than 30 days show as **Stale** until retested. The mainnet board op
 
 - `GET /api/results.json` (mainnet) or `?network=testnet`: readiness counts, every service's cells with dates and staleness, verified tests with txid and viewing key, community reports and listings. CORS-open and cached for a minute, format `zecproof-results/1`.
 - `npm run import:zechub -w @zecproof/db` loads [`packages/db/data/zechub-custodial-exchanges.json`](packages/db/data/zechub-custodial-exchanges.json), a dated snapshot of ZecHub's custodial exchanges page (commit `31decdb815`, read 2026-10-02), as **Unverified listing** claims. Re-running replaces only that source's listings. Listing claims read as claims ("Listed: transparent only", "Listed: shielded/UA accepted", always "per ZecHub") and use `listedClaim` in the export, never the `outcome` values of tests and community reports.
+- `npm run import:research -w @zecproof/db` loads [`docs/research/orb-zec-research-2026-10-02-v2.md`](docs/research/orb-zec-research-2026-10-02-v2.md) (community research by orb, read 2026-10-02) into `research_claims` and adds any new wallets, exchanges, swaps and hardware wallets to the mainnet board. Re-running replaces only that source's rows. Every row must be mapped or skipped in `packages/db/src/research.ts`, so a new row in a later version fails the import instead of being guessed at; server-only tools (zecd, zcash-walletd, Zallet, zcashd) are skipped. Corrections show as "No longer supports ZEC" (KuCoin, YWallet; sorted last) or "Listing status disputed: check pending" (Bitget). The export lists them under `research` with `researchClaim` codes and `researchCredit`.
 
 ## Scanner status
 
@@ -116,6 +118,10 @@ Files land in `web/public/service-icons/<slug>.png` or `.svg`. The script checks
 - **Code:** MIT (see [LICENSE](LICENSE)).
 - **ZecProof results** (verified tests, community reports, readiness counts): [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Credit "ZecProof" with a link.
 - **Unverified listings** adapted from the ZecHub Wiki (ZecHub contributors) stay under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), their source's license, and are marked separately on the board and in `/api/results.json` (`license` vs `listingsLicense`).
+
+## Credits
+
+Community research by orb ([X @ArtofOrb](https://x.com/ArtofOrb) · [zec-os.com](https://zec-os.com)): the wallet and exchange claims marked "per community research (orb)". Listings from the ZecHub Wiki (ZecHub contributors). See [docs/CREDITS.md](docs/CREDITS.md).
 
 ## Author
 

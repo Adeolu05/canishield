@@ -25,7 +25,7 @@ export async function serviceOgImage(network: NetworkId, slug: string) {
     return ogImage({ network, eyebrow: "ZecProof", title: "Service not found", lines: [] });
   }
   const visible = [...detail.communityReports, ...detail.listings];
-  const v = verdictFor(readinessOf(detail.tests, visible), detail.tests, visible);
+  const v = verdictFor(readinessOf(detail.tests, visible), detail.tests, visible, new Date(), detail.research);
   return ogImage({
     network,
     eyebrow: detail.service.kind,

@@ -7,6 +7,8 @@
 //                                 provable on-chain (e.g. a rejected address).
 //   - reports, tier "listing"   → "unverified listing": imported from an
 //                                 existing list, never tested.
+// Plus research_claims: product-level claims from community research (e.g.
+// "Ironwood supported"), kept apart from all three; never evidence.
 //
 // Networks: every test, report and pool key carries `network` with no default,
 // and CHECK constraints tie keys and addresses to that network's encoding.
@@ -56,7 +58,7 @@ function matchesNetwork(
   return sql`(${side("testnet")}) OR (${side("mainnet")})`;
 }
 
-export const serviceKind = pgEnum("service_kind", ["exchange", "wallet", "swap", "faucet", "other"]);
+export const serviceKind = pgEnum("service_kind", ["exchange", "wallet", "swap", "faucet", "other", "hardware"]);
 
 // MVP test matrix. Sapling is deferred: the scanner can detect Sapling notes,
 // but nothing in the stack can derive a Sapling receiver yet.
@@ -275,7 +277,48 @@ export const reports = pgTable(
   ],
 );
 
+// A product-level claim from community research (docs/research/), read from
+// the product's official pages by a contributor. Not a test, not a listing:
+// it never fills a matrix cell or moves readiness. One row per source and
+// service; a re-import replaces only that source's rows.
+export const researchClaim = pgEnum("research_claim", [
+  "ironwood_supported",
+  "shielded_supported", // shielded claimed, Ironwood not stated
+  "transparent_only",
+  "shielded_not_claimed", // ZEC supported, no shielded claim found
+  "shielded_announced", // announced, not yet shipped
+  "no_longer_supported", // dropped ZEC (delisted, discontinued)
+  "no_current_release", // no current Zcash release found
+  "listing_disputed", // listing status unclear; ZecProof check pending
+]);
+
+export const researchClaims = pgTable(
+  "research_claims",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
+    network: text("network").notNull(),
+    source: text("source").notNull(), // e.g. "orb"; see web/src/lib/evidence.ts RESEARCH_SOURCES
+    claim: researchClaim("claim").notNull(),
+    product: text("product").notNull(), // the row's name in the research, verbatim
+    detail: text("detail"), // the researcher's own words
+    officialUrl: text("official_url").notNull(), // the official page the claim was read from
+    readAt: timestamp("read_at", { withTimezone: true }).notNull(),
+    sourceFile: text("source_file").notNull(), // docs/research/… it was imported from
+    ...timestamps,
+  },
+  (t) => [
+    unique("research_claims_one_per_source").on(t.source, t.network, t.serviceId),
+    check("research_claims_network_valid", sql`${t.network} IN ${NETWORK_LIST}`),
+    check("research_claims_official_https", sql`${t.officialUrl} LIKE 'https://%'`),
+  ],
+);
+
 export type Service = typeof services.$inferSelect;
+export type ResearchClaimRow = typeof researchClaims.$inferSelect;
+export type ResearchClaim = (typeof researchClaim.enumValues)[number];
 export type Test = typeof tests.$inferSelect;
 export type Report = typeof reports.$inferSelect;
 export type KeyBatch = typeof keyBatches.$inferSelect;

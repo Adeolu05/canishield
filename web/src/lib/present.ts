@@ -1,7 +1,8 @@
 // Presentation only: how evidence is shown (icon, tone, words, dates).
 // Evidence semantics live in ./evidence and are not changed here.
-import type { AddressType, Pool, Report, ReportOutcome, Test } from "@zecproof/db";
+import type { AddressType, Pool, Report, ReportOutcome, ResearchClaimRow, Test } from "@zecproof/db";
 import { LISTED_CLAIM, READINESS, reportDate, sourceName, testDate, type Cell, type Readiness } from "./evidence";
+import { RESEARCH_CLAIM, researchSource } from "./research";
 
 export type Tone = "ok" | "shield" | "warn" | "bad" | "info" | "listed" | "neutral";
 
@@ -108,7 +109,13 @@ const UA_TYPES: AddressType[] = ["ironwood_ua", "full_ua"];
 const latest = <T>(xs: T[], date: (x: T) => Date) => xs.map(date).sort((a, b) => b.getTime() - a.getTime())[0];
 
 /** Plain-language verdict for a service page, e.g. "Transparent only: rejected unified addresses, Oct 2". */
-export function verdictFor(readiness: Readiness, verified: Test[], visible: Report[], now = new Date()): Verdict {
+export function verdictFor(
+  readiness: Readiness,
+  verified: Test[],
+  visible: Report[],
+  now = new Date(),
+  research: Pick<ResearchClaimRow, "claim" | "source">[] = [],
+): Verdict {
   const v = READINESS_VISUAL[readiness];
   const d = (x: Date | undefined) => (x ? shortDate(x, now) : "");
   const uaRejections = visible.filter(
@@ -128,14 +135,16 @@ export function verdictFor(readiness: Readiness, verified: Test[], visible: Repo
     case "rejected":
       return { ...v, title: "Rejects unified addresses", detail: `reported ${d(latest(uaRejections, reportDate))}; no payment verified yet` };
     case "untested": {
+      // Each source's claim in its own clause: never merged, never ranked.
       const listings = visible.filter((r) => r.tier === "listing");
-      if (!listings.length) return { ...v, title: "Not tested yet", detail: "no on-chain or community evidence so far" };
-      const claims = [...new Set(listings.map((r) => LISTED_CLAIM[r.outcome].label.replace(/^Listed: /, "")))];
-      return {
-        ...v,
-        title: "Not tested yet",
-        detail: `${sourceName(listings[0].sourceUrl)} lists it as ${claims.join(", ")} (unverified)`,
-      };
+      const parts: string[] = [];
+      if (listings.length) {
+        const claims = [...new Set(listings.map((r) => LISTED_CLAIM[r.outcome].label.replace(/^Listed: /, "")))];
+        parts.push(`${sourceName(listings[0].sourceUrl)} lists it as ${claims.join(", ")}`);
+      }
+      for (const r of research) parts.push(`${researchSource(r.source).name} says ${RESEARCH_CLAIM[r.claim].phrase}`);
+      if (!parts.length) return { ...v, title: "Not tested yet", detail: "no on-chain or community evidence so far" };
+      return { ...v, title: "Not tested yet", detail: `${parts.join("; ")} (${parts.length > 1 ? "all " : ""}unverified)` };
     }
   }
 }

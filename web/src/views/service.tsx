@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, ExternalLink } from "lucide-react";
-import type { Report, Test } from "@zecproof/db";
+import { ArrowRight, Ban, ExternalLink, FileSearch } from "lucide-react";
+import type { Report, ResearchClaimRow, Test } from "@zecproof/db";
+import { RESEARCH_CLAIM, researchSource } from "@/lib/research";
 import { ListedClaimBadge, ListingSource, OutcomeBadge } from "@/components/badges";
 import { CopyButton } from "@/components/copy-button";
 import { ServiceIcon } from "@/components/service-icon";
@@ -184,6 +185,53 @@ function ReportCard({ report, base, now }: { report: Report; base: string; now: 
   );
 }
 
+function ResearchCard({ claim, now }: { claim: ResearchClaimRow; now: Date }) {
+  const src = researchSource(claim.source);
+  const c = RESEARCH_CLAIM[claim.claim];
+  return (
+    <article className="rounded-xl border border-dashed border-line-strong bg-surface p-4 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={`${c.inactive ? "border-line-strong bg-surface-2 text-muted" : "border-line-strong bg-listed-soft text-listed"} inline-flex items-center gap-1 rounded-full border border-dashed px-2 py-0.5 text-xs font-medium`}>
+          {c.inactive ? <Ban aria-hidden="true" className="size-3.5" /> : <FileSearch aria-hidden="true" className="size-3.5" />}
+          {c.label}
+        </span>
+        <span className="text-xs text-subtle">per {src.name}</span>
+        <span className="ml-auto flex items-center gap-2 text-xs text-subtle">
+          Read <time dateTime={isoDay(claim.readAt)}>{shortDate(claim.readAt, now)}</time>
+          {isStale(claim.readAt, now) && <StaleChip />}
+        </span>
+      </div>
+      {claim.detail && (
+        <p className="mt-2 text-pretty text-muted">
+          <span className="font-medium text-foreground">{claim.product}:</span> {claim.detail}
+        </p>
+      )}
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+        <a href={claim.officialUrl} className="inline-flex items-center gap-1 font-medium text-accent-ink hover:underline" rel="noreferrer nofollow" target="_blank">
+          Official source <ExternalLink aria-hidden="true" className="size-3" />
+        </a>
+        <span className="text-subtle">
+          {src.url ? (
+            <a href={src.url} className="underline underline-offset-2 hover:text-foreground" rel="noreferrer" target="_blank">
+              {src.credit}
+            </a>
+          ) : (
+            src.credit
+          )}
+          {src.secondary && (
+            <>
+              {" · "}
+              <a href={src.secondary.url} className="underline underline-offset-2 hover:text-foreground" rel="noreferrer" target="_blank">
+                {src.secondary.label}
+              </a>
+            </>
+          )}
+        </span>
+      </div>
+    </article>
+  );
+}
+
 function SectionTitle({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -196,11 +244,11 @@ function SectionTitle({ title, hint }: { title: string; hint?: string }) {
 export async function ServiceView({ network, slug }: { network: NetworkId; slug: string }) {
   const detail = await getServiceDetail(network, slug);
   if (!detail) notFound();
-  const { service, tests, communityReports, listings } = detail;
+  const { service, tests, communityReports, listings, research } = detail;
   const base = basePath(network);
   const now = new Date();
   const visible = [...communityReports, ...listings];
-  const verdict = verdictFor(readinessOf(tests, visible), tests, visible, now);
+  const verdict = verdictFor(readinessOf(tests, visible), tests, visible, now, research);
   const testsOpen = canCreateTests(network);
   const nothing = tests.length === 0 && communityReports.length === 0;
 
@@ -308,17 +356,29 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
         {/* TODO: report submission form (writes a community report with status "unreviewed"). */}
       </section>
 
-      {listings.length > 0 && (
+      {(listings.length > 0 || research.length > 0) && (
         <section className="space-y-4">
-          <SectionTitle title="Unverified listings" hint="someone else's claims; never tested by ZecProof" />
-          <div className="space-y-4">
-            {listings.map((r) => (
-              <ReportCard key={r.id} report={r} base={base} now={now} />
-            ))}
+          <SectionTitle title="Other people's claims" hint="unverified; never tested by ZecProof. Each source shown on its own" />
+          {/* One column per source, side by side: claims are never merged or ranked. */}
+          <div className={`grid items-start gap-4 ${listings.length > 0 && research.length > 0 ? "lg:grid-cols-2" : ""}`}>
+            {listings.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-subtle">ZecHub listing</h3>
+                {listings.map((r) => (
+                  <ReportCard key={r.id} report={r} base={base} now={now} />
+                ))}
+                <p className="text-xs text-subtle">Quotes adapted from the source under its license (ZecHub: CC BY-SA 4.0, ZecHub contributors).</p>
+              </div>
+            )}
+            {research.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-subtle">Community research</h3>
+                {research.map((r) => (
+                  <ResearchCard key={r.id} claim={r} now={now} />
+                ))}
+              </div>
+            )}
           </div>
-          <p className="text-xs text-subtle">
-            Quotes adapted from the source under its license (ZecHub: CC BY-SA 4.0, ZecHub contributors).
-          </p>
         </section>
       )}
     </div>

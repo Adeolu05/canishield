@@ -19,7 +19,8 @@ export function Wordmark() {
   return (
     <span className="inline-flex items-center gap-2">
       <LogoMark />
-      <span className="text-[15px] font-semibold tracking-tight">
+      {/* Very narrow phones (< 360px) show the mark only, so the header never scrolls sideways. */}
+      <span className="text-[15px] font-semibold tracking-tight max-[359px]:sr-only">
         Zec<span className="text-accent-ink">Proof</span>
       </span>
     </span>

@@ -1,7 +1,7 @@
 import "server-only";
 import { connection } from "next/server";
 import { and, arrayContains, asc, desc, eq, ne } from "drizzle-orm";
-import { reports, services, tests, workerHeartbeats } from "@zecproof/db";
+import { reports, researchClaims, services, tests, workerHeartbeats } from "@zecproof/db";
 import { summarize } from "./evidence";
 import { getDb } from "./db";
 import type { NetworkId } from "./network";
@@ -39,24 +39,34 @@ const visibleReports = (db: Db, network: NetworkId, serviceId?: string) =>
     )
     .orderBy(desc(reports.createdAt));
 
+// Community research claims: shown beside listings, never mixed into cells or readiness.
+const researchOn = (db: Db, network: NetworkId, serviceId?: string) =>
+  db
+    .select()
+    .from(researchClaims)
+    .where(and(eq(researchClaims.network, network), serviceId ? eq(researchClaims.serviceId, serviceId) : undefined))
+    .orderBy(asc(researchClaims.source));
+
 const servicesOn = (db: Db, network: NetworkId) =>
   db.select().from(services).where(arrayContains(services.networks, [network])).orderBy(asc(services.name));
 
 /** Board rows (cells + readiness) and the readiness counts for one network. */
 export async function getBoard(network: NetworkId) {
-  return (await getResults(network)).summary;
+  const { summary, research } = await getResults(network);
+  return { ...summary, research };
 }
 
 /** Everything the board and /api/results.json are built from. */
 export async function getResults(network: NetworkId) {
   await connection(); // request-time data
   const db = getDb();
-  const [allServices, verified, visible] = await Promise.all([
+  const [allServices, verified, visible, research] = await Promise.all([
     servicesOn(db, network),
     verifiedTests(db, network),
     visibleReports(db, network),
+    researchOn(db, network),
   ]);
-  return { services: allServices, verified, visible, summary: summarize(allServices, verified, visible) };
+  return { services: allServices, verified, visible, research, summary: summarize(allServices, verified, visible) };
 }
 
 export async function getServiceDetail(network: NetworkId, slug: string) {
@@ -67,15 +77,17 @@ export async function getServiceDetail(network: NetworkId, slug: string) {
     .from(services)
     .where(and(eq(services.slug, slug), arrayContains(services.networks, [network])));
   if (!service) return null;
-  const [verified, visible] = await Promise.all([
+  const [verified, visible, research] = await Promise.all([
     verifiedTests(db, network, service.id),
     visibleReports(db, network, service.id),
+    researchOn(db, network, service.id),
   ]);
   return {
     service,
     tests: verified,
     communityReports: visible.filter((r) => r.tier === "community"),
     listings: visible.filter((r) => r.tier === "listing"),
+    research,
   };
 }
 
