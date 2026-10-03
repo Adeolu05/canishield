@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Ban, ExternalLink, FileSearch } from "lucide-react";
+import { ArrowRight, Ban, ClipboardCheck, ExternalLink, FileSearch } from "lucide-react";
 import type { Report, ResearchClaimRow, Test } from "@zecproof/db";
 import { RESEARCH_CLAIM, researchSource } from "@/lib/research";
+import { FORM_CHECK_LABEL, FORM_CHECK_METHOD, canLogFormChecks } from "@/lib/form-check";
+import Image from "next/image";
 import { ListedClaimBadge, ListingSource, OutcomeBadge } from "@/components/badges";
 import { CopyButton } from "@/components/copy-button";
 import { ServiceIcon } from "@/components/service-icon";
@@ -141,8 +143,10 @@ function EvidenceCard({ t, network, now, service }: { t: Test; network: NetworkI
 function ReportCard({ report, base, now }: { report: Report; base: string; now: Date }) {
   const date = reportDate(report);
   const listing = report.tier === "listing";
+  const formCheck = report.method === FORM_CHECK_METHOD;
+  const localShot = report.evidenceUrl?.startsWith("/api/evidence/") ? report.evidenceUrl : null;
   return (
-    <article className={`rounded-xl border bg-surface p-4 text-sm ${listing ? "border-dashed border-line-strong" : "border-line shadow-card"}`}>
+    <article id={`report-${report.id}`} className={`rounded-xl border bg-surface p-4 text-sm ${listing ? "border-dashed border-line-strong" : "border-line shadow-card"}`}>
       <div className="flex flex-wrap items-center gap-2">
         {report.addressType && <span className="font-semibold">{ADDRESS_TYPE_LABEL[report.addressType]}</span>}
         {listing ? (
@@ -158,11 +162,35 @@ function ReportCard({ report, base, now }: { report: Report; base: string; now: 
           </>
         )}
         <span className="ml-auto flex items-center gap-2 text-xs text-subtle">
-          {listing ? "Read" : "Reported"} <time dateTime={isoDay(date)}>{shortDate(date, now)}</time>
+          {listing ? "Read" : formCheck ? "Checked" : "Reported"} <time dateTime={isoDay(date)}>{shortDate(date, now)}</time>
           {isStale(date, now) && <StaleChip />}
         </span>
       </div>
+      {formCheck && (
+        <p className="mt-2 text-xs text-subtle">
+          Method: {FORM_CHECK_LABEL}. The address was pasted into the withdrawal form; nothing was sent.
+        </p>
+      )}
+      {report.errorText && (
+        <p className="mt-2 text-pretty">
+          <span className="text-subtle">Error shown: </span>
+          <q className="font-medium">{report.errorText}</q>
+        </p>
+      )}
+      {report.address && (
+        <p className="mt-2 flex items-start gap-2">
+          <span className="shrink-0 text-subtle">Address pasted:</span>
+          <span className="hash min-w-0 flex-1 truncate" title={report.address}>
+            {report.address}
+          </span>
+        </p>
+      )}
       {report.note && <p className="mt-2 text-pretty text-muted">{report.note}</p>}
+      {localShot && (
+        <a href={localShot} target="_blank" rel="noreferrer" className="mt-4 block w-fit overflow-hidden rounded-lg border border-line">
+          <Image src={localShot} alt={`Screenshot of the ${ADDRESS_TYPE_LABEL[report.addressType!] ?? ""} form check`} width={320} height={200} unoptimized className="h-auto max-h-48 w-auto max-w-full object-contain" />
+        </a>
+      )}
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium">
         {report.evidenceUrl && (
           <a href={report.evidenceUrl} className="inline-flex items-center gap-1 text-accent-ink hover:underline" rel="noreferrer nofollow" target="_blank">
@@ -353,7 +381,14 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
             ))}
           </div>
         )}
-        {/* TODO: report submission form (writes a community report with status "unreviewed"). */}
+        {network === "mainnet" && canLogFormChecks() && (
+          <Link
+            href={`/report/form-check?service=${service.id}`}
+            className="inline-flex items-center gap-2 text-sm font-medium text-accent-ink underline-offset-4 hover:underline"
+          >
+            <ClipboardCheck aria-hidden="true" className="size-4" /> Log a withdrawal form check
+          </Link>
+        )}
       </section>
 
       {(listings.length > 0 || research.length > 0) && (

@@ -8,6 +8,9 @@ try {
 }
 
 const nextConfig: NextConfig = {
+  // Form-check screenshots are up to 4 MB (checked again in lib/form-check.ts);
+  // the rest is room for the other fields and multipart overhead.
+  experimental: { serverActions: { bodySizeLimit: "5mb" } },
   async headers() {
     return [
       {
@@ -16,6 +19,14 @@ const nextConfig: NextConfig = {
         source: "/service-icons/:file*",
         headers: [
           { key: "Content-Security-Policy", value: "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+        ],
+      },
+      {
+        // Uploaded form-check screenshots: same treatment, they are images only.
+        source: "/evidence/:file*",
+        headers: [
+          { key: "Content-Security-Policy", value: "default-src 'none'; sandbox" },
           { key: "X-Content-Type-Options", value: "nosniff" },
         ],
       },

@@ -7,6 +7,10 @@ import { reports, services, tests, addressType, type AddressType } from "@zecpro
 import { isNetworkId } from "@zecproof/zcash/networks";
 import { getDb } from "@/lib/db";
 import { basePath, canCreateTests } from "@/lib/network";
+import { EVIDENCE_MAX_BYTES, FORM_CHECK_METHOD, canLogFormChecks, checkEvidence, parseFormCheck } from "@/lib/form-check";
+import { randomUUID } from "node:crypto";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 
 const isAddressType = (v: unknown): v is AddressType =>
   typeof v === "string" && (addressType.enumValues as readonly string[]).includes(v);
@@ -45,6 +49,69 @@ export async function createTest(formData: FormData) {
     .values({ network, serviceId, addressType: type })
     .returning({ id: tests.id });
   redirect(`${basePath(network)}/test/${test.id}`);
+}
+
+export type FormCheckState = { errors: string[] } | null;
+
+/**
+ * Files a withdrawal form check: a reference address was pasted into the
+ * service's withdrawal form and NOT submitted. No key is assigned and no funds
+ * move. Stored as a community report (unreviewed) with its screenshot.
+ */
+export async function logFormCheck(_prev: FormCheckState, formData: FormData): Promise<FormCheckState> {
+  if (!canLogFormChecks()) return { errors: ["Form checks are not enabled on this deployment."] };
+  const parsed = parseFormCheck((name) => formData.get(name));
+  const file = formData.get("evidence");
+  const errors = parsed.ok ? [] : [...parsed.errors];
+  let evidence: ReturnType<typeof checkEvidence> | null = null;
+  if (!(file instanceof File) || file.size === 0) errors.push("Attach the screenshot of the form.");
+  else if (file.size > EVIDENCE_MAX_BYTES) errors.push("The screenshot is over 4 MB.");
+  else {
+    evidence = checkEvidence(new Uint8Array(await file.arrayBuffer()));
+    if (!evidence.ok) errors.push(evidence.error);
+  }
+  if (!parsed.ok || errors.length || !evidence?.ok) return { errors };
+  const input = parsed.value;
+
+  const db = getDb();
+  const [service] = await db
+    .select({ id: services.id, slug: services.slug })
+    .from(services)
+    .where(and(eq(services.id, input.serviceId), arrayContains(services.networks, ["mainnet"])));
+  if (!service) return { errors: ["That service is not on the mainnet board."] };
+
+  // Saved under web/public/evidence with a name we choose (never the uploaded file name).
+  const day = input.observedAt.toISOString().slice(0, 10);
+  const name = `${service.slug}-${input.addressType}-${day}-${randomUUID().slice(0, 8)}.${evidence.format === "png" ? "png" : "jpg"}`;
+  const dir = join(process.cwd(), "public", "evidence");
+  await mkdir(dir, { recursive: true });
+  const path = join(dir, name);
+  await writeFile(path, evidence.bytes, { flag: "wx" });
+
+  let id: string;
+  try {
+    const [report] = await db
+      .insert(reports)
+      .values({
+        network: "mainnet",
+        serviceId: service.id,
+        tier: "community",
+        method: FORM_CHECK_METHOD,
+        addressType: input.addressType,
+        address: input.address,
+        outcome: input.result,
+        errorText: input.errorText,
+        observedAt: input.observedAt,
+        note: input.note,
+        evidenceUrl: `/api/evidence/${name}`, // served at request time; see app/api/evidence
+      })
+      .returning({ id: reports.id });
+    id = report.id;
+  } catch (e) {
+    await unlink(path).catch(() => {});
+    throw e;
+  }
+  redirect(`/services/${service.slug}#report-${id}`);
 }
 
 /**

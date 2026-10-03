@@ -87,6 +87,11 @@ export const reportOutcome = pgEnum("report_outcome", [
 
 export const reportTier = pgEnum("report_tier", ["community", "listing"]);
 
+// How a community report was observed. NULL: the original "tester marked the
+// address rejected during a test". A form check pastes a reference address
+// into a service's withdrawal form without submitting: no key, no funds.
+export const reportMethod = pgEnum("report_method", ["withdrawal_form_check"]);
+
 export const reportStatus = pgEnum("report_status", ["unreviewed", "accepted", "rejected"]);
 
 export const keyStatus = pgEnum("key_status", [
@@ -265,6 +270,10 @@ export const reports = pgTable(
     sourceReadAt: timestamp("source_read_at", { withTimezone: true }), // when that source was read
     note: text("note"),
     status: reportStatus("status").notNull().default("unreviewed"),
+    method: reportMethod("method"),
+    errorText: text("error_text"), // the form's exact error message, if any
+    observedAt: timestamp("observed_at", { withTimezone: true }), // when the check was done (else created_at)
+    address: text("address"), // the address pasted into the form
     ...timestamps,
   },
   (t) => [
@@ -274,6 +283,12 @@ export const reports = pgTable(
       "reports_listing_has_source",
       sql`${t.tier} <> 'listing' OR (${t.sourceUrl} IS NOT NULL AND ${t.sourceReadAt} IS NOT NULL)`,
     ),
+    // A form check is community evidence about the form only: accepted or rejected, never a pool.
+    check(
+      "reports_form_check_outcome",
+      sql`${t.method} IS NULL OR (${t.tier} = 'community' AND ${t.outcome} IN ('form_accepted', 'address_rejected') AND ${t.addressType} IS NOT NULL AND ${t.address} IS NOT NULL)`,
+    ),
+    check("reports_address_network", matchesNetwork(t.network, { address: [t.address] })),
   ],
 );
 
@@ -328,6 +343,7 @@ export type Pool = (typeof pool.enumValues)[number];
 export type TestStatus = (typeof testStatus.enumValues)[number];
 export type ReportOutcome = (typeof reportOutcome.enumValues)[number];
 export type ReportTier = (typeof reportTier.enumValues)[number];
+export type ReportMethod = (typeof reportMethod.enumValues)[number];
 
 // One row per network, upserted by the worker each cycle it reaches an
 // endpoint. Read-only for the web app's "Scanner online" pill; not evidence.

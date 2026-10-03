@@ -17,9 +17,9 @@ export type Cell =
 
 export const isStale = (date: Date, now: Date) => now.getTime() - date.getTime() > STALE_AFTER_DAYS * DAY_MS;
 
-/** When the claim was last established: verified, reported, or (listings) when the source was read. */
+/** When the claim was last established: verified, observed (e.g. a form check) or reported, or (listings) when the source was read. */
 export const testDate = (t: Test) => t.receivedAt ?? t.updatedAt;
-export const reportDate = (r: Report) => (r.tier === "listing" ? (r.sourceReadAt ?? r.createdAt) : r.createdAt);
+export const reportDate = (r: Report) => (r.tier === "listing" ? (r.sourceReadAt ?? r.createdAt) : (r.observedAt ?? r.createdAt));
 
 const newest = <T>(items: T[], date: (x: T) => Date) =>
   items.reduce<T | undefined>((best, x) => (!best || date(x) > date(best) ? x : best), undefined);

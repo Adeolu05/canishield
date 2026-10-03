@@ -11,7 +11,7 @@ export const ADDRESS_TYPE_LABEL: Record<AddressType, string> = {
 export const ADDRESS_TYPE_HINT: Record<AddressType, string> = {
   ironwood_ua: "Unified address with only a shielded (Orchard/Ironwood) receiver.",
   full_ua: "Unified address with shielded + transparent receivers. Sapling receiver not included yet.",
-  transparent: "Plain t-address (tm…).",
+  transparent: "Plain t-address (t1… on mainnet, tm… on testnet).",
 };
 
 export type Tier = "verified" | "community" | "listing";

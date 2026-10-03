@@ -3,6 +3,7 @@
 import {
   BadgeCheck,
   CircleCheck,
+  ClipboardCheck,
   CircleDashed,
   CircleX,
   Clock,
@@ -21,6 +22,7 @@ export const ICONS: Record<IconKey, LucideIcon> = {
   eye: Eye,
   "x-circle": CircleX,
   "check-circle": CircleCheck,
+  "clipboard-check": ClipboardCheck,
   "file-text": FileText,
   "circle-dashed": CircleDashed,
   "badge-check": BadgeCheck,

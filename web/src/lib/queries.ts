@@ -1,7 +1,7 @@
 import "server-only";
 import { connection } from "next/server";
-import { and, arrayContains, asc, desc, eq, ne } from "drizzle-orm";
-import { reports, researchClaims, services, tests, workerHeartbeats } from "@zecproof/db";
+import { and, arrayContains, asc, desc, eq, isNotNull, ne } from "drizzle-orm";
+import { reports, researchClaims, services, tests, workerHeartbeats, type AddressType } from "@zecproof/db";
 import { summarize } from "./evidence";
 import { getDb } from "./db";
 import type { NetworkId } from "./network";
@@ -89,6 +89,23 @@ export async function getServiceDetail(network: NetworkId, slug: string) {
     listings: visible.filter((r) => r.tier === "listing"),
     research,
   };
+}
+
+/**
+ * The addresses pasted into withdrawal forms for form checks: the newest
+ * mainnet Trust Wallet test address of each type. Already public on the board.
+ */
+export async function getReferenceAddresses(): Promise<Partial<Record<AddressType, string>>> {
+  await connection();
+  const rows = await getDb()
+    .select({ addressType: tests.addressType, address: tests.receiveAddress })
+    .from(tests)
+    .innerJoin(services, eq(services.id, tests.serviceId))
+    .where(and(eq(services.slug, "trust-wallet"), eq(tests.network, "mainnet"), isNotNull(tests.receiveAddress)))
+    .orderBy(desc(tests.createdAt));
+  const out: Partial<Record<AddressType, string>> = {};
+  for (const r of rows) out[r.addressType] ??= r.address!;
+  return out;
 }
 
 export async function listServices(network: NetworkId) {

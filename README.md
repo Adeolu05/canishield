@@ -17,7 +17,7 @@ Each test gets a throwaway key of its own. The tester withdraws from the service
 ## Evidence tiers
 
 - **On-chain verified**: a test whose payment the worker found. Its txid and viewing key are published so anyone can re-check.
-- **Community reported**: observed but not provable on-chain (e.g. the service's form rejected the address). Shown as "pending review" until an admin accepts or rejects it.
+- **Community reported**: observed but not provable on-chain (e.g. the service's form rejected the address). Shown as "pending review" until an admin accepts or rejects it. Includes **withdrawal form checks** (below), with `method: "withdrawal_form_check"`.
 - **Unverified listing**: imported from an existing list, never tested; must carry a `source_url`.
 - **Community research**: a product-level claim (e.g. "Ironwood supported") that a contributor read from the product's official page, stored apart in `research_claims`. Never tested, never fills a matrix cell, never counts toward readiness. Shown as "Claimed: … · per community research (orb)" with the official link, side by side with any ZecHub listing for the same service, never merged with it.
 
@@ -94,6 +94,16 @@ npm run dev:web                      # terminal 2 → http://localhost:3000
 ```
 
 `npm run build` typechecks every package and builds the web app. `npm test` runs the zcash, keygen and worker tests.
+
+## Withdrawal form checks
+
+`/report/form-check` (mainnet) logs whether a service's withdrawal form accepts an address, without submitting it: no key is assigned and no funds move. Pick the service, the address type and the result (accepted by the form / rejected), copy the exact error text if any, set the date and attach a screenshot. The reference addresses are the mainnet Trust Wallet test addresses of each type, prefilled in the form.
+
+- Stored as a community report (`method = withdrawal_form_check`, unreviewed), with `error_text`, `observed_at` and the pasted `address`. Database checks allow only "form accepted" or "address rejected" for this method, and only addresses encoded for the report's network.
+- Shown as **Form accepted (not submitted)** or **Address rejected**, tier Community reported, with the screenshot. A form accept never counts as verified and never as Ironwood-ready; a UA rejection counts toward "Rejects unified addresses", like any community rejection.
+- Screenshots: PNG or JPEG only, up to 4 MB and 8000 px a side, checked by their bytes; EXIF, XMP and text metadata are stripped. Saved under `web/public/evidence/` with a generated name and served by `/api/evidence/<file>` (`next start` does not serve files added to `public/` after a build), sandboxed and `nosniff`.
+- Open in development; in production only with `ZECPROOF_ENABLE_FORM_CHECKS=yes`. There is no login, so keep it off on any public deployment.
+- Export: `communityReports[]` carry `method`, `methodLabel`, `errorText`, `observedAt` and `address`; community cells carry `method`.
 
 ## Service icons
 

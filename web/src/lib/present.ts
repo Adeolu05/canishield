@@ -9,6 +9,7 @@ export type Tone = "ok" | "shield" | "warn" | "bad" | "info" | "listed" | "neutr
 /** Icon keys resolve to lucide icons in components/status.tsx. */
 export type IconKey =
   | "shield-check"
+  | "clipboard-check"
   | "shield"
   | "eye"
   | "x-circle"
@@ -25,7 +26,8 @@ export const OUTCOME_VISUAL: Record<ReportOutcome, { tone: Tone; icon: IconKey; 
   sapling: { tone: "shield", icon: "shield", label: "Sapling" },
   transparent: { tone: "warn", icon: "eye", label: "Transparent" },
   address_rejected: { tone: "bad", icon: "x-circle", label: "Address rejected" },
-  form_accepted: { tone: "info", icon: "check-circle", label: "Form accepted" },
+  // Only the form took the address; nothing was sent. Never a verification.
+  form_accepted: { tone: "info", icon: "clipboard-check", label: "Form accepted (not submitted)" },
 };
 
 export const READINESS_VISUAL: Record<Readiness, { tone: Tone; icon: IconKey; label: string; meaning: string }> = {

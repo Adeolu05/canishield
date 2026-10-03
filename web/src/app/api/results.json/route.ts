@@ -9,6 +9,7 @@ import { LISTED_CLAIM, READINESS, STALE_AFTER_DAYS, isStale, reportDate, sourceN
 import { NETWORKS, basePath } from "@/lib/network";
 import { getResults } from "@/lib/queries";
 import { RESEARCH_CLAIM, RESEARCH_SOURCES, researchJson } from "@/lib/research";
+import { methodJson } from "@/lib/form-check";
 
 const HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -48,7 +49,7 @@ function cellJson(cell: Cell) {
   const base = { tier: cell.tier, date: iso(cell.date), stale: cell.stale };
   if (cell.tier === "verified") return { ...base, outcome: cell.test.receivedPool, testId: cell.test.id };
   if (cell.tier === "community") {
-    return { ...base, outcome: cell.report.outcome, reportId: cell.report.id, reviewStatus: cell.report.status };
+    return { ...base, outcome: cell.report.outcome, method: cell.report.method, reportId: cell.report.id, reviewStatus: cell.report.status };
   }
   return {
     ...base,
@@ -90,6 +91,9 @@ function communityJson(r: Report, slug: string) {
     txid: r.txid,
     evidenceUrl: r.evidenceUrl,
     testId: r.testId,
+    // How it was observed: null for a tester's mark during a test; "withdrawal_form_check"
+    // when a reference address was pasted into the form and not submitted.
+    ...methodJson(r),
   };
 }
 
@@ -126,7 +130,8 @@ export async function GET(request: NextRequest) {
     staleAfterDays: STALE_AFTER_DAYS,
     tiers: {
       verified: "The scanner saw the payment land; txid and the test address's viewing key are published.",
-      community: "Observed but not provable on-chain (e.g. a form rejected the address). reviewStatus shows admin review.",
+      community:
+        "Observed but not provable on-chain (e.g. a form rejected the address). reviewStatus shows admin review. method \"withdrawal_form_check\": a reference address was pasted into the withdrawal form and not submitted (no key, no funds); form_accepted is never a verification.",
       listing: "Imported from an existing list, never tested. Carries listedClaim (not outcome); sourceUrl and sourceReadAt say where and when it was read.",
       research:
         "Community research: a product-level claim read from the product's official page by a contributor. Never tested, never in cells or readiness. Carries researchClaim (not outcome or listedClaim) and officialUrl; see the research field.",
