@@ -62,8 +62,9 @@ export async function saveFormCheck(
 
 /**
  * Attaches a checked screenshot to an existing community report, filling in
- * the error text and address only where they are empty. Any earlier evidence
- * link is kept in the note, so nothing is lost. Never creates a report.
+ * the error text and address only where they are empty. The self-hosted copy
+ * replaces any earlier evidence link (returned so the caller can log it).
+ * Never creates a report.
  */
 export async function attachEvidence(
   db: Db,
@@ -85,11 +86,10 @@ export async function attachEvidence(
 
   const stored = await storeEvidenceFile(r.slug, report.addressType, report.observedAt ?? report.createdAt, evidence, webRoot);
   const previous = report.evidenceUrl;
-  const note = previous ? [report.note, `Earlier copy of the screenshot: ${previous}`].filter(Boolean).join(" ") : report.note;
   try {
     await db
       .update(reports)
-      .set({ evidenceUrl: stored.url, errorText: report.errorText ?? fill.errorText, address: report.address ?? fill.address, note })
+      .set({ evidenceUrl: stored.url, errorText: report.errorText ?? fill.errorText, address: report.address ?? fill.address })
       .where(eq(reports.id, reportId));
     return { ok: true, file: stored.file, previousEvidenceUrl: previous };
   } catch (e) {

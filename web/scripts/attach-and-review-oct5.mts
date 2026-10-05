@@ -75,12 +75,12 @@ async function main() {
         continue;
       }
       if (!apply) {
-        console.log(`  ok     ${line}; would replace ${r.evidenceUrl ?? "no link"} (kept in the note)`);
+        console.log(`  ok     ${line}; would replace ${r.evidenceUrl ?? "no link"}`);
         continue;
       }
       const res = await attachEvidence(db, r.id, evidence, { errorText: ERROR_TEXT, address: s.shown });
       if (!res.ok) throw new Error(`${s.file}: ${res.error}`);
-      console.log(`  saved  ${line} -> public/evidence/${res.file}; earlier link ${res.previousEvidenceUrl ?? "none"} kept in the note`);
+      console.log(`  saved  ${line} -> public/evidence/${res.file}; replaced ${res.previousEvidenceUrl ?? "no earlier link"}`);
     }
 
     // 2. The nine Oct 5 exchange form checks.
