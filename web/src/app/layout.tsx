@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { InlineScript } from "@/components/inline-script";
 import { THEME_INIT_SCRIPT } from "@/components/theme-toggle";
 import { SITE_URL } from "@/lib/site";
+import { canCreateTests } from "@/lib/network";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -47,7 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to content
         </a>
-        <SiteHeader />
+        <SiteHeader mainnetTests={canCreateTests("mainnet")} />
         {/* Full-bleed backgrounds inside main use 100vw; clip them here (not on body,
             which would hand the overflow to the viewport) so nothing scrolls sideways. */}
         <div className="flex-1 overflow-x-clip">

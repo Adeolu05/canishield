@@ -72,7 +72,8 @@ const useShortcutLabel = () =>
     () => "Ctrl K",
   );
 
-export function CommandPalette() {
+/** `mainnetTests`: whether to offer the mainnet "Run a test" (off unless enabled on the server). */
+export function CommandPalette({ mainnetTests }: { mainnetTests: boolean }) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -106,10 +107,11 @@ export function CommandPalette() {
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const all = [...ACTIONS, ...(services ?? [])];
+    const actions = mainnetTests ? ACTIONS : ACTIONS.filter((a) => a.id !== "a-test");
+    const all = [...actions, ...(services ?? [])];
     if (!q) return all;
     return all.filter((i) => `${i.label} ${i.hint ?? ""} ${i.keywords ?? ""}`.toLowerCase().includes(q));
-  }, [query, services]);
+  }, [query, services, mainnetTests]);
 
   const go = (item: Item) => {
     dialog.current?.close();

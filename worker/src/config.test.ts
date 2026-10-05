@@ -39,3 +39,8 @@ test("testnet can rehearse mainnet rules; key source follows the seed", () => {
   assert.equal(loadConfig({ WORKER_TEST_MNEMONIC: "x" }).keySource, "derived");
   assert.equal(loadConfig({}).keySource, "pool");
 });
+
+test("a pool worker refuses a readable seed on any network", () => {
+  assert.throws(() => loadConfig({ ZECPROOF_KEY_SOURCE: "pool", WORKER_TEST_MNEMONIC: "abandon abandon" }), /uses the key pool/);
+  assert.equal(loadConfig({ ZECPROOF_KEY_SOURCE: "pool" }).keySource, "pool");
+});

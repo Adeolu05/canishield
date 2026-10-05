@@ -14,6 +14,7 @@
     "db:down": "docker compose down",
     "db:generate": "npm run generate -w @zecproof/db",
     "db:migrate": "npm run migrate -w @zecproof/db",
+    "db:migrate:hosted": "npm run migrate:hosted -w @zecproof/db",
     "db:seed": "npm run seed -w @zecproof/db",
     "dev:web": "npm run dev -w web",
     "dev:worker": "npm run dev -w worker",

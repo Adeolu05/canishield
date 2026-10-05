@@ -309,7 +309,7 @@ export async function BoardView({ network }: { network: NetworkId }) {
           inactive: !!RESEARCH_CLAIM[r.claim].inactive,
         });
       }
-      untested.push({ ...common, testHref: `${base}/test?service=${service.id}`, claims, inactive: isInactive(found) });
+      untested.push({ ...common, testHref: testsOpen ? `${base}/test?service=${service.id}` : null, claims, inactive: isInactive(found) });
     }
   }
 
