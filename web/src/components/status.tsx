@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Users,
   type LucideIcon,
+  UserCheck,
 } from "lucide-react";
 import type { IconKey, Tone } from "@/lib/present";
 
@@ -107,4 +108,15 @@ export function StaleChip() {
 
 export function PendingChip() {
   return <span className={`${chip} bg-surface-2 text-subtle`}>Pending review</span>;
+}
+
+/** A community report someone reviewed; the tooltip says who and when. */
+export function ReviewedChip({ label, title }: { label: string; title: string }) {
+  return (
+    // Neutral on purpose: a review is not a verification, so no green and no BadgeCheck.
+    <span title={title} className={`${chip} bg-surface-2 text-muted`}>
+      <UserCheck aria-hidden="true" className="size-3" strokeWidth={2.5} />
+      {label}
+    </span>
+  );
 }

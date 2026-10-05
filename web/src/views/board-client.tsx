@@ -89,6 +89,7 @@ function tierText(cell: CellView) {
   const parts: string[] = [TIER_MARK[cell.tier].name];
   if (cell.source) parts[0] += ` per ${cell.source}`;
   if (cell.pendingReview) parts.push("pending review");
+  if (cell.reviewed) parts.push(cell.reviewed.toLowerCase());
   if (cell.dateLabel) parts.push(cell.dateLabel.replace(/^Listing read/, "read").replace(/^Reported/, "reported").replace(/^Verified/, "verified"));
   if (cell.stale) parts.push("stale, older than 30 days");
   return parts.join(" · ");

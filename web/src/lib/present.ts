@@ -61,10 +61,15 @@ export interface CellView {
   dateIso?: string;
   stale: boolean;
   pendingReview: boolean;
+  /** Set when a community report was reviewed: "Reviewed (maintainer)". */
+  reviewed?: string;
   source?: string;
 }
 
 const DATE_VERB = { verified: "Verified", community: "Reported", listing: "Listing read" } as const;
+
+/** "Reviewed (maintainer)" for a maintainer review; plain "Reviewed" otherwise. */
+export const reviewedLabel = (by: string | null) => (by?.endsWith("(maintainer)") ? "Reviewed (maintainer)" : "Reviewed");
 
 export function cellView(cell: Cell, now = new Date()): CellView {
   if (cell.tier === "none") {
@@ -90,6 +95,7 @@ export function cellView(cell: Cell, now = new Date()): CellView {
     icon: v.icon,
     label: v.label,
     pendingReview: cell.tier === "community" && cell.report.status === "unreviewed",
+    reviewed: cell.tier === "community" && cell.report.status === "accepted" ? reviewedLabel(cell.report.reviewedBy) : undefined,
     ...dated,
   };
 }

@@ -8,11 +8,11 @@ import Image from "next/image";
 import { ListedClaimBadge, ListingSource, OutcomeBadge } from "@/components/badges";
 import { CopyButton } from "@/components/copy-button";
 import { ServiceIcon } from "@/components/service-icon";
-import { PendingChip, StaleChip, StatusIcon, TONE_SOFT, TONE_TEXT, TierChip } from "@/components/status";
+import { PendingChip, ReviewedChip, StaleChip, StatusIcon, TONE_SOFT, TONE_TEXT, TierChip } from "@/components/status";
 import { isStale, readinessOf, reportDate, testDate } from "@/lib/evidence";
 import { ADDRESS_TYPE_LABEL, POOL_LABEL } from "@/lib/labels";
 import { NETWORKS, basePath, canCreateTests, formatAmount, type NetworkId } from "@/lib/network";
-import { isoDay, shortDate, verdictFor } from "@/lib/present";
+import { isoDay, reviewedLabel, shortDate, verdictFor } from "@/lib/present";
 import { getServiceDetail } from "@/lib/queries";
 import { SITE_URL } from "@/lib/site";
 import { ShareProof } from "@/components/share";
@@ -159,6 +159,12 @@ function ReportCard({ report, base, now }: { report: Report; base: string; now: 
             <OutcomeBadge outcome={report.outcome} />
             <TierChip tier="community" />
             {report.status === "unreviewed" && <PendingChip />}
+            {report.status === "accepted" && report.reviewedAt && (
+              <ReviewedChip
+                label={reviewedLabel(report.reviewedBy)}
+                title={`Reviewed by ${report.reviewedBy ?? "a reviewer"} on ${shortDate(report.reviewedAt, now)}`}
+              />
+            )}
           </>
         )}
         <span className="ml-auto flex items-center gap-2 text-xs text-subtle">

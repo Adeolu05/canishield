@@ -87,6 +87,8 @@ function communityJson(r: Report, slug: string) {
     outcome: r.outcome,
     date: iso(reportDate(r)),
     reviewStatus: r.status,
+    reviewedBy: r.reviewedBy,
+    reviewedAt: iso(r.reviewedAt),
     note: r.note,
     txid: r.txid,
     evidenceUrl: r.evidenceUrl,

@@ -274,6 +274,9 @@ export const reports = pgTable(
     errorText: text("error_text"), // the form's exact error message, if any
     observedAt: timestamp("observed_at", { withTimezone: true }), // when the check was done (else created_at)
     address: text("address"), // the address pasted into the form
+    // Who moved a community report out of "unreviewed", and when (e.g. "David Peluola (maintainer)").
+    reviewedBy: text("reviewed_by"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
     ...timestamps,
   },
   (t) => [
@@ -289,6 +292,11 @@ export const reports = pgTable(
       sql`${t.method} IS NULL OR (${t.tier} = 'community' AND ${t.outcome} IN ('form_accepted', 'address_rejected') AND ${t.addressType} IS NOT NULL AND ${t.address} IS NOT NULL)`,
     ),
     check("reports_address_network", matchesNetwork(t.network, { address: [t.address] })),
+    // A reviewed community report always records who reviewed it and when.
+    check(
+      "reports_review_recorded",
+      sql`${t.tier} <> 'community' OR ${t.status} = 'unreviewed' OR (${t.reviewedBy} IS NOT NULL AND ${t.reviewedAt} IS NOT NULL)`,
+    ),
   ],
 );
 

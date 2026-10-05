@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import type { Report } from "@zecproof/db";
 import { bestCell, readinessOf } from "./evidence";
 import { addressMatchesType, checkEvidence, imageSize, methodJson, parseFormCheck, sniffImage, stripMetadata } from "./form-check";
-import { cellView, verdictFor } from "./present";
+import { cellView, reviewedLabel, verdictFor } from "./present";
 
 const NOW = new Date("2026-10-03T12:00:00Z");
 const UA = `u1${"q".repeat(104)}`;
@@ -153,6 +153,18 @@ test("a form rejection of a UA reads as Address rejected, dated by the check", (
   const cell = bestCell([], [rejected], "ironwood_ua", NOW);
   assert.equal(cellView(cell, NOW).label, "Address rejected");
   assert.ok(cell.tier === "community" && cell.date.toISOString().startsWith("2026-10-01"));
+});
+
+test("a maintainer review changes the review state only: still community, never verified", () => {
+  const reviewed = formReport({ status: "accepted", reviewedBy: "David Peluola (maintainer)", reviewedAt: new Date("2026-10-05T18:00:00Z") });
+  const view = cellView(bestCell([], [reviewed], "ironwood_ua", NOW), NOW);
+  assert.equal(view.tier, "community");
+  assert.equal(view.pendingReview, false);
+  assert.equal(view.reviewed, "Reviewed (maintainer)");
+  assert.equal(view.label, "Form accepted (not submitted)");
+  assert.equal(readinessOf([], [reviewed]), "untested", "a reviewed form accept is still not a verification");
+  assert.equal(reviewedLabel("someone else"), "Reviewed");
+  assert.equal(cellView(bestCell([], [formReport({})], "ironwood_ua", NOW), NOW).reviewed, undefined);
 });
 
 test("export: method fields on every community report", () => {

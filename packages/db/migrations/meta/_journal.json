@@ -50,6 +50,13 @@
       "when": 1791056753495,
       "tag": "0006_peaceful_nextwave",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791219518740,
+      "tag": "0007_parched_microchip",
+      "breakpoints": true
     }
   ]
 }
