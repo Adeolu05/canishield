@@ -52,8 +52,8 @@ const servicesOn = (db: Db, network: NetworkId) =>
 
 /** Board rows (cells + readiness) and the readiness counts for one network. */
 export async function getBoard(network: NetworkId) {
-  const { summary, research } = await getResults(network);
-  return { ...summary, research };
+  const { summary, research, visible } = await getResults(network);
+  return { ...summary, research, visible };
 }
 
 /** Everything the board and /api/results.json are built from. */

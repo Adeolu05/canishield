@@ -7,10 +7,8 @@ import { reports, services, tests, addressType, type AddressType } from "@zecpro
 import { isNetworkId } from "@zecproof/zcash/networks";
 import { getDb } from "@/lib/db";
 import { basePath, canCreateTests } from "@/lib/network";
-import { EVIDENCE_MAX_BYTES, FORM_CHECK_METHOD, canLogFormChecks, checkEvidence, parseFormCheck } from "@/lib/form-check";
-import { randomUUID } from "node:crypto";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { EVIDENCE_MAX_BYTES, canLogFormChecks, checkEvidence, parseFormCheck } from "@/lib/form-check";
+import { saveFormCheck } from "@/lib/form-check-store";
 
 const isAddressType = (v: unknown): v is AddressType =>
   typeof v === "string" && (addressType.enumValues as readonly string[]).includes(v);
@@ -71,47 +69,9 @@ export async function logFormCheck(_prev: FormCheckState, formData: FormData): P
     if (!evidence.ok) errors.push(evidence.error);
   }
   if (!parsed.ok || errors.length || !evidence?.ok) return { errors };
-  const input = parsed.value;
-
-  const db = getDb();
-  const [service] = await db
-    .select({ id: services.id, slug: services.slug })
-    .from(services)
-    .where(and(eq(services.id, input.serviceId), arrayContains(services.networks, ["mainnet"])));
-  if (!service) return { errors: ["That service is not on the mainnet board."] };
-
-  // Saved under web/public/evidence with a name we choose (never the uploaded file name).
-  const day = input.observedAt.toISOString().slice(0, 10);
-  const name = `${service.slug}-${input.addressType}-${day}-${randomUUID().slice(0, 8)}.${evidence.format === "png" ? "png" : "jpg"}`;
-  const dir = join(process.cwd(), "public", "evidence");
-  await mkdir(dir, { recursive: true });
-  const path = join(dir, name);
-  await writeFile(path, evidence.bytes, { flag: "wx" });
-
-  let id: string;
-  try {
-    const [report] = await db
-      .insert(reports)
-      .values({
-        network: "mainnet",
-        serviceId: service.id,
-        tier: "community",
-        method: FORM_CHECK_METHOD,
-        addressType: input.addressType,
-        address: input.address,
-        outcome: input.result,
-        errorText: input.errorText,
-        observedAt: input.observedAt,
-        note: input.note,
-        evidenceUrl: `/api/evidence/${name}`, // served at request time; see app/api/evidence
-      })
-      .returning({ id: reports.id });
-    id = report.id;
-  } catch (e) {
-    await unlink(path).catch(() => {});
-    throw e;
-  }
-  redirect(`/services/${service.slug}#report-${id}`);
+  const saved = await saveFormCheck(getDb(), parsed.value, evidence);
+  if (!saved.ok) return { errors: [saved.error] };
+  redirect(`/services/${saved.slug}#report-${saved.id}`);
 }
 
 /**

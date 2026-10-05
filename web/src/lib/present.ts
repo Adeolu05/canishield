@@ -2,7 +2,7 @@
 // Evidence semantics live in ./evidence and are not changed here.
 import type { AddressType, Pool, Report, ReportOutcome, ResearchClaimRow, Test } from "@zecproof/db";
 import { LISTED_CLAIM, READINESS, reportDate, sourceName, testDate, type Cell, type Readiness } from "./evidence";
-import { RESEARCH_CLAIM, researchSource } from "./research";
+import { RESEARCH_CLAIM, researchSource, resolutionFor } from "./research";
 
 export type Tone = "ok" | "shield" | "warn" | "bad" | "info" | "listed" | "neutral";
 
@@ -116,7 +116,7 @@ export function verdictFor(
   verified: Test[],
   visible: Report[],
   now = new Date(),
-  research: Pick<ResearchClaimRow, "claim" | "source">[] = [],
+  research: Pick<ResearchClaimRow, "claim" | "source" | "serviceId" | "readAt">[] = [],
 ): Verdict {
   const v = READINESS_VISUAL[readiness];
   const d = (x: Date | undefined) => (x ? shortDate(x, now) : "");
@@ -144,7 +144,14 @@ export function verdictFor(
         const claims = [...new Set(listings.map((r) => LISTED_CLAIM[r.outcome].label.replace(/^Listed: /, "")))];
         parts.push(`${sourceName(listings[0].sourceUrl)} lists it as ${claims.join(", ")}`);
       }
-      for (const r of research) parts.push(`${researchSource(r.source).name} says ${RESEARCH_CLAIM[r.claim].phrase}`);
+      for (const r of research) {
+        const resolved = resolutionFor(r, visible);
+        parts.push(
+          resolved
+            ? `${researchSource(r.source).name} found it not listed, since resolved: ${resolved.text.toLowerCase()}, ${d(resolved.date)}`
+            : `${researchSource(r.source).name} says ${RESEARCH_CLAIM[r.claim].phrase}`,
+        );
+      }
       if (!parts.length) return { ...v, title: "Not tested yet", detail: "no on-chain or community evidence so far" };
       return { ...v, title: "Not tested yet", detail: `${parts.join("; ")} (${parts.length > 1 ? "all " : ""}unverified)` };
     }

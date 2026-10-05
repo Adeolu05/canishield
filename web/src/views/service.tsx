@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Ban, ClipboardCheck, ExternalLink, FileSearch } from "lucide-react";
+import { ArrowRight, Ban, CircleCheck, ClipboardCheck, ExternalLink, FileSearch } from "lucide-react";
 import type { Report, ResearchClaimRow, Test } from "@zecproof/db";
-import { RESEARCH_CLAIM, researchSource } from "@/lib/research";
+import { RESEARCH_CLAIM, researchLabel, researchSource, resolutionFor } from "@/lib/research";
 import { FORM_CHECK_LABEL, FORM_CHECK_METHOD, canLogFormChecks } from "@/lib/form-check";
 import Image from "next/image";
 import { ListedClaimBadge, ListingSource, OutcomeBadge } from "@/components/badges";
@@ -213,15 +213,16 @@ function ReportCard({ report, base, now }: { report: Report; base: string; now: 
   );
 }
 
-function ResearchCard({ claim, now }: { claim: ResearchClaimRow; now: Date }) {
+function ResearchCard({ claim, now, reports }: { claim: ResearchClaimRow; now: Date; reports: Report[] }) {
   const src = researchSource(claim.source);
   const c = RESEARCH_CLAIM[claim.claim];
+  const resolved = resolutionFor(claim, reports);
   return (
     <article className="rounded-xl border border-dashed border-line-strong bg-surface p-4 text-sm">
       <div className="flex flex-wrap items-center gap-2">
         <span className={`${c.inactive ? "border-line-strong bg-surface-2 text-muted" : "border-line-strong bg-listed-soft text-listed"} inline-flex items-center gap-1 rounded-full border border-dashed px-2 py-0.5 text-xs font-medium`}>
           {c.inactive ? <Ban aria-hidden="true" className="size-3.5" /> : <FileSearch aria-hidden="true" className="size-3.5" />}
-          {c.label}
+          {researchLabel(claim, reports)}
         </span>
         <span className="text-xs text-subtle">per {src.name}</span>
         <span className="ml-auto flex items-center gap-2 text-xs text-subtle">
@@ -232,6 +233,17 @@ function ResearchCard({ claim, now }: { claim: ResearchClaimRow; now: Date }) {
       {claim.detail && (
         <p className="mt-2 text-pretty text-muted">
           <span className="font-medium text-foreground">{claim.product}:</span> {claim.detail}
+        </p>
+      )}
+      {resolved && (
+        <p className="mt-2 flex items-start gap-2 rounded-lg bg-surface-2 px-2 py-1 text-xs">
+          <CircleCheck aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-ok" />
+          <span>
+            Resolved <time dateTime={isoDay(resolved.date)}>{shortDate(resolved.date, now)}</time>: {resolved.text}.{" "}
+            <a href={`#report-${resolved.reportId}`} className="font-medium text-accent-ink hover:underline">
+              See the check
+            </a>
+          </span>
         </p>
       )}
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
@@ -409,7 +421,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
               <div className="space-y-4">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-subtle">Community research</h3>
                 {research.map((r) => (
-                  <ResearchCard key={r.id} claim={r} now={now} />
+                  <ResearchCard key={r.id} claim={r} now={now} reports={communityReports} />
                 ))}
               </div>
             )}

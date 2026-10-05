@@ -3,8 +3,8 @@
 // A third kind of evidence, kept apart from tests, community reports and
 // listings: it never fills a matrix cell, never moves readiness, and is
 // exported under its own field with its own codes.
-import type { ResearchClaim, ResearchClaimRow } from "@zecproof/db";
-import { isStale } from "./evidence";
+import type { Report, ResearchClaim, ResearchClaimRow } from "@zecproof/db";
+import { isStale, reportDate } from "./evidence";
 
 export interface ResearchSource {
   /** How a claim is attributed inline: "per community research (orb)". */
@@ -44,6 +44,40 @@ export const RESEARCH_CLAIM: Record<ResearchClaim, { label: string; phrase: stri
 
 export const isInactive = (claims: Pick<ResearchClaimRow, "claim">[]) => claims.some((c) => RESEARCH_CLAIM[c.claim].inactive);
 
+/** How a resolved "listing disputed" claim reads: the researcher's original finding, not the dispute. */
+export const RESOLVED_DISPUTE_LABEL = "Claimed: not listed";
+
+export interface Resolution {
+  date: Date;
+  text: string;
+  reportId: string;
+}
+
+/**
+ * A disputed listing is resolved by ZecProof's own later evidence that ZEC
+ * withdrawals work: a withdrawal form check, dated after the claim was read,
+ * whose form accepted the address. The claim itself is never changed.
+ */
+export function resolutionFor(claim: Pick<ResearchClaimRow, "claim" | "serviceId" | "readAt">, reports: Report[]): Resolution | null {
+  if (claim.claim !== "listing_disputed") return null;
+  const later = reports
+    .filter(
+      (r) =>
+        r.serviceId === claim.serviceId &&
+        r.tier === "community" &&
+        r.status !== "rejected" &&
+        r.method === "withdrawal_form_check" &&
+        r.outcome === "form_accepted" &&
+        reportDate(r) > claim.readAt,
+    )
+    .sort((a, b) => reportDate(b).getTime() - reportDate(a).getTime());
+  return later[0] ? { date: reportDate(later[0]), text: "ZEC withdrawals available (ZecProof form check)", reportId: later[0].id } : null;
+}
+
+/** The label to show for a claim, given ZecProof's own evidence for the same service. */
+export const researchLabel = (claim: Pick<ResearchClaimRow, "claim" | "serviceId" | "readAt">, reports: Report[]) =>
+  resolutionFor(claim, reports) ? RESOLVED_DISPUTE_LABEL : RESEARCH_CLAIM[claim.claim].label;
+
 /** "Claimed: Ironwood supported · per community research (orb)". */
 export const researchLine = (r: Pick<ResearchClaimRow, "claim" | "source">) =>
   `${RESEARCH_CLAIM[r.claim].label} · per ${researchSource(r.source).name}`;
@@ -61,9 +95,10 @@ export interface ClaimLine {
 export const inactiveLast = <T extends { inactive: boolean }>(rows: T[]) =>
   rows.map((r, i) => [r, i] as const).sort(([a, i], [b, j]) => Number(a.inactive) - Number(b.inactive) || i - j).map(([r]) => r);
 
-/** Export shape. Carries `researchClaim`, never `outcome` or `listedClaim`. */
-export function researchJson(r: ResearchClaimRow, slug: string, now: Date) {
+/** Export shape. Carries `researchClaim` (the researcher's original code, never changed), never `outcome` or `listedClaim`. */
+export function researchJson(r: ResearchClaimRow, slug: string, now: Date, reports: Report[] = []) {
   const src = researchSource(r.source);
+  const resolved = resolutionFor(r, reports);
   return {
     id: r.id,
     service: slug,
@@ -72,6 +107,8 @@ export function researchJson(r: ResearchClaimRow, slug: string, now: Date) {
     credit: { text: src.credit, url: src.url, secondaryUrl: src.secondary?.url ?? null },
     researchClaim: r.claim,
     researchClaimLabel: RESEARCH_CLAIM[r.claim].label,
+    // Set when ZecProof's own later evidence settled the claim (e.g. a disputed listing).
+    resolution: resolved ? { date: resolved.date.toISOString(), text: resolved.text, reportId: resolved.reportId } : null,
     product: r.product,
     detail: r.detail,
     officialUrl: r.officialUrl,

@@ -9,7 +9,7 @@ import { getBoard, getLatestProof, getServiceDetail } from "@/lib/queries";
 import { readinessOf } from "@/lib/evidence";
 import { verdictFor } from "@/lib/present";
 import { SITE_URL } from "@/lib/site";
-import { RESEARCH_CLAIM, inactiveLast, isInactive, researchSource, type ClaimLine } from "@/lib/research";
+import { RESEARCH_CLAIM, inactiveLast, isInactive, researchLabel, researchSource, resolutionFor, type ClaimLine } from "@/lib/research";
 import { ProofTrace } from "@/components/proof-trace";
 import { ShareProof } from "@/components/share";
 import { ServiceIcon } from "@/components/service-icon";
@@ -269,7 +269,7 @@ function Legend() {
 }
 
 export async function BoardView({ network }: { network: NetworkId }) {
-  const { rows, counts, total, research } = await getBoard(network);
+  const { rows, counts, total, research, visible } = await getBoard(network);
   const researchBy = Map.groupBy(research, (r) => r.serviceId);
   const base = basePath(network);
   const testsOpen = canCreateTests(network);
@@ -300,7 +300,14 @@ export async function BoardView({ network }: { network: NetworkId }) {
       const found = researchBy.get(service.id) ?? [];
       for (const r of found) {
         const source = researchSource(r.source).name;
-        claims.push({ kind: "research", label: RESEARCH_CLAIM[r.claim].label, source, title: `Per ${source}, read ${shortDate(r.readAt, now)} from the official page`, inactive: !!RESEARCH_CLAIM[r.claim].inactive });
+        const resolved = resolutionFor(r, visible);
+        claims.push({
+          kind: "research",
+          label: researchLabel(r, visible),
+          source: resolved ? `${source}, read ${shortDate(r.readAt, now)}; resolved ${shortDate(resolved.date, now)}` : source,
+          title: `Per ${source}, read ${shortDate(r.readAt, now)} from the official page${resolved ? `. Resolved ${shortDate(resolved.date, now)}: ${resolved.text}` : ""}`,
+          inactive: !!RESEARCH_CLAIM[r.claim].inactive,
+        });
       }
       untested.push({ ...common, testHref: `${base}/test?service=${service.id}`, claims, inactive: isInactive(found) });
     }

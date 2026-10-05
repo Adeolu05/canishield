@@ -104,6 +104,8 @@ npm run dev:web                      # terminal 2 → http://localhost:3000
 - Screenshots: PNG or JPEG only, up to 4 MB and 8000 px a side, checked by their bytes; EXIF, XMP and text metadata are stripped. Saved under `web/public/evidence/` with a generated name and served by `/api/evidence/<file>` (`next start` does not serve files added to `public/` after a build), sandboxed and `nosniff`.
 - Open in development; in production only with `ZECPROOF_ENABLE_FORM_CHECKS=yes`. There is no login, so keep it off on any public deployment.
 - Export: `communityReports[]` carry `method`, `methodLabel`, `errorText`, `observedAt` and `address`; community cells carry `method`.
+- Batch logging from screenshots on disk: `web/scripts/log-form-checks.mts` (dry run by default, `--apply` to store) runs the same validation, metadata stripping and storage as the page (`lib/form-check.ts`, `lib/form-check-store.ts`) and skips checks already logged. It was used for the Oct 5, 2026 checks of Bitget, MEXC and Binance.
+- A research claim of "listing status disputed" is shown as resolved (the original claim and its date stay) once a later form check on that service shows the form accepting an address; the export adds `resolution` next to the original `researchClaim`.
 
 ## Service icons
 

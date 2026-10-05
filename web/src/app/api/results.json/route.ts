@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
     tests: verified.map((t) => testJson(t, slugOf.get(t.serviceId)!, origin, network)),
     communityReports: visible.filter((r) => r.tier === "community").map((r) => communityJson(r, slugOf.get(r.serviceId)!)),
     listings: visible.filter((r) => r.tier === "listing").map((r) => listingJson(r, slugOf.get(r.serviceId)!, now)),
-    research: research.map((r) => researchJson(r, slugOf.get(r.serviceId)!, now)),
+    research: research.map((r) => researchJson(r, slugOf.get(r.serviceId)!, now, visible)),
     listedClaimCodes: Object.fromEntries(Object.values(LISTED_CLAIM).map((c) => [c.code, c.label])),
     researchClaimCodes: Object.fromEntries(Object.entries(RESEARCH_CLAIM).map(([code, c]) => [code, c.label])),
     researchCredit: RESEARCH_CREDIT,
