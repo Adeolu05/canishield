@@ -1,4 +1,6 @@
-# Deploying ZecProof (Windows, PowerShell 7)
+# Deploying Can I Shield? (Windows, PowerShell 7)
+
+The public site is <https://canishield.vercel.app>. Repo, folder, Neon, Railway and env-var names keep the internal zecproof prefix (see the README).
 
 What goes where:
 
@@ -129,7 +131,7 @@ The DB client notices Neon's pooled host and turns off prepared statements, keep
 
 ## 4. Set ZECPROOF_SITE_URL
 
-1. Note the site address: Vercel project → **Domains** (e.g. `https://zecproof.vercel.app`, or your own domain if you add one there).
+1. Note the site address: Vercel project → **Domains** (`https://canishield.vercel.app`, or your own domain if you add one there).
 2. **Settings → Environment Variables** → add `ZECPROOF_SITE_URL` = that address, with `https://` and **no trailing slash**. Environment: Production (and Preview if you want).
 3. **Deployments** → the latest one → **⋯** → **Redeploy**. Environment variable changes only apply to new deployments.
 
@@ -190,9 +192,9 @@ Open the site (your `ZECPROOF_SITE_URL`) and tick each:
 
 - [ ] **Board loads**: `/` shows the mainnet board with services and icons; `/testnet` shows the testnet board.
 - [ ] **Scanner online**: on `/testnet` the header pill says **Scanner online** within about a minute of the worker starting. (On `/` it stays **Scanner offline** until a mainnet worker exists. That's expected.)
-- [ ] **Export**: `/api/results.json` and `/api/results.json?network=testnet` return JSON starting with `{"format":"zecproof-results/1"`.
+- [ ] **Export**: `/api/results.json` and `/api/results.json?network=testnet` return JSON starting with `{"format":"canishield-results/1"`.
 - [ ] **Evidence screenshots**: open a service with a form check (e.g. `/services/binance`) and click a screenshot link; the image loads from `/api/evidence/…`.
-- [ ] **404s**: `/no-such-page` and `/services/no-such-service` show the ZecProof "not found" page.
+- [ ] **404s**: `/no-such-page` and `/services/no-such-service` show the Can I Shield? "not found" page.
 - [ ] **No mainnet test button**: on `/`, the hero button reads **Try a test on testnet** (not "Run a test"); untested services show no "Help test this" link; ⌘K / Ctrl+K lists "Run a test · testnet" only; `/test` says mainnet tests aren't open.
 - [ ] **Form checks closed**: `/report/form-check` says form checks aren't open here.
 - [ ] **Testnet test works end to end**: `/testnet/test` → pick a service → you get an address within ~30 s (the worker assigned a pool key).

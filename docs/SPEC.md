@@ -1,11 +1,13 @@
-# ZecProof: Build Spec
+# Can I Shield?: Build Spec
+
+(Formerly ZecProof; renamed Oct 7, 2026. Internal identifiers keep the zecproof prefix; see the README.)
 
 Last updated: Oct 1, 2026 (mainnet decisions added) · Owner: David Peluola
 Source doc: https://claude.ai/code/artifact/39691e4c-c885-4d44-ae85-c434fe54f62a
 
 ## Summary
 
-ZecProof is a live, verifiable board that answers one question: **is this exchange, wallet or swap service Ironwood-ready?** It proves shielded Zcash support with on-chain evidence anyone can re-check, instead of self-reported lists.
+Can I Shield? is a live, verifiable board that answers one question: **is this exchange, wallet or swap service Ironwood-ready?** It proves shielded Zcash support with on-chain evidence anyone can re-check, instead of self-reported lists.
 
 **Pitch:** The Bech32 adoption page for Ironwood: proof, not claims, of where shielded ZEC actually works.
 
@@ -39,7 +41,7 @@ In scope:
 - Ironwood migration panel (counts from the registry)
 - Seed data: ZecHub exchange list imported as "Unverified listing"
 
-Out of scope (post-hackathon): scheduled re-testing, ZecProof-run exchange accounts, embeddable badges, public API with keys, status-change alerts, mobile app, moderation dashboard beyond a simple admin flag.
+Out of scope (post-hackathon): scheduled re-testing, CanIShield-run exchange accounts, embeddable badges, public API with keys, status-change alerts, mobile app, moderation dashboard beyond a simple admin flag.
 
 ## Evidence model
 
@@ -123,7 +125,7 @@ Never send shielded ZEC to an exchange deposit address during testing.
 
 ## Judging criteria
 
-| Criterion | What ZecProof shows |
+| Criterion | What Can I Shield? shows |
 | --- | --- |
 | Functionality | A live test verified on mainnet in the demo; clean, typed code |
 | Potential impact | Every ZEC user choosing where to buy or which wallet to trust |

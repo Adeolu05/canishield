@@ -1,6 +1,6 @@
 # Credits
 
-People who helped ZecProof. Every contribution here must be credited on the
+People who helped Can I Shield? (formerly ZecProof). Every contribution here must be credited on the
 board (next to the data it produced), in the README and in the Colosseum
 submission. Do not remove an entry without asking the person.
 

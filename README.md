@@ -1,6 +1,12 @@
-# ZecProof
+# Can I Shield?
+
+**Can I send shielded ZEC to this service? Live, re-checkable answers for wallets and exchanges.**
+
+<https://canishield.vercel.app> · compact name **CanIShield**
 
 A public registry of which Zcash services actually deliver shielded withdrawals, backed by on-chain evidence. Runs on **testnet** by default; mainnet is built but off (see below).
+
+> **Name.** This project was called ZecProof until Oct 7, 2026 and was renamed because another, unrelated project already uses that name. Internal identifiers still use the zecproof prefix: npm packages (`@zecproof/*`), env vars (`ZECPROOF_*`), the database name and user, Docker and Railway config, folder names, and the file formats of key batches, seed files and listing snapshots (`zecproof-key-batch/1`, `zecproof-key-seeds/1`, `zecproof-listing-snapshot/1`). They are not shown to users, and renaming them would risk the deployment and existing key files.
 
 Each test gets a throwaway key of its own. The tester withdraws from the service to that key's address, and the worker records which pool the payment landed in. The key's viewing key is published so anyone can re-verify the result.
 
@@ -25,7 +31,7 @@ Claims older than 30 days show as **Stale** until retested. The mainnet board op
 
 ## Data export and listings
 
-- `GET /api/results.json` (mainnet) or `?network=testnet`: readiness counts, every service's cells with dates and staleness, verified tests with txid and viewing key, community reports and listings. CORS-open and cached for a minute, format `zecproof-results/1`.
+- `GET /api/results.json` (mainnet) or `?network=testnet`: readiness counts, every service's cells with dates and staleness, verified tests with txid and viewing key, community reports and listings. CORS-open and cached for a minute, format `canishield-results/1` (renamed from `zecproof-results/1` on Oct 7, 2026, before anything depended on it), with a `source` block giving the name, compact name and URL.
 - `npm run import:zechub -w @zecproof/db` loads [`packages/db/data/zechub-custodial-exchanges.json`](packages/db/data/zechub-custodial-exchanges.json), a dated snapshot of ZecHub's custodial exchanges page (commit `31decdb815`, read 2026-10-02), as **Unverified listing** claims. Re-running replaces only that source's listings. Listing claims read as claims ("Listed: transparent only", "Listed: shielded/UA accepted", always "per ZecHub") and use `listedClaim` in the export, never the `outcome` values of tests and community reports.
 - `npm run import:research -w @zecproof/db` loads [`docs/research/orb-zec-research-2026-10-02-v2.md`](docs/research/orb-zec-research-2026-10-02-v2.md) (community research by orb, read 2026-10-02) into `research_claims` and adds any new wallets, exchanges, swaps and hardware wallets to the mainnet board. Re-running replaces only that source's rows. Every row must be mapped or skipped in `packages/db/src/research.ts`, so a new row in a later version fails the import instead of being guessed at; server-only tools (zecd, zcash-walletd, Zallet, zcashd) are skipped. Corrections show as "No longer supports ZEC" (KuCoin, YWallet; sorted last) or "Listing status disputed: check pending" (Bitget). The export lists them under `research` with `researchClaim` codes and `researchCredit`.
 
@@ -133,7 +139,7 @@ Files land in `web/public/service-icons/<slug>.png` or `.svg`. The script checks
 ## License
 
 - **Code:** MIT (see [LICENSE](LICENSE)).
-- **ZecProof results** (verified tests, community reports, readiness counts): [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Credit "ZecProof" with a link.
+- **Can I Shield? results** (verified tests, community reports, readiness counts): [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Credit "CanIShield" with a link to <https://canishield.vercel.app>.
 - **Unverified listings** adapted from the ZecHub Wiki (ZecHub contributors) stay under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), their source's license, and are marked separately on the board and in `/api/results.json` (`license` vs `listingsLicense`).
 
 ## Credits
