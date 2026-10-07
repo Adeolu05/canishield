@@ -1,7 +1,7 @@
 import { serviceOgImage } from "@/lib/og-pages";
 import { OG_SIZE } from "@/lib/og";
 
-export const alt = "ZecProof testnet verdict for this service";
+export const alt = "Can I Shield? testnet verdict for this service";
 export const size = OG_SIZE;
 export const contentType = "image/png";
 

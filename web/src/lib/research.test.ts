@@ -85,7 +85,7 @@ test("a disputed listing is resolved only by a later form check the form accepte
   const j = researchJson(disputed, "bitget", NOW, reports);
   assert.equal(j.researchClaim, "listing_disputed");
   assert.equal(j.readAt, "2026-10-02T00:00:00.000Z");
-  assert.deepEqual(j.resolution, { date: "2026-10-05T12:00:00.000Z", text: "ZEC withdrawals available (ZecProof form check)", reportId: "fc" });
+  assert.deepEqual(j.resolution, { date: "2026-10-05T12:00:00.000Z", text: "ZEC withdrawals available (CanIShield form check)", reportId: "fc" });
   assert.equal(researchJson(disputed, "bitget", NOW, []).resolution, null);
 
   const v = verdictFor("untested", [], [], NOW, [disputed]);

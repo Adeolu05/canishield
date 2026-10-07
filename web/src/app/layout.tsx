@@ -60,7 +60,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <footer className="border-t border-line">
           <div className="mx-auto max-w-7xl space-y-2 px-4 py-6 text-xs text-subtle sm:px-6">
             <p>
-              ZecProof results (verified tests and community reports) are licensed{" "}
+              {BRAND.name} results (verified tests and community reports) are licensed{" "}
               <a href="https://creativecommons.org/licenses/by/4.0/" className="underline underline-offset-2 hover:text-foreground" rel="license noreferrer" target="_blank">
                 CC BY 4.0
               </a>
@@ -71,7 +71,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <a href="https://creativecommons.org/licenses/by-sa/4.0/" className="underline underline-offset-2 hover:text-foreground" rel="license noreferrer" target="_blank">
                 CC BY-SA 4.0
               </a>
-              . ZecProof&apos;s code is MIT.
+              . The code is MIT.
             </p>
             <p>
               Wallet and exchange claims marked &ldquo;per community research (orb)&rdquo;:{" "}
@@ -82,9 +82,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <a href="https://zec-os.com" className="underline underline-offset-2 hover:text-foreground" rel="noreferrer" target="_blank">
                 zec-os.com
               </a>
-              . Read from official pages; not tested by ZecProof.
+              . Read from official pages; not tested by {BRAND.compact}.
             </p>
-            <p>ZecProof is independent and not affiliated with the services listed. Names and logos belong to their owners.</p>
+            <p>{BRAND.name} is independent and not affiliated with the services listed. Names and logos belong to their owners.</p>
             <p>
               Built by David Peluola ·{" "}
               <a href="https://x.com/0xdavee_" className="underline underline-offset-2 hover:text-foreground" rel="me noreferrer" target="_blank">

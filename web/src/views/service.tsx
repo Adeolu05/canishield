@@ -411,7 +411,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
 
       {(listings.length > 0 || research.length > 0) && (
         <section className="space-y-4">
-          <SectionTitle title="Other people's claims" hint="unverified; never tested by ZecProof. Each source shown on its own" />
+          <SectionTitle title="Other people's claims" hint="unverified; never tested by CanIShield. Each source shown on its own" />
           {/* One column per source, side by side: claims are never merged or ranked. */}
           <div className={`grid items-start gap-4 ${listings.length > 0 && research.length > 0 ? "lg:grid-cols-2" : ""}`}>
             {listings.length > 0 && (

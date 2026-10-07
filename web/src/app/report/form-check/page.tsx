@@ -16,7 +16,7 @@ export default async function FormCheckPage(props: PageProps<"/report/form-check
       <div className="mx-auto max-w-xl space-y-4 rounded-xl border border-line bg-surface p-6 shadow-card">
         <h1 className="text-2xl font-semibold tracking-tight">Log a form check</h1>
         <p className="text-muted">
-          Form checks are logged from ZecProof&apos;s own machine and aren&apos;t open here.{" "}
+          Form checks are logged from the maintainer&apos;s own machine and aren&apos;t open here.{" "}
           <Link href="/" className="font-medium text-foreground underline underline-offset-2">
             Back to the board
           </Link>

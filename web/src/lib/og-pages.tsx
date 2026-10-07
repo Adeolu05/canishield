@@ -22,7 +22,7 @@ export async function boardOgImage(network: NetworkId) {
 export async function serviceOgImage(network: NetworkId, slug: string) {
   const detail = await getServiceDetail(network, slug);
   if (!detail) {
-    return ogImage({ network, eyebrow: "ZecProof", title: "Service not found", lines: [] });
+    return ogImage({ network, eyebrow: "Can I Shield?", title: "Service not found", lines: [] });
   }
   const visible = [...detail.communityReports, ...detail.listings];
   const v = verdictFor(readinessOf(detail.tests, visible), detail.tests, visible, new Date(), detail.research);

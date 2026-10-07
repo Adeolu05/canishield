@@ -54,7 +54,7 @@ export interface Resolution {
 }
 
 /**
- * A disputed listing is resolved by ZecProof's own later evidence that ZEC
+ * A disputed listing is resolved by CanIShield's own later evidence that ZEC
  * withdrawals work: a withdrawal form check, dated after the claim was read,
  * whose form accepted the address. The claim itself is never changed.
  */
@@ -71,10 +71,10 @@ export function resolutionFor(claim: Pick<ResearchClaimRow, "claim" | "serviceId
         reportDate(r) > claim.readAt,
     )
     .sort((a, b) => reportDate(b).getTime() - reportDate(a).getTime());
-  return later[0] ? { date: reportDate(later[0]), text: "ZEC withdrawals available (ZecProof form check)", reportId: later[0].id } : null;
+  return later[0] ? { date: reportDate(later[0]), text: "ZEC withdrawals available (CanIShield form check)", reportId: later[0].id } : null;
 }
 
-/** The label to show for a claim, given ZecProof's own evidence for the same service. */
+/** The label to show for a claim, given CanIShield's own evidence for the same service. */
 export const researchLabel = (claim: Pick<ResearchClaimRow, "claim" | "serviceId" | "readAt">, reports: Report[]) =>
   resolutionFor(claim, reports) ? RESOLVED_DISPUTE_LABEL : RESEARCH_CLAIM[claim.claim].label;
 
@@ -107,7 +107,7 @@ export function researchJson(r: ResearchClaimRow, slug: string, now: Date, repor
     credit: { text: src.credit, url: src.url, secondaryUrl: src.secondary?.url ?? null },
     researchClaim: r.claim,
     researchClaimLabel: RESEARCH_CLAIM[r.claim].label,
-    // Set when ZecProof's own later evidence settled the claim (e.g. a disputed listing).
+    // Set when CanIShield's own later evidence settled the claim (e.g. a disputed listing).
     resolution: resolved ? { date: resolved.date.toISOString(), text: resolved.text, reportId: resolved.reportId } : null,
     product: r.product,
     detail: r.detail,

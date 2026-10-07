@@ -8,6 +8,8 @@ import type { Report, Test } from "@zecproof/db";
 import { LISTED_CLAIM, READINESS, STALE_AFTER_DAYS, isStale, reportDate, sourceName, testDate, type Cell } from "@/lib/evidence";
 import { NETWORKS, basePath } from "@/lib/network";
 import { getResults } from "@/lib/queries";
+import { BRAND } from "@/lib/brand";
+import { SITE_URL } from "@/lib/site";
 import { RESEARCH_CLAIM, RESEARCH_SOURCES, researchJson } from "@/lib/research";
 import { methodJson } from "@/lib/form-check";
 
@@ -17,13 +19,13 @@ const HEADERS = {
   "Cache-Control": "public, max-age=60, s-maxage=300",
 };
 
-/** ZecProof's own results: verified tests, community reports and readiness counts. */
+/** CanIShield's own results: verified tests, community reports and readiness counts. */
 const RESULTS_LICENSE = {
   name: "CC BY 4.0",
   url: "https://creativecommons.org/licenses/by/4.0/",
   appliesTo: ["tests", "communityReports", "readiness", "services[].cells with tier verified or community"],
-  attribution: "ZecProof",
-  note: "Unverified listings are licensed separately; see listingsLicense. ZecProof's code is MIT.",
+  attribution: BRAND.compact,
+  note: "Unverified listings are licensed separately; see listingsLicense. The code is MIT.",
 };
 
 /** Third-party listings keep their source's license, separate from the above. */
@@ -126,7 +128,8 @@ export async function GET(request: NextRequest) {
   const slugOf = new Map(services.map((s) => [s.id, s.slug]));
 
   const body = {
-    format: "zecproof-results/1",
+    format: "canishield-results/1",
+    source: { name: BRAND.name, compact: BRAND.compact, url: SITE_URL },
     network,
     generatedAt: now.toISOString(),
     staleAfterDays: STALE_AFTER_DAYS,
@@ -159,7 +162,7 @@ export async function GET(request: NextRequest) {
     listedClaimCodes: Object.fromEntries(Object.values(LISTED_CLAIM).map((c) => [c.code, c.label])),
     researchClaimCodes: Object.fromEntries(Object.entries(RESEARCH_CLAIM).map(([code, c]) => [code, c.label])),
     researchCredit: RESEARCH_CREDIT,
-    license: { ...RESULTS_LICENSE, attribution: `ZecProof (${origin})` },
+    license: { ...RESULTS_LICENSE, attribution: `${BRAND.compact} (${origin})` },
     listingsLicense: LISTINGS_LICENSE,
   };
   return Response.json(body, { headers: HEADERS });
