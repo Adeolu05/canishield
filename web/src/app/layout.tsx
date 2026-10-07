@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { InlineScript } from "@/components/inline-script";
 import { THEME_INIT_SCRIPT } from "@/components/theme-toggle";
 import { SITE_URL } from "@/lib/site";
+import { BRAND } from "@/lib/brand";
 import { canCreateTests } from "@/lib/network";
 import "./globals.css";
 
@@ -20,10 +21,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: "ZecProof · Can I send shielded ZEC to…?", template: "%s · ZecProof" },
-  description:
-    "On-chain evidence of which exchanges, wallets and services actually support shielded Zcash (Ironwood), with txids and viewing keys anyone can re-check.",
-  openGraph: { siteName: "ZecProof", type: "website" },
+  title: { default: BRAND.name, template: `%s · ${BRAND.compact}` },
+  description: BRAND.description,
+  applicationName: BRAND.name,
+  openGraph: { siteName: BRAND.name, type: "website" },
   twitter: { card: "summary_large_image" },
 };
 

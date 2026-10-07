@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wordmark } from "./logo";
+import { BRAND } from "@/lib/brand";
 import { ScannerPill } from "./scanner-pill";
 import { ThemeToggle } from "./theme-toggle";
 import { CommandPalette } from "./command-palette";
@@ -19,7 +20,7 @@ export function SiteHeader({ mainnetTests }: { mainnetTests: boolean }) {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4 sm:gap-8 sm:px-6">
-        <Link href="/" aria-label="ZecProof home" className="rounded-md">
+        <Link href="/" aria-label={`${BRAND.compact} home`} className="rounded-md">
           <Wordmark />
         </Link>
         <nav aria-label="Main" className="flex items-center gap-1 text-sm max-sm:[&>a:last-child]:hidden">

@@ -1,5 +1,6 @@
 // Link-preview images (1200×630). Satori supports flexbox only.
 import { ImageResponse } from "next/og";
+import { BRAND, MARK_CHECK, MARK_SHIELD } from "./brand";
 
 export const OG_SIZE = { width: 1200, height: 630 };
 
@@ -16,8 +17,8 @@ const TONE_HEX: Record<string, string> = {
 function Mark() {
   return (
     <svg width="56" height="56" viewBox="0 0 32 32">
-      <path d="M16 2.5 4.5 6.8v8.4c0 7.2 4.8 12.6 11.5 14.3 6.7-1.7 11.5-7.1 11.5-14.3V6.8L16 2.5Z" fill="#F4B728" />
-      <path d="M10.5 11.5h11l-9.3 9h9.3" fill="none" stroke="#18181B" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={MARK_SHIELD} fill="#F4B728" />
+      <path d={MARK_CHECK} fill="none" stroke="#18181B" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -51,7 +52,7 @@ export function ogImage({
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <Mark />
           <div style={{ display: "flex", fontSize: 34, fontWeight: 700, letterSpacing: -0.5 }}>
-            Zec<span style={{ color: "#F4B728" }}>Proof</span>
+            CanI<span style={{ color: "#F4B728" }}>Shield</span>
           </div>
           {network === "testnet" && (
             <div style={{ display: "flex", marginLeft: 12, padding: "6px 14px", borderRadius: 10, background: "#33280b", color: "#fcd34d", fontSize: 22 }}>
@@ -71,7 +72,7 @@ export function ogImage({
           </div>
         </div>
         <div style={{ display: "flex", fontSize: 24, color: "#9a9aa3" }}>
-          On-chain evidence of shielded Zcash support · txids and viewing keys anyone can re-check
+          {BRAND.description}
         </div>
       </div>
     ),
