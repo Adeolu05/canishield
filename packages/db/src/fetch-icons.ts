@@ -20,7 +20,7 @@ const OUT_DIR = fileURLToPath(new URL("../../../web/public/service-icons/", impo
 const MANIFEST = fileURLToPath(new URL("../../../web/src/lib/service-icons.json", import.meta.url));
 const MAX_BYTES = 256 * 1024;
 const TIMEOUT_MS = 10_000;
-const UA = "Mozilla/5.0 (compatible; ZecProof icon fetch; one-off)";
+const UA = "Mozilla/5.0 (compatible; CanIShield icon fetch; one-off)";
 
 /** Pages to read instead of the listed website, when the homepage is not the brand's. */
 const PAGE_OVERRIDES: Record<string, string> = {};

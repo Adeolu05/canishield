@@ -1,4 +1,4 @@
-# ZecProof scanner worker. Build from the repo root (the worker uses the
+# CanIShield scanner worker. Build from the repo root (the worker uses the
 # packages/db and packages/zcash workspaces):
 #   docker build -f worker/Dockerfile -t zecproof-worker .
 #

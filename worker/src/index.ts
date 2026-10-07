@@ -1,4 +1,4 @@
-// ZecProof scanner worker. One process serves one network (testnet by default).
+// CanIShield scanner worker. One process serves one network (testnet by default).
 //
 // Each cycle:
 //   expire never-assigned tests → assign addresses to pending tests →

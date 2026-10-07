@@ -25,7 +25,7 @@ async function main() {
           name: e.name,
           kind: "exchange",
           websiteUrl: e.website,
-          notes: `Listed on ${snap.source.name} (read ${snap.source.readAt}). Not yet tested by ZecProof.`,
+          notes: `Listed on ${snap.source.name} (read ${snap.source.readAt}). Not yet tested by CanIShield.`,
           networks: ["mainnet"],
         })
         .onConflictDoUpdate({

@@ -44,7 +44,7 @@ export function encryptSeeds(batchId: string, network: string, seeds: SeedEntry[
 }
 
 export function decryptSeeds(file: SeedsFile, passphrase: string): SeedEntry[] {
-  if (file.format !== SEEDS_FORMAT) throw new Error("Not a ZecProof seeds file.");
+  if (file.format !== SEEDS_FORMAT) throw new Error("Not a CanIShield seeds file.");
   const { N, r, p } = file.kdf;
   const key = scryptSync(passphrase, Buffer.from(file.kdf.salt, "base64"), 32, { N, r, p, maxmem: SCRYPT.maxmem });
   const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(file.cipher.iv, "base64"));

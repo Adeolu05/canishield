@@ -1,4 +1,4 @@
-// ZecProof data model.
+// CanIShield data model.
 //
 // Three evidence tiers (docs/SPEC.md, "Evidence model"):
 //   - tests with a receipt      → "on-chain verified": a throwaway key per
@@ -312,7 +312,7 @@ export const researchClaim = pgEnum("research_claim", [
   "shielded_announced", // announced, not yet shipped
   "no_longer_supported", // dropped ZEC (delisted, discontinued)
   "no_current_release", // no current Zcash release found
-  "listing_disputed", // listing status unclear; ZecProof check pending
+  "listing_disputed", // listing status unclear; CanIShield check pending
 ]);
 
 export const researchClaims = pgTable(

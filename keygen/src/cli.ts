@@ -1,4 +1,4 @@
-// ZecProof offline key tool. Never imported by the worker or the web app.
+// CanIShield offline key tool. Never imported by the worker or the web app.
 //
 //   generate  make a batch: N fresh seeds (one per test), an encrypted seeds
 //             file, and a public file with viewing keys + addresses only

@@ -43,7 +43,7 @@ export interface BatchPublic {
 /** Parses a batch file and re-derives every address from its keys. */
 export function parseBatchPublic(json: unknown): BatchPublic {
   const b = json as BatchPublic;
-  if (b?.format !== BATCH_FORMAT) throw new Error(`Not a ZecProof key batch (format ${String(b?.format)}).`);
+  if (b?.format !== BATCH_FORMAT) throw new Error(`Not a CanIShield key batch (format ${String(b?.format)}).`);
   if (!isNetworkId(b.network)) throw new Error(`Unknown network "${String(b.network)}".`);
   if (!Number.isInteger(b.birthdayHeight) || b.birthdayHeight < 1) throw new Error("Batch has no valid birthdayHeight.");
   if (!Array.isArray(b.keys) || b.keys.length === 0) throw new Error("Batch has no keys.");

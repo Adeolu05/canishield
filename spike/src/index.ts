@@ -1,4 +1,4 @@
-// ZecProof day-1 spike: which pool did an incoming testnet payment land in?
+// CanIShield day-1 spike: which pool did an incoming testnet payment land in?
 //
 //   npm run spike            one pass: scan birthday → tip, print what landed
 //   npm run spike -- --watch keep polling every 30s until Ctrl+C

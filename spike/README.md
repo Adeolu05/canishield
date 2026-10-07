@@ -1,4 +1,4 @@
-# ZecProof spike: which pool did a payment land in?
+# CanIShield spike: which pool did a payment land in?
 
 Testnet only. Uses [`@ledgerhq/zcash-utils`](https://www.npmjs.com/package/@ledgerhq/zcash-utils) 2.5.0 (Apache-2.0) for shielded scanning and the lightwalletd gRPC API ([lightwallet-protocol](https://github.com/zcash/lightwallet-protocol), MIT, in `proto/`) for transparent UTXOs.
 

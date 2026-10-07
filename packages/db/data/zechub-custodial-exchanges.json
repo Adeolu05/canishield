@@ -9,7 +9,7 @@
     "readAt": "2026-10-02",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "attribution": "Adapted from the ZecHub Wiki (ZecHub contributors), CC BY-SA 4.0. Quotes are verbatim; the per-address-type claims below are ZecProof's reading of them."
+    "attribution": "Adapted from the ZecHub Wiki (ZecHub contributors), CC BY-SA 4.0. Quotes are verbatim; the per-address-type claims below are CanIShield's reading of them."
   },
   "mapping": {
     "transparent": "\"Supports\" names transparent addresses → claim the service pays a transparent address.",
