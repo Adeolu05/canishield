@@ -52,7 +52,9 @@ export function ogImage({
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <Mark />
           <div style={{ display: "flex", fontSize: 34, fontWeight: 700, letterSpacing: -0.5 }}>
-            CanI<span style={{ color: "#F4B728" }}>Shield</span>
+            {/* Display name in link previews; Satori needs explicit spacing between spans. */}
+            <span>Can I</span>
+            <span style={{ color: "#F4B728", marginLeft: 10 }}>Shield?</span>
           </div>
           {network === "testnet" && (
             <div style={{ display: "flex", marginLeft: 12, padding: "6px 14px", borderRadius: 10, background: "#33280b", color: "#fcd34d", fontSize: 22 }}>
