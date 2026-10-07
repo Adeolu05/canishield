@@ -1,0 +1,15 @@
+# Build context for worker/Dockerfile. Never send env files or key material.
+**/node_modules
+**/.next
+**/dist
+**/*.tsbuildinfo
+.git
+.env
+.env.*
+**/.env
+**/.env.*
+*.seeds.enc.json
+**/*seeds*.json
+web/public
+docs
+spike

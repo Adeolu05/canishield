@@ -66,6 +66,8 @@ u1k4cq54vwua52vle8cvqamyl9mhgzusd0p50enuq9jc3j8evra07r8zx9737wz66f9vj5tmf8wv5f66
 
 The first mainnet test, step by step on Windows: [docs/RUNBOOK-mainnet.md](docs/RUNBOOK-mainnet.md).
 
+Deploying (web on Vercel, Postgres on Neon, worker on Railway), step by step on Windows: [docs/DEPLOY.md](docs/DEPLOY.md). Apply migrations to the hosted database with `npm run db:migrate:hosted` (reads only `DATABASE_URL` from the environment, never `.env`).
+
 The whole pool path can be rehearsed on testnet: generate a `--network testnet` batch, verify, import, and run the worker with `WORKER_TEST_MNEMONIC=` (empty) and `ZECPROOF_REQUIRED_CONFIRMATIONS=10 ZECPROOF_EXPLORER_CHECK=on`.
 
 ## Test matrix (MVP)

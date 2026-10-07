@@ -12,6 +12,7 @@
   "scripts": {
     "generate": "drizzle-kit generate",
     "migrate": "tsx --env-file-if-exists=../../.env src/migrate.ts",
+    "migrate:hosted": "tsx src/migrate.ts",
     "seed": "tsx --env-file-if-exists=../../.env src/seed.ts",
     "typecheck": "tsc --noEmit",
     "import:zechub": "tsx --env-file-if-exists=../../.env src/import-listings.ts",

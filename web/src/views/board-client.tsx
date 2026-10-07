@@ -28,7 +28,8 @@ export interface UntestedRowView {
   name: string;
   kind: string;
   href: string;
-  testHref: string;
+  /** Null when tests can't be created on this network (mainnet, unless enabled). */
+  testHref: string | null;
   /** Every source's claim, one line each: ZecHub listings and community research, never merged. */
   claims: ClaimLine[];
   /** Research says the service dropped ZEC; sorted last. */
@@ -308,12 +309,14 @@ export function UntestedList({ rows, note }: { rows: UntestedRowView[]; note?: s
                   Not in any listing or research
                 </p>
               )}
-              <Link
-                href={r.testHref}
-                className="inline-flex items-center gap-1 justify-self-start text-sm font-medium text-accent-ink underline-offset-4 transition-colors duration-150 hover:underline sm:justify-self-end"
-              >
-                Help test this <ArrowRight aria-hidden="true" className="size-4" />
-              </Link>
+              {r.testHref && (
+                <Link
+                  href={r.testHref}
+                  className="inline-flex items-center gap-1 justify-self-start text-sm font-medium text-accent-ink underline-offset-4 transition-colors duration-150 hover:underline sm:justify-self-end"
+                >
+                  Help test this <ArrowRight aria-hidden="true" className="size-4" />
+                </Link>
+              )}
             </li>
           ))}
         </ul>

@@ -3,6 +3,7 @@
 // Mainnet is off unless BOTH ZECPROOF_NETWORK=mainnet and
 // ZECPROOF_ALLOW_MAINNET=yes are set. A mainnet worker uses only the
 // offline-generated key pool and refuses to start if any seed is readable.
+// A pool worker on either network refuses a seed too (see worker/Dockerfile).
 import { NETWORKS, isNetworkId, type NetworkId, type NetworkProfile } from "@zecproof/zcash/networks";
 
 export class ConfigError extends Error {}
@@ -32,6 +33,11 @@ function resolveKeySource(network: NetworkId, env = process.env): KeySource {
   }
   const source = env.ZECPROOF_KEY_SOURCE ?? (env.WORKER_TEST_MNEMONIC ? "derived" : "pool");
   if (source !== "derived" && source !== "pool") throw new ConfigError(`Unknown ZECPROOF_KEY_SOURCE "${source}".`);
+  // A pool worker holds viewing keys only. The Docker image (worker/Dockerfile)
+  // pins the pool, so a hosted worker never runs with a seed in its environment.
+  if (source === "pool" && env.WORKER_TEST_MNEMONIC) {
+    throw new ConfigError("WORKER_TEST_MNEMONIC is set but this worker uses the key pool: remove the seed from its environment.");
+  }
   return source;
 }
 

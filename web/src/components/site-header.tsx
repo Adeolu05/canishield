@@ -14,7 +14,7 @@ const NAV = [
   { href: "/api/results.json", label: "API", match: () => false },
 ];
 
-export function SiteHeader() {
+export function SiteHeader({ mainnetTests }: { mainnetTests: boolean }) {
   const pathname = usePathname() ?? "/";
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -42,7 +42,7 @@ export function SiteHeader() {
         </nav>
         <div className="ml-auto flex items-center gap-2">
           <ScannerPill />
-          <CommandPalette />
+          <CommandPalette mainnetTests={mainnetTests} />
           <ThemeToggle />
         </div>
       </div>
