@@ -6,6 +6,13 @@
 # native binary (needs glibc 2.34+) and no musl build.
 FROM node:24-bookworm-slim
 
+# CA certificates: the native zcash-utils binary (Rust) reads the system trust
+# store for TLS to lightwalletd/Zaino. The slim image ships without one, which
+# shows up as "TLS config failed: transport error" on every endpoint.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Workspace manifests first, so the install layer is cached across code changes.
