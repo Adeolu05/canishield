@@ -62,10 +62,19 @@ export async function TestStatusView({ network, id }: { network: NetworkId; id: 
       </div>
 
       {test.status === "pending" && (
-        <Panel tone="neutral" icon={<Hourglass aria-hidden="true" className="size-5" />} title="Preparing a fresh address">
-          <p className="text-sm text-muted">The scanner assigns a throwaway address within about 30 seconds. This page updates by itself.</p>
-          <div className="h-24 animate-pulse rounded-lg bg-surface-2" aria-hidden="true" />
-          {test.error && <p className="text-xs text-bad">{test.error}</p>}
+        <Panel tone="neutral" icon={<Hourglass aria-hidden="true" className="size-5" />} title={test.error ? "No test address free right now" : "Preparing a fresh address"}>
+          {test.error ? (
+            <p className="text-sm text-muted">
+              Every test gets its own throwaway address, and all of them are in use at the moment. This test will start by itself once new
+              addresses are added, so you can leave this page open or come back later. The mainnet results and their on-chain evidence are on
+              the board in the meantime.
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-muted">The scanner assigns a throwaway address within about 30 seconds. This page updates by itself.</p>
+              <div className="h-24 animate-pulse rounded-lg bg-surface-2" aria-hidden="true" />
+            </>
+          )}
         </Panel>
       )}
 

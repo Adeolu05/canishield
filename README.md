@@ -4,7 +4,15 @@
 
 <https://canishield.vercel.app> · compact name **CanIShield**
 
-A public registry of which Zcash services actually deliver shielded withdrawals, backed by on-chain evidence. Runs on **testnet** by default; mainnet is built but off (see below).
+A public registry of which Zcash services actually deliver shielded withdrawals, backed by on-chain evidence.
+
+**Live now:** [canishield.vercel.app](https://canishield.vercel.app) · [2-min demo](https://youtu.be/dE29j72mCJM) · built for Colosseum's Crypto World's Fair (Zcash track). Two scanners (mainnet and testnet) run around the clock on Railway; the board runs on Vercel with Postgres on Neon.
+
+**Results so far (mainnet, 4 of 40 services tested):**
+
+- Trust Wallet sends transparent only: verified on-chain at block 3,503,266, with the txid and a throwaway viewing key published so anyone can re-check it.
+- Trust Wallet, Bitget, MEXC and Binance reject both Ironwood-only and full unified addresses (withdrawal-form checks with screenshots, reviewed before publishing).
+- None of the tested services can send shielded ZEC yet.
 
 > **Name.** This project was called ZecProof until Oct 7, 2026 and was renamed because another, unrelated project already uses that name. Internal identifiers still use the zecproof prefix: npm packages (`@zecproof/*`), env vars (`ZECPROOF_*`), the database name and user, Docker and Railway config, folder names, and the file formats of key batches, seed files and listing snapshots (`zecproof-key-batch/1`, `zecproof-key-seeds/1`, `zecproof-listing-snapshot/1`). They are not shown to users, and renaming them would risk the deployment and existing key files.
 
@@ -46,7 +54,7 @@ Each network has its own list, tried in order each cycle; the worker stops if an
 - Testnet (`ZECPROOF_TESTNET_GRPC_URLS`): `testnet.zec.rocks` → `zaino.testnet.unsafe.zec.rocks`
 - Mainnet (`ZECPROOF_MAINNET_GRPC_URLS`): `na.zec.rocks` → `eu.zec.rocks` → `zaino.unsafe.zec.rocks`
 
-## Mainnet (off by default)
+## Mainnet safety switches
 
 Nothing touches mainnet unless the worker has `ZECPROOF_NETWORK=mainnet` **and** `ZECPROOF_ALLOW_MAINNET=yes`, and the web app has `ZECPROOF_ENABLE_MAINNET_TESTS=yes`. A mainnet worker uses only offline-generated keys, refuses to start if any seed (`WORKER_TEST_MNEMONIC`) is readable, and marks a result verified only after 10 confirmations and an independent explorer check (ZecBlock, then Blockchair).
 

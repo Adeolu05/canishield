@@ -37,7 +37,7 @@ async function assignPending(db: Db, cfg: WorkerConfig, endpoint: HealthyEndpoin
       } else {
         const key = await takePoolKey(tx, endpoint, network);
         if (!key) {
-          await tx.update(tests).set({ error: `No unused ${network} keys in the pool. Import a new batch.` }).where(eq(tests.id, test.id));
+          await tx.update(tests).set({ error: `All ${network} test addresses are in use right now.` }).where(eq(tests.id, test.id));
           console.error(`pool      empty: ${test.id} stays pending`);
           return;
         }
