@@ -199,19 +199,27 @@ async function main() {
       if (err instanceof WrongChainError) throw err; // never fall through to another chain
       console.error(`error     ${err instanceof Error ? err.message : err}`);
     }
-    // Expire stale pending tests before assigning, so they never get an address.
-    await expireUnassigned(db, cfg);
-    if (endpoint) {
-      if (endpoint.url !== lastUrl) console.log(`using     ${endpoint.url} (tip ${endpoint.tip})`);
-      lastUrl = endpoint.url;
-      await heartbeat(db, cfg, endpoint);
-      await assignPending(db, cfg, endpoint, mnemonic);
-      await scanAwaiting(db, cfg, endpoint);
-      await confirmSeen(db, cfg, endpoint);
+    try {
+      // Expire stale pending tests before assigning, so they never get an address.
+      await expireUnassigned(db, cfg);
+      if (endpoint) {
+        if (endpoint.url !== lastUrl) console.log(`using     ${endpoint.url} (tip ${endpoint.tip})`);
+        lastUrl = endpoint.url;
+        await heartbeat(db, cfg, endpoint);
+        await assignPending(db, cfg, endpoint, mnemonic);
+        await scanAwaiting(db, cfg, endpoint);
+        await confirmSeen(db, cfg, endpoint);
+      }
+      // After the scan, so a payment that landed before the deadline still counts.
+      // Needs no chain access, so it also runs when every endpoint is down.
+      await expireUnpaid(db, cfg);
+    } catch (err) {
+      // A database outage (or any other failed cycle) is logged and retried next
+      // cycle instead of crashing the process into a restart loop. Each step only
+      // writes what it finished, so the next cycle picks up where this one stopped.
+      if (once) throw err;
+      console.error(`error     cycle failed, retrying in ${POLL_INTERVAL_MS / 1000}s: ${err instanceof Error ? err.message : err}`);
     }
-    // After the scan, so a payment that landed before the deadline still counts.
-    // Needs no chain access, so it also runs when every endpoint is down.
-    await expireUnpaid(db, cfg);
     if (once) break;
     await sleep(POLL_INTERVAL_MS);
   }
