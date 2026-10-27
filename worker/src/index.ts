@@ -218,7 +218,7 @@ async function main() {
       // cycle instead of crashing the process into a restart loop. Each step only
       // writes what it finished, so the next cycle picks up where this one stopped.
       if (once) throw err;
-      console.error(`error     cycle failed, retrying in ${POLL_INTERVAL_MS / 1000}s: ${err instanceof Error ? err.message : err}`);
+      console.error(`error     cycle failed, retrying in ${POLL_INTERVAL_MS / 1000}s: ${describe(err)}`);
     }
     if (once) break;
     await sleep(POLL_INTERVAL_MS);
@@ -227,7 +227,24 @@ async function main() {
   await db.$client.end();
 }
 
+/** The message plus its causes: Drizzle wraps driver errors as "Failed query: ...", and the reason is in `cause`. */
+function describe(err: unknown): string {
+  const parts: string[] = [];
+  let e: unknown = err;
+  for (let depth = 0; e && depth < 4; depth++) {
+    if (e instanceof Error) {
+      const code = (e as { code?: string }).code;
+      parts.push(code ? `${e.message} [${code}]` : e.message);
+      e = e.cause;
+    } else {
+      parts.push(String(e));
+      break;
+    }
+  }
+  return parts.join(" <- caused by: ");
+}
+
 main().catch((err) => {
-  console.error(err instanceof ConfigError ? `Config: ${err.message}` : err instanceof Error ? err.message : err);
+  console.error(err instanceof ConfigError ? `Config: ${err.message}` : describe(err));
   process.exit(1);
 });
