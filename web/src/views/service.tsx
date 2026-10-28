@@ -10,6 +10,7 @@ import { CopyButton } from "@/components/copy-button";
 import { ServiceIcon } from "@/components/service-icon";
 import { PendingChip, ReviewedChip, StaleChip, StatusIcon, TONE_SOFT, TONE_TEXT, TierChip } from "@/components/status";
 import { isStale, readinessOf, reportDate, testDate } from "@/lib/evidence";
+import { describeTiming, formatDuration, summarizeTiming, timeToChainMs } from "@/lib/timing";
 import { ADDRESS_TYPE_LABEL, POOL_LABEL } from "@/lib/labels";
 import { NETWORKS, basePath, canCreateTests, formatAmount, type NetworkId } from "@/lib/network";
 import { isoDay, reviewedLabel, shortDate, verdictFor } from "@/lib/present";
@@ -90,6 +91,11 @@ function EvidenceCard({ t, network, now, service }: { t: Test; network: NetworkI
             <span className="text-subtle">Not recorded</span>
           )}
         </Field>
+        {timeToChainMs(t) != null && (
+          <Field label="Time to chain">
+            {formatDuration(timeToChainMs(t)!)} <span className="text-subtle">· from the reported request time to the block time</span>
+          </Field>
+        )}
         {t.explorerName && (
           <Field label="Cross-checked">
             Confirmed on {t.explorerName}
@@ -296,6 +302,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
   const visible = [...communityReports, ...listings];
   const verdict = verdictFor(readinessOf(tests, visible), tests, visible, now, research);
   const testsOpen = canCreateTests(network);
+  const timing = summarizeTiming(tests);
   const nothing = tests.length === 0 && communityReports.length === 0;
 
   return (
@@ -363,6 +370,12 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
 
       <section className="space-y-4">
         <SectionTitle title="On-chain evidence" hint="txid, block and viewing key for every verified payment" />
+        {timing && (
+          <p className="rounded-lg border border-line bg-surface px-4 py-2 text-sm text-muted">
+            Withdrawals reached the chain in <strong className="font-semibold text-foreground">{describeTiming(timing)}</strong> after they were
+            requested <span className="text-subtle">(request times reported by testers; block times from the chain)</span>.
+          </p>
+        )}
         {tests.length === 0 ? (
           <div className="rounded-xl border border-dashed border-line-strong bg-surface px-6 py-10 text-center">
             <p className="font-medium">No verified payments yet</p>

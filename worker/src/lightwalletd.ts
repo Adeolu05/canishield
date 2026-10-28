@@ -24,6 +24,7 @@ export interface AddressUtxo {
 type Callback<T> = (err: grpc.ServiceError | null, res: T) => void;
 interface Client extends grpc.Client {
   GetLightdInfo(req: object, cb: Callback<LightdInfo>): void;
+  GetBlock(req: { height: number }, options: grpc.CallOptions, cb: Callback<{ height: string; time: number }>): void;
   GetAddressUtxos(
     req: { addresses: string[]; startHeight: number; maxEntries: number },
     cb: Callback<{ addressUtxos: Array<Omit<AddressUtxo, "txid"> & { txid: Buffer }> }>,
@@ -44,6 +45,13 @@ const call = <T>(fn: (cb: Callback<T>) => void) =>
   new Promise<T>((resolve, reject) => fn((err, res) => (err ? reject(err) : resolve(res))));
 
 export const getLightdInfo = (c: Client) => call<LightdInfo>((cb) => c.GetLightdInfo({}, cb));
+
+/** Header time of the block at `height`, or undefined if the server leaves it unset (0). Gives up after `timeoutMs`. */
+export async function getBlockTime(c: Client, height: number, timeoutMs: number): Promise<Date | undefined> {
+  const block = await call<{ height: string; time: number }>((cb) => c.GetBlock({ height }, { deadline: Date.now() + timeoutMs }, cb));
+  if (Number(block.height) !== height) throw new Error(`asked for block ${height}, got ${block.height}`);
+  return block.time > 0 ? new Date(block.time * 1000) : undefined;
+}
 
 /** True if any transaction touched `address` in [start, end]. Stops at the first one. */
 export function hasTaddressHistory(c: Client, address: string, start: number, end: number): Promise<boolean> {

@@ -5,13 +5,14 @@
 //   scan awaiting tests → confirm seen payments (depth + explorer) →
 //   expire unpaid tests
 import { setTimeout as sleep } from "node:timers/promises";
-import { and, asc, eq, lt, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { createDb, keyPool, tests, workerHeartbeats, type Db } from "@zecproof/db";
-import { ConfigError, POLL_INTERVAL_MS, loadConfig, requireTestMnemonic, type WorkerConfig } from "./config";
+import { ConfigError, ENDPOINT_TIMEOUT_MS, POLL_INTERVAL_MS, loadConfig, requireTestMnemonic, type WorkerConfig } from "./config";
 import { WrongChainError, closeEndpoints, openEndpoints, pickEndpoint, type HealthyEndpoint } from "./endpoints";
 import { confirmOnExplorer } from "./explorer";
 import { addressesForType, deriveTestKeys, type TestKeys } from "./keys";
 import { takePoolKey } from "./pool";
+import { getBlockTime } from "./lightwalletd";
 import { findFirstReceipt } from "./scanner";
 
 const once = process.argv.includes("--once");
@@ -96,6 +97,16 @@ async function expireUnpaid(db: Db, cfg: WorkerConfig) {
   for (const { id } of expired) console.log(`expired   ${id}  (no payment)`);
 }
 
+/** Block header time for timing; a failure only means the time is filled in later, never a lost receipt. */
+async function blockTimeOrNull(endpoint: HealthyEndpoint, height: number): Promise<Date | null> {
+  try {
+    return (await getBlockTime(endpoint.client, height, ENDPOINT_TIMEOUT_MS)) ?? null;
+  } catch (err) {
+    console.warn(`blocktime ${height}: ${err instanceof Error ? err.message : err}`);
+    return null;
+  }
+}
+
 async function scanAwaiting(db: Db, cfg: WorkerConfig, endpoint: HealthyEndpoint) {
   const { tip } = endpoint;
   const awaiting = await db
@@ -121,6 +132,9 @@ async function scanAwaiting(db: Db, cfg: WorkerConfig, endpoint: HealthyEndpoint
             error: null,
           })
           .where(eq(tests.id, test.id));
+        // After the receipt is safely written: timing only, never in its way.
+        const blockTime = await blockTimeOrNull(endpoint, receipt.height);
+        if (blockTime) await db.update(tests).set({ blockTime }).where(eq(tests.id, test.id));
         console.log(`seen      ${test.id}  → ${receipt.pool.toUpperCase()}  height ${receipt.height}  txid ${receipt.txid}`);
       } else {
         await db.update(tests).set({ scannedToHeight: tip, error: null }).where(eq(tests.id, test.id));
@@ -131,6 +145,30 @@ async function scanAwaiting(db: Db, cfg: WorkerConfig, endpoint: HealthyEndpoint
       await db.update(tests).set({ error: message }).where(eq(tests.id, test.id));
       console.error(`error     ${test.id}  ${message}`);
     }
+  }
+}
+
+/**
+ * Block time for seen or recently verified payments that don't have it yet (a
+ * GetBlock call failed or timed out earlier). A few per cycle; timing only.
+ */
+async function backfillBlockTimes(db: Db, cfg: WorkerConfig, endpoint: HealthyEndpoint) {
+  const missing = await db
+    .select({ id: tests.id, height: tests.receivedHeight })
+    .from(tests)
+    .where(
+      and(
+        eq(tests.network, cfg.network),
+        inArray(tests.status, ["confirming", "received"]),
+        isNull(tests.blockTime),
+        isNotNull(tests.receivedHeight),
+        gt(tests.updatedAt, new Date(Date.now() - 2 * 24 * 3600_000)),
+      ),
+    )
+    .limit(3);
+  for (const { id, height } of missing) {
+    const blockTime = await blockTimeOrNull(endpoint, height!);
+    if (blockTime) await db.update(tests).set({ blockTime }).where(eq(tests.id, id));
   }
 }
 
@@ -209,6 +247,7 @@ async function main() {
         await assignPending(db, cfg, endpoint, mnemonic);
         await scanAwaiting(db, cfg, endpoint);
         await confirmSeen(db, cfg, endpoint);
+        await backfillBlockTimes(db, cfg, endpoint);
       }
       // After the scan, so a payment that landed before the deadline still counts.
       // Needs no chain access, so it also runs when every endpoint is down.

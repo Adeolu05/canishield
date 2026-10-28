@@ -15,6 +15,10 @@ import { zip321Uri } from "@/lib/present";
 import { SITE_URL } from "@/lib/site";
 import { VerifiedReceipt, WatchMarker } from "@/components/verified-receipt";
 import { getTest } from "@/lib/queries";
+import { RequestedAtForm } from "@/components/requested-at-form";
+import { isTester } from "@/lib/tester-token";
+import { formatDuration, timeToChainMs } from "@/lib/timing";
+import type { Test } from "@zecproof/db";
 
 const POLL_SECONDS = 10;
 
@@ -31,6 +35,48 @@ function Panel({ tone, icon, title, children }: { tone: "ok" | "bad" | "warn" | 
           {children}
         </div>
       </div>
+    </section>
+  );
+}
+
+const utcTime = (d: Date) => `${d.toISOString().slice(0, 10)} ${d.toISOString().slice(11, 16)} UTC`;
+
+/** How long the service took: the tester's request time against the block time. */
+function Timing({ test, serviceName, canEdit }: { test: Test; serviceName: string; canEdit: boolean }) {
+  if (!["awaiting_payment", "confirming", "received"].includes(test.status)) return null;
+  if (!test.requestedAt) {
+    if (!canEdit) return null;
+    return (
+      <details className="rounded-xl border border-line bg-surface p-4 shadow-card">
+        <summary className="cursor-pointer text-sm font-semibold">How long did {serviceName} take? Add when you requested the withdrawal</summary>
+        <RequestedAtForm testId={test.id} serviceName={serviceName} />
+      </details>
+    );
+  }
+  const ms = timeToChainMs(test);
+  return (
+    <section className="rounded-xl border border-line bg-surface p-4 text-sm shadow-card">
+      <h2 className="font-semibold">Timing</h2>
+      <dl className="mt-2 grid gap-1 text-muted sm:grid-cols-2">
+        <div>
+          <dt className="text-xs text-subtle">Withdrawal requested (reported by the tester)</dt>
+          <dd className="tabular-nums">{utcTime(test.requestedAt)}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-subtle">Landed on-chain (block time)</dt>
+          <dd className="tabular-nums">{test.blockTime ? utcTime(test.blockTime) : test.status === "awaiting_payment" ? "Waiting for the payment" : "Not recorded yet"}</dd>
+        </div>
+      </dl>
+      {ms != null && (
+        <p className="mt-2">
+          Reached the chain <strong className="font-semibold">{formatDuration(ms)}</strong> after the withdrawal was requested.
+        </p>
+      )}
+      {canEdit && test.requestedEvidenceUrl && (
+        <a href={test.requestedEvidenceUrl} target="_blank" rel="nofollow ugc noreferrer" className="mt-2 inline-block text-xs text-accent-ink hover:underline">
+          Withdrawal history screenshot
+        </a>
+      )}
     </section>
   );
 }
@@ -219,6 +265,8 @@ export async function TestStatusView({ network, id }: { network: NetworkId; id: 
           {test.error && <p className="text-sm text-muted">{test.error}</p>}
         </Panel>
       )}
+
+      <Timing test={test} serviceName={service.name} canEdit={await isTester(test.id, test.testerTokenHash)} />
 
       <Link href={`${base}/services/${service.slug}`} className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground">
         All evidence for {service.name} <ArrowRight aria-hidden="true" className="size-4" />

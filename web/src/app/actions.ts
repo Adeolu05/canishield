@@ -2,13 +2,15 @@
 
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
-import { and, arrayContains, eq } from "drizzle-orm";
+import { and, arrayContains, eq, isNull } from "drizzle-orm";
 import { reports, services, tests, addressType, type AddressType } from "@zecproof/db";
 import { isNetworkId } from "@zecproof/zcash/networks";
 import { getDb } from "@/lib/db";
 import { basePath, canCreateTests } from "@/lib/network";
 import { EVIDENCE_MAX_BYTES, canLogFormChecks, checkEvidence, parseFormCheck } from "@/lib/form-check";
 import { saveFormCheck } from "@/lib/form-check-store";
+import { parseRequestedAt } from "@/lib/timing";
+import { isTester, newTesterToken, setTesterCookie } from "@/lib/tester-token";
 
 const isAddressType = (v: unknown): v is AddressType =>
   typeof v === "string" && (addressType.enumValues as readonly string[]).includes(v);
@@ -42,10 +44,12 @@ export async function createTest(formData: FormData) {
     .where(and(eq(services.id, serviceId), arrayContains(services.networks, [network])));
   if (!service) throw new Error(`That service is not listed on ${network}.`);
 
+  const { token, hash } = newTesterToken();
   const [test] = await db
     .insert(tests)
-    .values({ network, serviceId, addressType: type })
+    .values({ network, serviceId, addressType: type, testerTokenHash: hash })
     .returning({ id: tests.id });
+  await setTesterCookie(test.id, token, `${basePath(network)}/test/${test.id}`);
   redirect(`${basePath(network)}/test/${test.id}`);
 }
 
@@ -100,4 +104,31 @@ export async function markAddressRejected(testId: string, formData: FormData) {
     });
   });
   refresh();
+}
+
+export type RequestedAtState = { error: string } | null;
+
+/**
+ * The tester says when they clicked "withdraw". Tester-reported, so it is only
+ * ever shown as such; the block time comes from the chain. Settable once, only
+ * from the browser that created the test (cookie token), while the test is open
+ * or after it is verified.
+ */
+export async function setRequestedAt(testId: string, _prev: RequestedAtState, formData: FormData): Promise<RequestedAtState> {
+  const db = getDb();
+  const [test] = await db.select().from(tests).where(eq(tests.id, testId));
+  if (!test) return { error: "Test not found." };
+  if (!(await isTester(test.id, test.testerTokenHash))) return { error: "Only the browser that started this test can add its request time." };
+  if (!["awaiting_payment", "confirming", "received"].includes(test.status)) return { error: "This test is closed." };
+  if (test.requestedAt) return { error: "The request time is already recorded." };
+  const parsed = parseRequestedAt(optionalText(formData.get("requestedAtLocal")), optionalText(formData.get("tzOffset")), test);
+  if (!parsed.ok) return { error: parsed.error };
+  const evidenceUrl = optionalUrl(formData.get("requestedEvidenceUrl"));
+  if (evidenceUrl && evidenceUrl.length > 500) return { error: "That screenshot link is too long (500 characters at most)." };
+  await db
+    .update(tests)
+    .set({ requestedAt: parsed.value, requestedEvidenceUrl: evidenceUrl })
+    .where(and(eq(tests.id, testId), isNull(tests.requestedAt)));
+  refresh();
+  return null;
 }

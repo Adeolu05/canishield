@@ -228,6 +228,17 @@ export const tests = pgTable(
     explorerName: text("explorer_name"),
     explorerConfirmedAt: timestamp("explorer_confirmed_at", { withTimezone: true }),
 
+    // Timing (docs/SPEC-deposits-and-timing.md). requestedAt is what the
+    // tester says they clicked "withdraw" at; blockTime is the header time of
+    // the block the first payment landed in. Only their difference is shown.
+    requestedAt: timestamp("requested_at", { withTimezone: true }),
+    requestedEvidenceUrl: text("requested_evidence_url"),
+    blockTime: timestamp("block_time", { withTimezone: true }),
+    // sha256 of a random token set as an httpOnly cookie in the browser that
+    // created the test. Only that browser can add the request time; the token
+    // itself is never stored. NULL for tests created before this existed.
+    testerTokenHash: text("tester_token_hash"),
+
     testerNote: text("tester_note"),
     error: text("error"),
 

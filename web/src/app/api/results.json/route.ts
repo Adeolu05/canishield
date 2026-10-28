@@ -12,6 +12,7 @@ import { BRAND } from "@/lib/brand";
 import { SITE_URL } from "@/lib/site";
 import { RESEARCH_CLAIM, RESEARCH_SOURCES, researchJson } from "@/lib/research";
 import { methodJson } from "@/lib/form-check";
+import { timeToChainMs } from "@/lib/timing";
 
 const HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -77,6 +78,16 @@ function testJson(t: Test, slug: string, origin: string, network: "mainnet" | "t
     verifiedAt: iso(testDate(t)),
     explorer: t.explorerName ? { name: t.explorerName, confirmedAt: iso(t.explorerConfirmedAt) } : null,
     explorerUrl: t.receivedTxid ? NETWORKS[network].explorerTxUrl(t.receivedTxid) : null,
+    // Timing: requestedAt is tester-reported; blockTime is the block header time.
+    timing: {
+      requestedAt: iso(t.requestedAt),
+      requestedAtSource: t.requestedAt ? "tester" : null,
+      blockTime: iso(t.blockTime),
+      timeToChainSeconds: (() => {
+        const ms = timeToChainMs(t);
+        return ms == null ? null : Math.round(ms / 1000);
+      })(),
+    },
     page: `${origin}${basePath(network)}/services/${slug}`,
   };
 }
