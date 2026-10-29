@@ -1,5 +1,5 @@
 {
-  "id": "05cb5642-b179-422a-8b34-d2ad36f1dbe3",
+  "id": "4cb13de3-f144-46f0-a780-c352697dcec3",
   "prevId": "81f6328f-5cd5-43bb-a348-e66121228fb2",
   "version": "7",
   "dialect": "postgresql",
@@ -103,7 +103,7 @@
           "name": "address_hmac",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "check_amount_zat": {
           "name": "check_amount_zat",
@@ -138,6 +138,24 @@
         "after_nu7": {
           "name": "after_nu7",
           "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "destination_checked": {
+          "name": "destination_checked",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tx_submitted_at": {
+          "name": "tx_submitted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_checked_at": {
+          "name": "last_checked_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -305,7 +323,7 @@
         },
         "deposit_checks_published_is_clean": {
           "name": "deposit_checks_published_is_clean",
-          "value": "\"deposit_checks\".\"status\" <> 'published' OR (\"deposit_checks\".\"reviewed_by\" IS NOT NULL AND \"deposit_checks\".\"reviewed_at\" IS NOT NULL AND \"deposit_checks\".\"txid\" IS NULL AND \"deposit_checks\".\"check_amount_zat\" IS NULL AND \"deposit_checks\".\"height\" IS NULL AND \"deposit_checks\".\"evidence_url\" IS NULL)"
+          "value": "\"deposit_checks\".\"status\" <> 'published' OR (\"deposit_checks\".\"reviewed_by\" IS NOT NULL AND \"deposit_checks\".\"reviewed_at\" IS NOT NULL AND \"deposit_checks\".\"txid\" IS NULL AND \"deposit_checks\".\"check_amount_zat\" IS NULL AND \"deposit_checks\".\"height\" IS NULL AND \"deposit_checks\".\"evidence_url\" IS NULL AND \"deposit_checks\".\"address_hmac\" IS NULL)"
         },
         "deposit_checks_credited_time": {
           "name": "deposit_checks_credited_time",
@@ -326,6 +344,10 @@
         "deposit_checks_amount_positive": {
           "name": "deposit_checks_amount_positive",
           "value": "\"deposit_checks\".\"check_amount_zat\" IS NULL OR \"deposit_checks\".\"check_amount_zat\" > 0"
+        },
+        "deposit_checks_open_has_address": {
+          "name": "deposit_checks_open_has_address",
+          "value": "\"deposit_checks\".\"status\" NOT IN ('awaiting_tx', 'verifying', 'onchain_ok') OR \"deposit_checks\".\"address_hmac\" IS NOT NULL"
         }
       },
       "isRLSEnabled": false

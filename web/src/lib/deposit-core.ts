@@ -3,6 +3,9 @@
 import type { DepositAddressType, DepositResult, DepositSource, DepositStatus } from "@zecproof/db";
 import type { NetworkId } from "@zecproof/zcash/networks";
 
+/** Who deposit checks are for: services that take deposits (not wallets, hardware wallets or faucets). */
+export const DEPOSIT_SERVICE_KINDS = ["exchange", "swap", "other"] as const;
+
 /** Deposit checks per network: ZECPROOF_ENABLE_DEPOSIT_CHECKS=testnet, mainnet,testnet or yes (both). */
 export function depositsEnabledFor(setting: string | undefined, network: NetworkId): boolean {
   const v = (setting ?? "").toLowerCase().split(",").map((s) => s.trim());
@@ -104,6 +107,32 @@ export function parseCreditedAt(local: string | null, tzOffsetMinutes: string | 
   }
   return { ok: true, value };
 }
+
+/**
+ * Durations shown or exported for deposits, deliberately coarse so they can't
+ * be used to find the block (spec section 7): under 3 min, then 5-minute steps
+ * up to an hour, 15-minute steps up to a day, then hours.
+ */
+export function roundedMinutes(ms: number): number {
+  const min = Math.max(0, ms) / 60_000;
+  if (min < 3) return 0;
+  if (min < 60) return Math.max(5, Math.round(min / 5) * 5);
+  if (min < 24 * 60) return Math.round(min / 15) * 15;
+  return Math.round(min / 60) * 60;
+}
+
+export function roundedDuration(ms: number): string {
+  const m = roundedMinutes(ms);
+  if (m === 0) return "under 3 min";
+  if (m < 60) return `about ${m} min`;
+  const h = Math.floor(m / 60);
+  const rest = m - h * 60;
+  if (h < 48) return `about ${h} h${rest ? ` ${rest} min` : ""}`;
+  return `about ${Math.round(h / 24)} d`;
+}
+
+/** Printable text only: letters, digits, punctuation, symbols and plain spaces (no control or bidi characters). */
+export const isPlainText = (s: string) => /^[\p{L}\p{M}\p{N}\p{P}\p{S} ]+$/u.test(s);
 
 /** "Not credited after 24 hours" can only be reported 24 hours after the payment landed. */
 export const canReportNotCredited = (blockTime: Date | null, now = new Date()) => !!blockTime && now.getTime() - blockTime.getTime() >= 24 * 3600_000;

@@ -1,26 +1,26 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, BadgeCheck, Hourglass, Lock, ShieldAlert, TriangleAlert } from "lucide-react";
-import { markWalletRefused } from "@/app/deposit-actions";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { CopyButton } from "@/components/copy-button";
 import { Countdown, LiveDot } from "@/components/live";
 import { TONE_SOFT } from "@/components/status";
 import { Stepper } from "@/components/stepper";
-import { DepositStartForm, ReportForm, TxidForm } from "@/components/deposit-forms";
+import { DepositStartForm, ReportForm, TxidForm, WalletRefusedForm } from "@/components/deposit-forms";
 import {
   DEPOSIT_ADDRESS_LABEL,
   DEPOSIT_RESULT_LABEL,
   DEPOSIT_SOURCE_LABEL,
   DEPOSIT_STATUS_LABEL,
   DEPOSIT_STEP,
+  DEPOSIT_SERVICE_KINDS,
   canReportNotCredited,
+  roundedDuration,
   zecExact,
 } from "@/lib/deposit-core";
 import { depositsEnabled, getDepositCheck } from "@/lib/deposit-checks";
 import { NETWORKS, basePath, type NetworkId } from "@/lib/network";
 import { listServices } from "@/lib/queries";
-import { formatDuration } from "@/lib/timing";
 import { isTester } from "@/lib/tester-token";
 
 const DEPOSIT_STEPS = ["Choose", "Send", "On-chain", "Credited"] as const;
@@ -80,7 +80,7 @@ export async function DepositStartView({ network, preselected }: { network: Netw
       </div>
     );
   }
-  const services = (await listServices(network)).filter((s) => s.kind !== "wallet" && s.kind !== "hardware" && s.kind !== "faucet");
+  const services = (await listServices(network)).filter((s) => (DEPOSIT_SERVICE_KINDS as readonly string[]).includes(s.kind));
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <div className="space-y-6">
@@ -95,6 +95,7 @@ export async function DepositStartView({ network, preselected }: { network: Netw
         </div>
       </div>
       <PrivacyNotice />
+      {services.length === 0 && <p className="text-sm text-muted">No exchanges or swap services are listed on {network} yet.</p>}
       <DepositStartForm network={network} unit={NETWORKS[network].unit} services={services.map((s) => ({ id: s.id, name: s.name }))} preselected={preselected} />
       <p className="text-xs text-subtle">
         Withdrawals instead?{" "}
@@ -117,14 +118,14 @@ export async function DepositStatusView({ network, id }: { network: NetworkId; i
   const unit = NETWORKS[network].unit;
   const tester = await isTester(check.id, check.testerTokenHash);
   const failed = check.status === "refused" || check.status === "expired" || check.status === "wallet_refused";
-  const toCredit = check.creditedAt && check.blockTime ? formatDuration(Math.max(0, check.creditedAt.getTime() - check.blockTime.getTime())) : null;
+  const toCredit = check.creditedAt && check.blockTime ? roundedDuration(check.creditedAt.getTime() - check.blockTime.getTime()) : null;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       {/* Only while the worker has something to do: refreshing during awaiting_tx could interrupt the tester typing. */}
       {check.status === "verifying" && <AutoRefresh intervalMs={POLL_SECONDS * 1000} />}
       <div className="space-y-6">
-        <Stepper current={DEPOSIT_STEP[check.status]} done={check.status === "published"} failed={failed} steps={DEPOSIT_STEPS} label="Deposit check progress" />
+        <Stepper current={check.status === "expired" && check.source ? 3 : DEPOSIT_STEP[check.status]} done={check.status === "published"} failed={failed} steps={DEPOSIT_STEPS} label="Deposit check progress" />
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm text-muted">
@@ -164,15 +165,7 @@ export async function DepositStatusView({ network, id }: { network: NetworkId; i
             </section>
             <details className="rounded-xl border border-line bg-surface p-4 shadow-card">
               <summary className="cursor-pointer text-sm font-semibold">My wallet couldn&apos;t pay this address</summary>
-              <form action={markWalletRefused.bind(null, check.id)} className="mt-4 space-y-4">
-                <p className="text-xs text-subtle">
-                  For example, a wallet without TEX support refusing a TEX address. That&apos;s a useful result too: it&apos;s recorded for
-                  {` ${check.wallet}`} and this address kind.
-                </p>
-                <button type="submit" className="rounded-lg border border-line-strong px-4 py-2 text-sm font-medium transition-colors duration-150 hover:bg-surface-2">
-                  Record that the wallet refused
-                </button>
-              </form>
+              <WalletRefusedForm checkId={check.id} wallet={check.wallet} />
             </details>
           </>
         ) : (
@@ -193,6 +186,12 @@ export async function DepositStatusView({ network, id }: { network: NetworkId; i
 
       {check.status === "onchain_ok" && (
         <Panel tone="ok" icon={<BadgeCheck aria-hidden="true" className="size-5" />} title="The payment checks out on-chain">
+          {check.destinationChecked === false && (
+            <p className="text-sm text-muted">
+              Your deposit address keeps a shielded payment shielded, so we could check where the money came from, but not the amount or where it
+              went. Your screenshot carries that part.
+            </p>
+          )}
           <dl className="grid gap-2 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-xs text-subtle">Came from</dt>
@@ -205,7 +204,7 @@ export async function DepositStatusView({ network, id }: { network: NetworkId; i
             </div>
           </dl>
           {tester ? (
-            <ReportForm checkId={check.id} serviceName={service.name} canSayNotCredited={canReportNotCredited(check.blockTime)} />
+            <ReportForm checkId={check.id} serviceName={service.name} canSayNotCredited={canReportNotCredited(check.blockTime ?? check.updatedAt)} />
           ) : (
             <p className="text-sm text-muted">Waiting for the tester to report whether {service.name} credited it.</p>
           )}

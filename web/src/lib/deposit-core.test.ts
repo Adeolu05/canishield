@@ -1,6 +1,25 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { canReportNotCredited, depositsEnabledFor, parseCreditedAt, parseTxid, parseZec, zecExact } from "./deposit-core";
+import { canReportNotCredited, depositsEnabledFor, isPlainText, parseCreditedAt, parseTxid, parseZec, roundedDuration, roundedMinutes, zecExact } from "./deposit-core";
+
+test("deposit-core: durations are coarse", () => {
+  const min = 60_000;
+  assert.equal(roundedDuration(2 * min), "under 3 min");
+  assert.equal(roundedDuration(3 * min), "about 5 min");
+  assert.equal(roundedDuration(19 * min + 17_000), "about 20 min");
+  assert.equal(roundedDuration(97 * min), "about 1 h 30 min");
+  assert.equal(roundedDuration(26 * 60 * min), "about 26 h");
+  assert.equal(roundedDuration(80 * 60 * min), "about 3 d");
+  assert.equal(roundedMinutes(19 * min + 17_000), 20);
+});
+
+test("deposit-core: wallet names are plain text", () => {
+  assert.equal(isPlainText("Zodl 3.18 (iOS)"), true);
+  assert.equal(isPlainText("Zingo! 2.0 · beta"), true);
+  assert.equal(isPlainText("bad\u001b[2Jname"), false);
+  assert.equal(isPlainText("evil\u202Eeman"), false);
+  assert.equal(isPlainText("two\nlines"), false);
+});
 
 test("deposit-core: the switch is per network", () => {
   assert.equal(depositsEnabledFor(undefined, "testnet"), false);

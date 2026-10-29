@@ -4,7 +4,7 @@ import { ArrowDownToLine, Lock } from "lucide-react";
 import { DEPOSIT_ADDRESS_LABEL, DEPOSIT_RESULT_LABEL, DEPOSIT_SOURCE_LABEL } from "@/lib/deposit-core";
 import type { PublishedDeposit } from "@/lib/deposit-checks";
 import { shortDate } from "@/lib/present";
-import { formatDuration } from "@/lib/timing";
+import { roundedDuration } from "@/lib/deposit-core";
 
 const RESULT_TONE: Record<string, string> = {
   credited: "bg-ok-soft text-ok",
@@ -28,13 +28,20 @@ export function DepositResults({ deposits, base, serviceId, open, now }: { depos
       ) : (
         <ul className="space-y-4">
           {deposits.map((d) => {
-            const toCredit = d.creditedAt && d.blockTime ? formatDuration(Math.max(0, d.creditedAt.getTime() - d.blockTime.getTime())) : null;
+            const toCredit = d.creditedAt && d.blockTime ? roundedDuration(d.creditedAt.getTime() - d.blockTime.getTime()) : null;
             return (
               <li key={d.id} className="rounded-xl border border-line bg-surface p-4 shadow-card">
                 <div className="flex flex-wrap items-center gap-2">
                   {d.result && <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${RESULT_TONE[d.result]}`}>{DEPOSIT_RESULT_LABEL[d.result]}</span>}
-                  <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-xs text-muted">
-                    <Lock aria-hidden="true" className="size-3" /> On-chain checked (private)
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-xs text-muted"
+                    title={
+                      d.destinationChecked === false
+                        ? "Our scanner checked that the money left a shielded pool. The deposit address keeps payments shielded, so the amount and destination were not visible; the credit screenshot was reviewed."
+                        : "Our scanner matched the txid, amount and deposit address on-chain; the credit screenshot was reviewed. The txid isn't published."
+                    }
+                  >
+                    <Lock aria-hidden="true" className="size-3" /> {d.destinationChecked === false ? "Source checked on-chain (private)" : "On-chain checked (private)"}
                   </span>
                   {d.afterNu7 != null && <span className="text-xs text-subtle">{d.afterNu7 ? "after NU7" : "before NU7"}</span>}
                 </div>

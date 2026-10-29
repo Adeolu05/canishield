@@ -96,23 +96,60 @@ export function shieldedSpend(tx: ZbTx): "ironwood" | "orchard" | "sapling" | nu
 
 export type SourceResult = { kind: "shielded"; source: DepositSource } | { kind: "refused"; reason: string } | { kind: "need"; txids: string[] };
 
+export interface SourceRules {
+  /** Follow transparent inputs one hop back (only for TEX deposit addresses, which can't be paid any other way). */
+  allowOneHop: boolean;
+  /** The first step of a two-step payment can't be older than the check. */
+  notBefore: Date;
+}
+
+/** Blocks between the two steps of a TEX payment: wallets send the second step straight after the first. */
+const MAX_HOP_BLOCKS = 100;
+
+const txTime = (tx: ZbTx) => {
+  const t = Number(tx.blockTime);
+  return t > 0 ? new Date(t * 1000) : null;
+};
+
 /**
- * Where the deposit's money came from. `prev` holds the transactions that
- * created this tx's transparent inputs; any missing one is asked for ("need").
+ * Where the deposit's money came from. A direct payment spends only shielded
+ * value (no transparent inputs). A two-step (TEX) payment spends only outputs of
+ * transactions that themselves spent only shielded value, made for this check
+ * and just before it. `prev` holds those transactions; missing ones are asked for.
  */
-export function classifyDepositSource(tx: ZbTx, prev: Map<string, ZbTx>): SourceResult {
+export function classifyDepositSource(tx: ZbTx, prev: Map<string, ZbTx>, rules: SourceRules): SourceResult {
+  if (tx.isCoinbase) return { kind: "refused", reason: "This transaction didn't spend from a shielded pool." };
   const direct = shieldedSpend(tx);
-  if (direct) return { kind: "shielded", source: direct };
-  if (tx.isCoinbase || tx.inputs.length === 0) return { kind: "refused", reason: "This transaction didn't spend from a shielded pool." };
-  const missing = [...new Set(tx.inputs.map((i) => i.prev_txid))].filter((id) => !prev.has(id));
-  if (missing.length) return { kind: "need", txids: missing };
-  // Two-step (TEX): every transparent input must come straight out of a shielded pool, all the same one.
-  const pools = new Set(tx.inputs.map((i) => shieldedSpend(prev.get(i.prev_txid)!)));
-  if (pools.has(null) || pools.size !== 1) {
+  if (direct) {
+    if (tx.inputs.length > 0) return { kind: "refused", reason: "This deposit mixed transparent and shielded money. Send it from your shielded balance only." };
+    return { kind: "shielded", source: direct };
+  }
+  if (!rules.allowOneHop || tx.inputs.length === 0) {
     return { kind: "refused", reason: "This deposit came from a transparent address, not a shielded wallet." };
   }
-  const pool = [...pools][0]!;
-  return { kind: "shielded", source: `via_tex_${pool}` as DepositSource };
+  const missing = [...new Set(tx.inputs.map((i) => i.prev_txid))].filter((id) => !prev.has(id));
+  if (missing.length) return { kind: "need", txids: missing };
+  const height = Number(tx.blockHeight);
+  const pools = new Set<string | null>();
+  for (const input of tx.inputs) {
+    const p = prev.get(input.prev_txid)!;
+    const pool = shieldedSpend(p);
+    const pt = txTime(p);
+    const ph = Number(p.blockHeight);
+    const ok =
+      pool !== null &&
+      p.inputs.length === 0 && // the first step spent shielded value only
+      pt !== null &&
+      pt.getTime() >= rules.notBefore.getTime() &&
+      ph > 0 &&
+      ph <= height &&
+      height - ph <= MAX_HOP_BLOCKS;
+    pools.add(ok ? pool : null);
+  }
+  if (pools.has(null) || pools.size !== 1) {
+    return { kind: "refused", reason: "This deposit came from a transparent address, not straight from a shielded wallet in two steps." };
+  }
+  return { kind: "shielded", source: `via_tex_${[...pools][0]}` as DepositSource };
 }
 
 /** True if some output pays exactly `amountZat` to an address whose keyed hash is `addressHmac`. */
@@ -124,12 +161,17 @@ export interface DepositToVerify {
   addressType: DepositAddressType;
   addressHmac: string;
   checkAmountZat: number;
+  /** When the check (and so its unique amount) was created: the payment can't be older. */
+  createdAt: Date;
 }
+
+/** Block header times can run a little behind real time. */
+const CLOCK_SKEW_MS = 5 * 60_000;
 
 export type DepositVerdict =
   | { kind: "wait"; reason: string }
   | { kind: "need"; txids: string[] }
-  | { kind: "ok"; source: DepositSource; height: number; blockTime: Date | null; destinationVisible: boolean }
+  | { kind: "ok"; source: DepositSource; height: number; blockTime: Date; destinationVisible: boolean }
   | { kind: "refused"; reason: string };
 
 /** The whole on-chain check for one deposit, given the tx and any input transactions already fetched. */
@@ -142,8 +184,12 @@ export function verifyDeposit(
 ): DepositVerdict {
   const height = Number(tx.blockHeight);
   if (!(height > 0)) return { kind: "wait", reason: "not mined yet" };
-  if (!tx.isCanonical) return { kind: "refused", reason: "This transaction isn't on the main chain." };
+  // Off the main chain can be a reorg in progress: wait (the step gives up after its deadline).
+  if (!tx.isCanonical) return { kind: "wait", reason: "not on the main chain (yet)" };
   if (tx.confirmations < requiredConfirmations) return { kind: "wait", reason: `${tx.confirmations}/${requiredConfirmations} confirmations` };
+  const notBefore = new Date(check.createdAt.getTime() - CLOCK_SKEW_MS);
+  const landed = txTime(tx);
+  if (!landed || landed < notBefore) return { kind: "refused", reason: "This transaction is older than the check. Send a new payment with the check amount." };
 
   // Unified and Sapling deposit addresses: a shielded payment to them stays shielded, so the destination and
   // amount can't be seen on-chain. Only the source is checked; the credit screenshot carries the rest.
@@ -157,9 +203,8 @@ export function verifyDeposit(
         : "No output in this transaction pays the exact check amount.",
     };
   }
-  const source = classifyDepositSource(tx, prev);
+  const source = classifyDepositSource(tx, prev, { allowOneHop: check.addressType === "tex", notBefore });
   if (source.kind === "need") return source;
   if (source.kind === "refused") return source;
-  const t = Number(tx.blockTime);
-  return { kind: "ok", source: source.source, height, blockTime: t > 0 ? new Date(t * 1000) : null, destinationVisible };
+  return { kind: "ok", source: source.source, height, blockTime: landed, destinationVisible };
 }

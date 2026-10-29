@@ -254,8 +254,6 @@ async function main() {
       // After the scan, so a payment that landed before the deadline still counts.
       // Needs no chain access, so it also runs when every endpoint is down.
       await expireUnpaid(db, cfg);
-      // Deposit checks need only the explorer, not the lightwalletd endpoint.
-      await depositStep(db, cfg);
       // Last: the NU7 page's block strip, on its own time budget, after the test work is done.
       if (endpoint) await recordBlocks(db, cfg, endpoint);
     } catch (err) {
@@ -265,6 +263,9 @@ async function main() {
       if (once) throw err;
       console.error(`error     cycle failed, retrying in ${POLL_INTERVAL_MS / 1000}s: ${describe(err)}`);
     }
+    // Deposit checks need only the explorer, not lightwalletd, and run even when the cycle above failed.
+    // depositStep catches its own errors and stops after its time budget.
+    await depositStep(db, cfg);
     if (once) break;
     await sleep(POLL_INTERVAL_MS);
   }

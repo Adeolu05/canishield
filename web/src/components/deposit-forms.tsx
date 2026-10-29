@@ -2,11 +2,25 @@
 
 // Deposit check forms. The address preview decodes in the browser, so the
 // tester sees what kind of address it is before anything is sent.
-import { useActionState, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { startTransition, useActionState, useMemo, useState, useSyncExternalStore, type FormEvent } from "react";
 import { AlertCircle, ArrowRight, Info } from "lucide-react";
 import { DepositAddressError, decodeDepositAddress } from "@zecproof/zcash/deposit";
 import type { NetworkId } from "@zecproof/zcash/networks";
-import { createDepositCheck, reportDepositResult, submitDepositTxid, type DepositFormState } from "@/app/deposit-actions";
+import { createDepositCheck, markWalletRefused, reportDepositResult, submitDepositTxid, type DepositFormState } from "@/app/deposit-actions";
+
+/**
+ * Submits through the action without React's automatic form reset, so a
+ * validation error never wipes what the tester typed. `before` can fill hidden
+ * fields first (e.g. the timezone offset).
+ */
+function submitWithoutReset(action: (fd: FormData) => void, before?: (form: HTMLFormElement) => void) {
+  return (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    before?.(e.currentTarget);
+    const fd = new FormData(e.currentTarget);
+    startTransition(() => action(fd));
+  };
+}
 
 const field = "h-11 w-full rounded-lg border border-line-strong bg-surface px-4 text-sm";
 const primary =
@@ -24,7 +38,9 @@ function ErrorLine({ state }: { state: DepositFormState }) {
 
 export function DepositStartForm({ network, unit, services, preselected }: { network: NetworkId; unit: string; services: { id: string; name: string }[]; preselected?: string }) {
   const [state, action, pending] = useActionState(createDepositCheck, null);
+  // Controlled, so they survive the form reset React does after every action.
   const [address, setAddress] = useState("");
+  const [serviceId, setServiceId] = useState(preselected ?? "");
   const preview = useMemo(() => {
     if (!address.trim()) return null;
     try {
@@ -35,14 +51,14 @@ export function DepositStartForm({ network, unit, services, preselected }: { net
   }, [address, network]);
 
   return (
-    <form action={action} className="space-y-6 rounded-xl border border-line bg-surface p-6 shadow-card">
+    <form onSubmit={submitWithoutReset(action)} className="space-y-6 rounded-xl border border-line bg-surface p-6 shadow-card">
       <input type="hidden" name="network" value={network} />
       <ErrorLine state={state} />
       <div className="space-y-2">
         <label htmlFor="serviceId" className="text-sm font-medium">
           Service you&apos;re depositing into
         </label>
-        <select id="serviceId" name="serviceId" required defaultValue={preselected ?? ""} className={field}>
+        <select id="serviceId" name="serviceId" required value={serviceId} onChange={(e) => setServiceId(e.target.value)} className={field}>
           <option value="" disabled>
             Choose a service…
           </option>
@@ -83,7 +99,7 @@ export function DepositStartForm({ network, unit, services, preselected }: { net
           <label htmlFor="base" className="text-sm font-medium">
             Amount you&apos;ll deposit ({unit})
           </label>
-          <input id="base" name="base" required inputMode="decimal" placeholder="0.01" className={field} aria-describedby="base-help" />
+          <input id="base" name="base" required inputMode="decimal" placeholder="0.01" defaultValue={state?.values?.base} className={field} aria-describedby="base-help" />
           <p id="base-help" className="text-xs text-subtle">
             At or above the service&apos;s minimum deposit. We add a few zatoshis to make the amount unique to this check.
           </p>
@@ -92,7 +108,7 @@ export function DepositStartForm({ network, unit, services, preselected }: { net
           <label htmlFor="wallet" className="text-sm font-medium">
             Wallet you&apos;ll send from, with version
           </label>
-          <input id="wallet" name="wallet" required maxLength={80} placeholder="e.g. Zodl 3.18" className={field} />
+          <input id="wallet" name="wallet" required maxLength={80} placeholder="e.g. Zodl 3.18" defaultValue={state?.values?.wallet} className={field} />
           <p className="text-xs text-subtle">Published with the result: TEX support depends on the wallet.</p>
         </div>
       </div>
@@ -106,13 +122,13 @@ export function DepositStartForm({ network, unit, services, preselected }: { net
 export function TxidForm({ checkId }: { checkId: string }) {
   const [state, action, pending] = useActionState<DepositFormState, FormData>(submitDepositTxid.bind(null, checkId), null);
   return (
-    <form action={action} className="space-y-4">
+    <form onSubmit={submitWithoutReset(action)} className="space-y-4">
       <ErrorLine state={state} />
       <div className="space-y-1">
         <label htmlFor="txid" className="text-sm font-medium">
           Transaction ID (txid) of the deposit
         </label>
-        <input id="txid" name="txid" required autoComplete="off" spellCheck={false} placeholder="64 characters" className={`${field} font-mono`} />
+        <input id="txid" name="txid" required autoComplete="off" spellCheck={false} placeholder="64 characters" defaultValue={state?.values?.txid} className={`${field} font-mono`} />
         <p className="text-xs text-subtle">For a two-step (TEX) deposit, the txid of the second step: the payment to the service.</p>
       </div>
       <button type="submit" disabled={pending} className={primary}>
@@ -128,7 +144,6 @@ const useTimeZone = () => useSyncExternalStore(noSubscribe, () => Intl.DateTimeF
 export function ReportForm({ checkId, serviceName, canSayNotCredited }: { checkId: string; serviceName: string; canSayNotCredited: boolean }) {
   const [state, action, pending] = useActionState<DepositFormState, FormData>(reportDepositResult.bind(null, checkId), null);
   const [result, setResult] = useState<"credited" | "held_for_review" | "not_credited_24h">("credited");
-  const offsetRef = useRef<HTMLInputElement>(null);
   const zone = useTimeZone();
   const options = [
     { v: "credited", label: "Credited", hint: `${serviceName} added it to my balance` },
@@ -137,11 +152,12 @@ export function ReportForm({ checkId, serviceName, canSayNotCredited }: { checkI
   ] as const;
   return (
     <form
-      action={action}
-      onSubmit={(e) => {
-        const local = (e.currentTarget.elements.namedItem("creditedAtLocal") as HTMLInputElement | null)?.value;
-        if (offsetRef.current && local) offsetRef.current.value = String(new Date(local).getTimezoneOffset());
-      }}
+      onSubmit={submitWithoutReset(action, (form) => {
+        // The offset for the entered moment (so daylight saving is right), set before the form data is read.
+        const local = (form.elements.namedItem("creditedAtLocal") as HTMLInputElement | null)?.value;
+        const offset = form.elements.namedItem("tzOffset") as HTMLInputElement | null;
+        if (offset && local) offset.value = String(new Date(local).getTimezoneOffset());
+      })}
       className="space-y-4"
     >
       <ErrorLine state={state} />
@@ -176,14 +192,14 @@ export function ReportForm({ checkId, serviceName, canSayNotCredited }: { checkI
             <label htmlFor="creditedAtLocal" className="text-xs font-medium">
               When it was credited{zone ? ` (your time, ${zone})` : " (your time)"}
             </label>
-            <input id="creditedAtLocal" name="creditedAtLocal" type="datetime-local" required className={field} />
-            <input ref={offsetRef} type="hidden" name="tzOffset" defaultValue="" />
+            <input id="creditedAtLocal" name="creditedAtLocal" type="datetime-local" required defaultValue={state?.values?.creditedAtLocal} className={field} />
+            <input type="hidden" name="tzOffset" defaultValue="" />
           </div>
           <div className="space-y-1">
             <label htmlFor="confirmationsShown" className="text-xs font-medium">
               Confirmations the service showed (optional)
             </label>
-            <input id="confirmationsShown" name="confirmationsShown" inputMode="numeric" placeholder="e.g. 10" className={field} />
+            <input id="confirmationsShown" name="confirmationsShown" inputMode="numeric" placeholder="e.g. 10" defaultValue={state?.values?.confirmationsShown} className={field} />
           </div>
         </div>
       )}
@@ -191,11 +207,34 @@ export function ReportForm({ checkId, serviceName, canSayNotCredited }: { checkI
         <label htmlFor="evidenceUrl" className="text-xs font-medium">
           Link to a screenshot of the service&apos;s deposit history
         </label>
-        <input id="evidenceUrl" name="evidenceUrl" type="url" required maxLength={500} placeholder="https://…" className={field} />
+        <input id="evidenceUrl" name="evidenceUrl" type="url" required maxLength={500} placeholder="https://…" defaultValue={state?.values?.evidenceUrl} className={field} />
         <p className="text-xs text-subtle">Seen only by the maintainer, deleted after review. Crop out account numbers, emails and balances.</p>
       </div>
       <button type="submit" disabled={pending} className={primary}>
         {pending ? "Sending…" : "Send my report"} <ArrowRight aria-hidden="true" className="size-4" />
+      </button>
+    </form>
+  );
+}
+
+export function WalletRefusedForm({ checkId, wallet }: { checkId: string; wallet: string }) {
+  const [state, action, pending] = useActionState<DepositFormState, FormData>(markWalletRefused.bind(null, checkId), null);
+  return (
+    <form onSubmit={submitWithoutReset(action)} className="mt-4 space-y-4">
+      <ErrorLine state={state} />
+      <p className="text-xs text-subtle">
+        For example, a wallet without TEX support refusing a TEX address. That&apos;s a useful result too: it&apos;s recorded for {wallet} and
+        this address kind, after review.
+      </p>
+      <div className="space-y-1">
+        <label htmlFor="refusedEvidenceUrl" className="text-xs font-medium">
+          Link to a screenshot of the wallet&apos;s error
+        </label>
+        <input id="refusedEvidenceUrl" name="refusedEvidenceUrl" type="url" required maxLength={500} placeholder="https://…" defaultValue={state?.values?.refusedEvidenceUrl} className={field} />
+        <p className="text-xs text-subtle">Seen only by the maintainer, deleted after review. Crop out anything personal.</p>
+      </div>
+      <button type="submit" disabled={pending} className="rounded-lg border border-line-strong px-4 py-2 text-sm font-medium transition-colors duration-150 hover:bg-surface-2 disabled:opacity-60">
+        {pending ? "Saving…" : "Record that the wallet refused"}
       </button>
     </form>
   );

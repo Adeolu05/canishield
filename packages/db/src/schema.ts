@@ -353,14 +353,20 @@ export const depositChecks = pgTable(
     addressType: depositAddressType("address_type").notNull(),
     // For unified addresses: the receiver kinds, e.g. {orchard,p2pkh}. Never the address.
     uaReceivers: text("ua_receivers").array(),
-    // HMAC-SHA256(server secret, address as it appears on-chain). Never the address.
-    addressHmac: text("address_hmac").notNull(),
+    // HMAC-SHA256(server secret, address as it appears on-chain). Never the address. Cleared with the
+    // other private fields once the check is finished, so finished rows can't be linked to each other.
+    addressHmac: text("address_hmac"),
     checkAmountZat: bigint("check_amount_zat", { mode: "number" }), // private: cleared on publish
     wallet: text("wallet").notNull(), // e.g. "Zodl 3.18"
     txid: text("txid"), // private: cleared on publish
     txidHmac: text("txid_hmac").unique(), // stops the same tx being used twice
     height: integer("height"), // private: cleared on publish
     afterNu7: boolean("after_nu7"), // from the height, kept after the height is cleared
+    // False when the deposit address keeps a shielded payment shielded (unified, Sapling): only the
+    // source was checked on-chain, not the amount or the destination.
+    destinationChecked: boolean("destination_checked"),
+    txSubmittedAt: timestamp("tx_submitted_at", { withTimezone: true }), // when the tester gave the txid
+    lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }), // the worker's last attempt
     blockTime: timestamp("block_time", { withTimezone: true }),
     source: depositSource("source"),
     result: depositResult("result"),
@@ -382,7 +388,7 @@ export const depositChecks = pgTable(
     // Privacy, enforced here rather than remembered: a published check holds nothing that links it to a person.
     check(
       "deposit_checks_published_is_clean",
-      sql`${t.status} <> 'published' OR (${t.reviewedBy} IS NOT NULL AND ${t.reviewedAt} IS NOT NULL AND ${t.txid} IS NULL AND ${t.checkAmountZat} IS NULL AND ${t.height} IS NULL AND ${t.evidenceUrl} IS NULL)`,
+      sql`${t.status} <> 'published' OR (${t.reviewedBy} IS NOT NULL AND ${t.reviewedAt} IS NOT NULL AND ${t.txid} IS NULL AND ${t.checkAmountZat} IS NULL AND ${t.height} IS NULL AND ${t.evidenceUrl} IS NULL AND ${t.addressHmac} IS NULL)`,
     ),
     check("deposit_checks_credited_time", sql`${t.result} IS DISTINCT FROM 'credited' OR (${t.creditedAt} IS NOT NULL AND (${t.blockTime} IS NULL OR ${t.creditedAt} >= ${t.blockTime} - interval '5 minutes'))`),
     // Past awaiting_tx, every check has a txid, except one the wallet refused (or that expired waiting).
@@ -393,6 +399,8 @@ export const depositChecks = pgTable(
     check("deposit_checks_wallet_refused", sql`${t.status} <> 'wallet_refused' OR ${t.result} = 'wallet_refused'`),
     check("deposit_checks_refused_reason", sql`${t.status} <> 'refused' OR ${t.refusedReason} IS NOT NULL`),
     check("deposit_checks_amount_positive", sql`${t.checkAmountZat} IS NULL OR ${t.checkAmountZat} > 0`),
+    // Open checks always know their address hash; only finished ones may drop it.
+    check("deposit_checks_open_has_address", sql`${t.status} NOT IN ('awaiting_tx', 'verifying', 'onchain_ok') OR ${t.addressHmac} IS NOT NULL`),
   ],
 );
 

@@ -60,6 +60,8 @@ test("deposit: Sapling, wrong network, typos and junk", () => {
   assert.match(err(() => decodeDepositAddress(T1, "testnet"))!, /mainnet address/);
   assert.match(err(() => decodeDepositAddress(T1.slice(0, -1) + (T1.endsWith("b") ? "c" : "b"), "mainnet"))!, /checksum/);
   assert.match(err(() => decodeDepositAddress("", "mainnet"))!, /Paste/);
+  assert.match(err(() => decodeDepositAddress("tex1S2rt77ggv6q989lr49rkgzmh5slsksa9khdgte", "mainnet"))!, /mixes upper and lower case/);
+  assert.equal(decodeDepositAddress("TEX1S2RT77GGV6Q989LR49RKGZMH5SLSKSA9KHDGTE", "mainnet").kind, "tex", "all upper case is valid bech32");
   assert.match(err(() => decodeDepositAddress("0xabc", "mainnet"))!, /doesn't look like a Zcash address/);
 });
 

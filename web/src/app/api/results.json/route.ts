@@ -9,6 +9,7 @@ import { LISTED_CLAIM, READINESS, STALE_AFTER_DAYS, isStale, reportDate, sourceN
 import { NETWORKS, basePath } from "@/lib/network";
 import { getResults } from "@/lib/queries";
 import { publishedDeposits } from "@/lib/deposit-checks";
+import { roundedMinutes } from "@/lib/deposit-core";
 import { BRAND } from "@/lib/brand";
 import { SITE_URL } from "@/lib/site";
 import { RESEARCH_CLAIM, RESEARCH_SOURCES, researchJson } from "@/lib/research";
@@ -152,6 +153,8 @@ export async function GET(request: NextRequest) {
       listing: "Imported from an existing list, never tested. Carries listedClaim (not outcome); sourceUrl and sourceReadAt say where and when it was read.",
       onchain_checked_private:
         "Deposit checks: a tester paid a unique amount from a shielded wallet to their own deposit address at the service; our scanner matched the txid, amount and address on-chain, and a maintainer reviewed the credit screenshot. The txid is not published, so it can't be re-checked by others.",
+      source_checked_private:
+        "Deposit checks to an address that keeps a shielded payment shielded (unified or Sapling): our scanner checked only that the money left a shielded pool; the amount and destination aren't visible on-chain and rest on the reviewed credit screenshot.",
       research:
         "Community research: a product-level claim read from the product's official page by a contributor. Never tested, never in cells or readiness. Carries researchClaim (not outcome or listedClaim) and officialUrl; see the research field.",
     },
@@ -175,10 +178,10 @@ export async function GET(request: NextRequest) {
     research: research.map((r) => researchJson(r, slugOf.get(r.serviceId)!, now, visible)),
     // Published deposit checks only. The deposit address, txid, exact amount and block are never stored
     // after review (the database refuses to publish a check that still holds them), so they can't appear here.
+    // No id: it would link a published row to a check page the tester may have shared.
     depositChecks: deposits.map((d) => ({
-      id: d.id,
       service: d.serviceSlug,
-      tier: "onchain_checked_private",
+      tier: d.destinationChecked === false ? "source_checked_private" : "onchain_checked_private",
       addressType: d.addressType,
       uaReceivers: d.uaReceivers,
       wallet: d.wallet,
@@ -186,7 +189,8 @@ export async function GET(request: NextRequest) {
       result: d.result,
       afterNu7: d.afterNu7,
       date: d.blockTime ? d.blockTime.toISOString().slice(0, 10) : null,
-      timeToCreditSeconds: d.creditedAt && d.blockTime ? Math.max(0, Math.round((d.creditedAt.getTime() - d.blockTime.getTime()) / 1000)) : null,
+      // Rounded on purpose (under 3 min = 0, then 5-minute, 15-minute and hour steps): exact values could locate the block.
+      timeToCreditMinutes: d.creditedAt && d.blockTime ? roundedMinutes(d.creditedAt.getTime() - d.blockTime.getTime()) : null,
       confirmationsShown: d.confirmationsShown,
       reviewedAt: iso(d.reviewedAt),
     })),

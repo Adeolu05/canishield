@@ -95,6 +95,14 @@ If ZecBlock is unavailable, retry later. Blockchair is not used for deposit chec
 `awaiting_tx` → `verifying` → `onchain_ok` (waiting for the tester's credit report) → `reported` (credit result in, waiting for review) → `published`
 Side exits: `refused` (on-chain check failed, with reason), `expired` (no txid within 48 h, or no credit report within 7 days of `onchain_ok`), `wallet_refused` (step 6, last option).
 
+### Rules added after review (29 Oct)
+
+- The deposit transaction, and for TEX the first step too, must be mined after the check was created (5 minutes' clock skew allowed). An old transaction can't be claimed.
+- A direct payment must spend shielded value only (no transparent inputs). The one-hop path is only for TEX addresses, and the first step must spend shielded value only and be at most 100 blocks before the second.
+- Unified and Sapling deposits store `destination_checked = false` and publish as "Source checked on-chain (private)": only the source was verifiable.
+- A transaction seen off the main chain waits (it may be a reorg); every `verifying` check is refused 48 hours after its txid was given if it hasn't passed by then. The worker checks the least recently checked first, within a 20-second budget per cycle.
+- At most 2 open checks per deposit address and 30 new checks per network per hour.
+
 ## 6. Evidence tier for deposits
 
 Deposit results are **on-chain checked, privately**: our worker verified the payment on-chain, but the txid is not published, so the public cannot re-check it the way they can a withdrawal test. This is weaker than "On-chain verified" and stronger than "Community reported", so it gets its own label:
@@ -113,7 +121,7 @@ A deposit address belongs to the tester's verified exchange account. Publishing 
 
 | Data | Stored | Published |
 | --- | --- | --- |
-| Deposit address | never in plain text; only `HMAC-SHA256(server secret, address)` and its decoded type and receivers | type only |
+| Deposit address | never in plain text; only `HMAC-SHA256(server secret, address)` and its decoded type and receivers. The HMAC is cleared too once the check is published, refused or expired | type only |
 | Check amount | until review, then deleted | never |
 | txid | until review, then deleted (keep only `HMAC(txid)` to stop the same tx being reused) | never |
 | Block height | until review, then deleted | never |
@@ -123,7 +131,7 @@ A deposit address belongs to the tester's verified exchange account. Publishing 
 | Credit result, confirmations shown, time to credit | kept | yes |
 | Screenshot | link kept for review, then deleted | never |
 
-- Durations are rounded (under 3 min, then whole minutes, then hours), so they cannot be used to find the block.
+- Durations are rounded (under 3 min, then 5-minute steps to an hour, 15-minute steps to a day, then hours), on the site and in the export, so they cannot be used to find the block. The export carries no check id.
 - The page tells the tester all of this before they start, and tells them to crop account numbers, emails and balances out of screenshots.
 - The server secret for the HMACs lives only in the web app's and worker's environment, never in the repo.
 

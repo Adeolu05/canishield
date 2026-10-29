@@ -57,6 +57,7 @@ export async function publishedDeposits(network: NetworkId, serviceId?: string) 
       source: depositChecks.source,
       result: depositChecks.result,
       afterNu7: depositChecks.afterNu7,
+      destinationChecked: depositChecks.destinationChecked,
       blockTime: depositChecks.blockTime,
       creditedAt: depositChecks.creditedAt,
       confirmationsShown: depositChecks.confirmationsShown,

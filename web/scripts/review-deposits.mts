@@ -13,7 +13,9 @@ import { createDb, depositChecks, services } from "@zecproof/db";
 
 const [cmd, id, text] = process.argv.slice(2);
 const db = createDb();
-const CLEAR = { txid: null, checkAmountZat: null, height: null, evidenceUrl: null } as const;
+const CLEAR = { txid: null, checkAmountZat: null, height: null, evidenceUrl: null, addressHmac: null } as const;
+/** Fields typed by testers go through JSON.stringify, so nothing in them can play tricks on this terminal. */
+const q = (v: unknown) => JSON.stringify(v ?? null);
 const REVIEWABLE = ["reported", "wallet_refused"] as const;
 
 try {
@@ -28,10 +30,10 @@ try {
       const toCredit = c.creditedAt && c.blockTime ? `${Math.round((c.creditedAt.getTime() - c.blockTime.getTime()) / 60_000)} min` : "n/a";
       console.log(
         [
-          `${c.id}  ${c.network}  ${name}`,
-          `  status ${c.status}, result ${c.result}, address ${c.addressType}, wallet "${c.wallet}", source ${c.source ?? "n/a"}`,
+          `${c.id}  ${c.network}  ${q(name)}`,
+          `  status ${c.status}, result ${c.result}, address ${c.addressType}, wallet ${q(c.wallet)}, source ${c.source ?? "n/a"}${c.destinationChecked === false ? " (destination not visible)" : ""}`,
           `  landed ${c.blockTime?.toISOString() ?? "n/a"}, credited ${c.creditedAt?.toISOString() ?? "n/a"} (${toCredit}), confirmations shown ${c.confirmationsShown ?? "n/a"}`,
-          `  screenshot ${c.evidenceUrl ?? "none"}`,
+          `  screenshot ${q(c.evidenceUrl)}`,
         ].join("\n"),
       );
     }

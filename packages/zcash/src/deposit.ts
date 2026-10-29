@@ -65,6 +65,8 @@ export function decodeDepositAddress(input: string, network: NetworkId): Decoded
   const address = input.trim();
   if (!address) throw new DepositAddressError("Paste the deposit address the service shows you.");
   const lower = address.toLowerCase();
+  // Bech32 strings are all lower case or all upper case, never mixed (BIP 173).
+  const mixedCase = address !== lower && address !== address.toUpperCase();
   const hrp = HRP[network];
   const wrongNetwork = () =>
     new DepositAddressError(`That's a ${OTHER[network]} address. This check is on ${network}: paste the ${network} deposit address.`);
@@ -88,6 +90,9 @@ export function decodeDepositAddress(input: string, network: NetworkId): Decoded
       label: kind === "transparent_p2pkh" ? "Transparent address (t-address)" : "Transparent script address (P2SH)",
     };
   }
+
+  const bech = [hrp.tex, hrp.sapling, hrp.ua, HRP[OTHER[network]].tex, HRP[OTHER[network]].sapling, HRP[OTHER[network]].ua].some((h) => lower.startsWith(`${h}1`));
+  if (bech && mixedCase) throw new DepositAddressError("That address mixes upper and lower case, so it has a typo. Copy it again from the service.");
 
   // TEX (ZIP 320): bech32m of a 20-byte P2PKH hash. Paid on-chain as that P2PKH address.
   if (lower.startsWith(`${hrp.tex}1`) || lower.startsWith(`${HRP[OTHER[network]].tex}1`)) {
