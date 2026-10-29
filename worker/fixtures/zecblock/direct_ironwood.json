@@ -1,0 +1,22 @@
+{
+  "txid": "040d7fa5099dd63184d85f524d7413a2ff5e46b34af412f51d535e0627d7586d",
+  "blockHeight": "3533851",
+  "blockTime": "1793213323",
+  "confirmations": 860,
+  "isCanonical": true,
+  "version": 6,
+  "valueBalanceSaplingZat": "0",
+  "valueBalanceOrchardZat": "0",
+  "valueBalanceIronwoodZat": "10015000",
+  "feeZat": "15000",
+  "isCoinbase": false,
+  "inputs": [],
+  "outputs": [
+    {
+      "address": "t1KfKBK2P13DUPu7EhHWz5XcFAjx1zHXAQb",
+      "spent": false,
+      "value": "10000000",
+      "vout_index": 0
+    }
+  ]
+}

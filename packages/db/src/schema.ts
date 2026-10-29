@@ -16,6 +16,7 @@
 import { sql, type SQL } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   check,
   index,
   integer,
@@ -311,6 +312,92 @@ export const reports = pgTable(
     ),
   ],
 );
+
+// ---- Deposit checks (docs/SPEC-deposits-and-timing.md, sections 5 to 8) ----
+// The reverse of a withdrawal test: a tester sends a unique amount from their
+// own shielded wallet to their own deposit address at a service, our worker
+// checks the payment on-chain, and the tester reports whether it was credited.
+// The deposit address, txid, exact amount, height and screenshot are private:
+// the database refuses to publish a check until they are cleared.
+
+export const depositAddressType = pgEnum("deposit_address_type", ["transparent_p2pkh", "transparent_p2sh", "tex", "unified", "sapling"]);
+export const depositSource = pgEnum("deposit_source", [
+  "ironwood",
+  "orchard",
+  "sapling",
+  "via_tex_ironwood",
+  "via_tex_orchard",
+  "via_tex_sapling",
+]);
+export const depositResult = pgEnum("deposit_result", ["credited", "not_credited_24h", "held_for_review", "wallet_refused"]);
+export const depositStatus = pgEnum("deposit_status", [
+  "awaiting_tx", // check created; the tester has the amount, no txid yet
+  "verifying", // txid given; the worker is checking it on-chain
+  "onchain_ok", // payment verified; waiting for the tester's credit report
+  "reported", // credit result in; waiting for review
+  "published", // reviewed; private fields cleared
+  "refused", // the on-chain check failed (refused_reason says why)
+  "expired", // no txid in 48 h, or no credit report within 7 days
+  "wallet_refused", // the tester's wallet could not pay this address (no txid)
+]);
+
+export const depositChecks = pgTable(
+  "deposit_checks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
+    network: text("network").notNull(),
+    status: depositStatus("status").notNull().default("awaiting_tx"),
+    addressType: depositAddressType("address_type").notNull(),
+    // For unified addresses: the receiver kinds, e.g. {orchard,p2pkh}. Never the address.
+    uaReceivers: text("ua_receivers").array(),
+    // HMAC-SHA256(server secret, address as it appears on-chain). Never the address.
+    addressHmac: text("address_hmac").notNull(),
+    checkAmountZat: bigint("check_amount_zat", { mode: "number" }), // private: cleared on publish
+    wallet: text("wallet").notNull(), // e.g. "Zodl 3.18"
+    txid: text("txid"), // private: cleared on publish
+    txidHmac: text("txid_hmac").unique(), // stops the same tx being used twice
+    height: integer("height"), // private: cleared on publish
+    afterNu7: boolean("after_nu7"), // from the height, kept after the height is cleared
+    blockTime: timestamp("block_time", { withTimezone: true }),
+    source: depositSource("source"),
+    result: depositResult("result"),
+    creditedAt: timestamp("credited_at", { withTimezone: true }), // tester-reported
+    confirmationsShown: integer("confirmations_shown"), // tester-reported, from the service's own UI
+    evidenceUrl: text("evidence_url"), // private: cleared on publish
+    refusedReason: text("refused_reason"),
+    testerTokenHash: text("tester_token_hash"), // sha256 of the tester's cookie, like tests
+    reviewedBy: text("reviewed_by"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    index("deposit_checks_service_idx").on(t.network, t.serviceId),
+    index("deposit_checks_status_idx").on(t.network, t.status),
+    check("deposit_checks_network_valid", sql`${t.network} IN ${NETWORK_LIST}`),
+    check("deposit_checks_wallet_len", sql`char_length(${t.wallet}) BETWEEN 1 AND 80`),
+    // Privacy, enforced here rather than remembered: a published check holds nothing that links it to a person.
+    check(
+      "deposit_checks_published_is_clean",
+      sql`${t.status} <> 'published' OR (${t.reviewedBy} IS NOT NULL AND ${t.reviewedAt} IS NOT NULL AND ${t.txid} IS NULL AND ${t.checkAmountZat} IS NULL AND ${t.height} IS NULL AND ${t.evidenceUrl} IS NULL)`,
+    ),
+    check("deposit_checks_credited_time", sql`${t.result} IS DISTINCT FROM 'credited' OR (${t.creditedAt} IS NOT NULL AND (${t.blockTime} IS NULL OR ${t.creditedAt} >= ${t.blockTime} - interval '5 minutes'))`),
+    // Past awaiting_tx, every check has a txid, except one the wallet refused (or that expired waiting).
+    check("deposit_checks_has_tx", sql`${t.status} IN ('awaiting_tx', 'expired', 'wallet_refused') OR ${t.txidHmac} IS NOT NULL`),
+    check("deposit_checks_wallet_refused", sql`${t.status} <> 'wallet_refused' OR ${t.result} = 'wallet_refused'`),
+    check("deposit_checks_refused_reason", sql`${t.status} <> 'refused' OR ${t.refusedReason} IS NOT NULL`),
+    check("deposit_checks_amount_positive", sql`${t.checkAmountZat} IS NULL OR ${t.checkAmountZat} > 0`),
+  ],
+);
+
+export type DepositCheck = typeof depositChecks.$inferSelect;
+export type DepositAddressType = (typeof depositAddressType.enumValues)[number];
+export type DepositSource = (typeof depositSource.enumValues)[number];
+export type DepositResult = (typeof depositResult.enumValues)[number];
+export type DepositStatus = (typeof depositStatus.enumValues)[number];
 
 // A product-level claim from community research (docs/research/), read from
 // the product's official pages by a contributor. Not a test, not a listing:

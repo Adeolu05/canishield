@@ -15,6 +15,7 @@ import { takePoolKey } from "./pool";
 import { getBlockTime } from "./lightwalletd";
 import { findFirstReceipt } from "./scanner";
 import { recordBlocks } from "./blocks";
+import { depositStep } from "./deposit-step";
 
 const once = process.argv.includes("--once");
 
@@ -253,6 +254,8 @@ async function main() {
       // After the scan, so a payment that landed before the deadline still counts.
       // Needs no chain access, so it also runs when every endpoint is down.
       await expireUnpaid(db, cfg);
+      // Deposit checks need only the explorer, not the lightwalletd endpoint.
+      await depositStep(db, cfg);
       // Last: the NU7 page's block strip, on its own time budget, after the test work is done.
       if (endpoint) await recordBlocks(db, cfg, endpoint);
     } catch (err) {

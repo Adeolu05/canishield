@@ -26,6 +26,8 @@ export interface NetworkProfile {
   requireExplorerCheck: boolean;
   /** Human-facing transaction page. */
   explorerTxUrl: (txid: string) => string;
+  /** First block of the NU7 network upgrade on this network. */
+  nu7Height: number;
 }
 
 export const NETWORKS: Record<NetworkId, NetworkProfile> = {
@@ -43,6 +45,7 @@ export const NETWORKS: Record<NetworkId, NetworkProfile> = {
     requiredConfirmations: 1,
     requireExplorerCheck: false,
     explorerTxUrl: (txid) => `https://testnet.zecblock.com/tx/${txid}`,
+    nu7Height: 4_465_026,
   },
   mainnet: {
     id: "mainnet",
@@ -58,6 +61,7 @@ export const NETWORKS: Record<NetworkId, NetworkProfile> = {
     requiredConfirmations: 10,
     requireExplorerCheck: true,
     explorerTxUrl: (txid) => `https://zecblock.com/tx/${txid}`,
+    nu7Height: 3_543_405,
   },
 };
 

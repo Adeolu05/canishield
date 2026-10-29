@@ -71,6 +71,13 @@
       "when": 1793272302066,
       "tag": "0009_nu7_chain_blocks",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793277115979,
+      "tag": "0010_deposit_checks",
+      "breakpoints": true
     }
   ]
 }
