@@ -7,6 +7,9 @@ import { NETWORKS, basePath, canCreateTests, type NetworkId } from "@/lib/networ
 import { OUTCOME_VISUAL, READINESS_ORDER, READINESS_VISUAL, cellView, shortDate, strongestTier, type Tone } from "@/lib/present";
 import { getBoard, getLatestProof, getServiceDetail } from "@/lib/queries";
 import { Nu7Strip } from "@/components/nu7-live";
+import { depositsEnabled, publishedDeposits, type PublishedDeposit } from "@/lib/deposit-checks";
+import { DEPOSIT_ADDRESS_LABEL, DEPOSIT_RESULT_LABEL, DEPOSIT_SERVICE_KINDS, roundedDuration } from "@/lib/deposit-core";
+import type { DepositCellView } from "./board-client";
 import { getNu7Snapshot } from "@/lib/nu7-data";
 import { readinessOf } from "@/lib/evidence";
 import { verdictFor } from "@/lib/present";
@@ -270,15 +273,49 @@ function Legend() {
   );
 }
 
+const DEPOSIT_VISUAL = {
+  credited: { tone: "ok", icon: "check-circle" },
+  held_for_review: { tone: "warn", icon: "clock" },
+  not_credited_24h: { tone: "bad", icon: "x-circle" },
+  wallet_refused: { tone: "bad", icon: "x-circle" },
+} as const;
+
+/** The newest published deposit per service, preferring results from after NU7. */
+function depositCells(deposits: PublishedDeposit[], now: Date): Map<string, DepositCellView> {
+  const best = new Map<string, PublishedDeposit>();
+  for (const d of deposits) {
+    const cur = best.get(d.serviceId);
+    const newer = (x: PublishedDeposit) => (x.reviewedAt?.getTime() ?? 0);
+    if (!cur || (d.afterNu7 && !cur.afterNu7) || (d.afterNu7 === cur.afterNu7 && newer(d) > newer(cur))) best.set(d.serviceId, d);
+  }
+  const out = new Map<string, DepositCellView>();
+  for (const [id, d] of best) {
+    if (!d.result) continue;
+    const v = DEPOSIT_VISUAL[d.result];
+    const time = d.creditedAt && d.blockTime ? roundedDuration(d.creditedAt.getTime() - d.blockTime.getTime()) : null;
+    const tier = d.destinationChecked === false ? "Source checked on-chain (private)" : "On-chain checked (private)";
+    out.set(id, {
+      tone: v.tone,
+      icon: v.icon,
+      label: DEPOSIT_RESULT_LABEL[d.result],
+      detail: [`${DEPOSIT_ADDRESS_LABEL[d.addressType]} address`, time, d.afterNu7 === false ? "before NU7" : null].filter(Boolean).join(" · "),
+      title: `${tier} · from ${d.wallet}${d.blockTime ? ` · ${shortDate(d.blockTime, now)}` : ""}`,
+    });
+  }
+  return out;
+}
+
 export async function BoardView({ network }: { network: NetworkId }) {
   // NU7 is a mainnet event (testnet activated it on 4 Oct). Started alongside the board query;
   // getNu7Snapshot never throws; on a database problem the strip shows the planned date.
   const nu7Promise = network === "mainnet" ? getNu7Snapshot() : null;
+  const depositsPromise = publishedDeposits(network).catch(() => [] as PublishedDeposit[]);
   const { rows, counts, total, research, visible } = await getBoard(network);
   const researchBy = Map.groupBy(research, (r) => r.serviceId);
   const base = basePath(network);
   const testsOpen = canCreateTests(network);
   const now = new Date();
+  const deposits = depositCells(await depositsPromise, now);
 
   const tested: TestedRowView[] = [];
   const untested: UntestedRowView[] = [];
@@ -292,8 +329,9 @@ export async function BoardView({ network }: { network: NetworkId }) {
     const common = { id: service.id, slug: service.slug, name: service.name, kind: service.kind, href: `${base}/services/${service.slug}` };
     const strongest = strongestTier(Object.values(c));
     if (strongest === "verified") verifiedCount++;
-    if (strongest === "verified" || strongest === "community") {
-      tested.push({ ...common, readiness, cells: c });
+    const deposit = deposits.get(service.id);
+    if (strongest === "verified" || strongest === "community" || deposit) {
+      tested.push({ ...common, readiness, cells: c, deposit, depositNotApplicable: !(DEPOSIT_SERVICE_KINDS as readonly string[]).includes(service.kind) });
     } else {
       // One line per source. ZecHub: the UA claim if listed, else the t-address claim.
       const claims: ClaimLine[] = [];
@@ -404,7 +442,7 @@ export async function BoardView({ network }: { network: NetworkId }) {
 
         <ReadinessBar counts={counts} total={total} tested={tested.length} />
 
-        <TestedMatrix rows={tested} />
+        <TestedMatrix rows={tested} showDeposit={depositsEnabled(network) || deposits.size > 0} />
 
         <UntestedList
           rows={inactiveLast(untested)}

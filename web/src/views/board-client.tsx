@@ -4,13 +4,24 @@
 // so the server can render everything else and pass it in only as `children`.
 import Link from "next/link";
 import { createContext, useContext, useDeferredValue, useState, type ReactNode } from "react";
-import { ArrowRight, BadgeCheck, Ban, Clock, FileSearch, FileText, Search, Users, X } from "lucide-react";
+import { ArrowRight, BadgeCheck, Ban, Clock, FileSearch, FileText, Lock, Search, Users, X } from "lucide-react";
 import { ServiceIcon } from "@/components/service-icon";
 import type { AddressType } from "@zecproof/db";
 import type { Readiness } from "@/lib/evidence";
 import type { ClaimLine } from "@/lib/research";
-import { READINESS_ORDER, READINESS_VISUAL, type CellView } from "@/lib/present";
+import { READINESS_ORDER, READINESS_VISUAL, type CellView, type IconKey, type Tone } from "@/lib/present";
 import { StatusIcon, StatusLabel, TONE_TEXT } from "@/components/status";
+
+/** The newest published deposit check for a service (board column "Shielded deposit"). */
+export interface DepositCellView {
+  tone: Tone;
+  icon: IconKey;
+  label: string;
+  /** e.g. "TEX address · about 20 min" */
+  detail: string;
+  /** Tooltip: tier, wallet and date. */
+  title: string;
+}
 
 export interface TestedRowView {
   id: string;
@@ -20,6 +31,9 @@ export interface TestedRowView {
   href: string;
   readiness: Readiness;
   cells: Record<AddressType, CellView>;
+  deposit?: DepositCellView;
+  /** Wallets, hardware wallets and faucets: deposits don't apply (receiving is what withdrawal tests cover). */
+  depositNotApplicable?: boolean;
 }
 
 export interface UntestedRowView {
@@ -163,7 +177,23 @@ const COLUMNS: { type: AddressType; label: string; hint: string }[] = [
   { type: "transparent", label: "Transparent", hint: "t-address" },
 ];
 
-export function TestedMatrix({ rows }: { rows: TestedRowView[] }) {
+function DepositCell({ cell, notApplicable }: { cell?: DepositCellView; notApplicable?: boolean }) {
+  if (notApplicable) return <span className="text-xs text-subtle">Not applicable</span>;
+  if (!cell) return <StatusLabel icon="circle-dashed" tone="neutral" label="Untested" className="font-normal" />;
+  return (
+    <div title={cell.title}>
+      <div className="flex items-center gap-2">
+        <StatusLabel icon={cell.icon} tone={cell.tone} label={cell.label} />
+        <span role="img" aria-label={cell.title} className="grid size-5 place-items-center rounded text-muted">
+          <Lock aria-hidden="true" className="size-3.5" />
+        </span>
+      </div>
+      <div className="mt-1 pl-6 text-xs text-subtle">{cell.detail}</div>
+    </div>
+  );
+}
+
+export function TestedMatrix({ rows, showDeposit = false }: { rows: TestedRowView[]; showDeposit?: boolean }) {
   const { q, matches } = useMatcher();
   const rank = (r: Readiness) => READINESS_ORDER.indexOf(r);
   const shown = rows.filter(matches).sort((a, b) => rank(a.readiness) - rank(b.readiness) || a.name.localeCompare(b.name));
@@ -193,11 +223,16 @@ export function TestedMatrix({ rows }: { rows: TestedRowView[] }) {
                   <th
                     key={c.type}
                     scope="col"
-                    className={`sticky top-14 z-20 border-b border-line bg-surface-2 px-4 py-2 text-xs font-medium text-muted ${i === COLUMNS.length - 1 ? "rounded-tr-xl" : ""}`}
+                    className={`sticky top-14 z-20 border-b border-line bg-surface-2 px-4 py-2 text-xs font-medium text-muted ${i === COLUMNS.length - 1 && !showDeposit ? "rounded-tr-xl" : ""}`}
                   >
                     <span className="text-foreground">{c.label}</span> <span className="font-normal text-subtle">· {c.hint}</span>
                   </th>
                 ))}
+                {showDeposit && (
+                  <th scope="col" className="sticky top-14 z-20 rounded-tr-xl border-b border-l border-line bg-surface-2 px-4 py-2 text-xs font-medium text-muted">
+                    <span className="text-foreground">Shielded deposit</span> <span className="font-normal text-subtle">· from a shielded wallet</span>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -220,6 +255,11 @@ export function TestedMatrix({ rows }: { rows: TestedRowView[] }) {
                       <Cell cell={r.cells[c.type]} />
                     </td>
                   ))}
+                  {showDeposit && (
+                    <td className="border-b border-l border-line px-4 py-4 align-top group-last:border-b-0">
+                      <DepositCell cell={r.deposit} notApplicable={r.depositNotApplicable} />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -250,6 +290,14 @@ export function TestedMatrix({ rows }: { rows: TestedRowView[] }) {
                       </dd>
                     </div>
                   ))}
+                  {showDeposit && (
+                    <div className="grid grid-cols-[8rem_1fr] gap-4 py-2">
+                      <dt className="pt-0.5 text-xs text-muted">Shielded deposit</dt>
+                      <dd>
+                        <DepositCell cell={r.deposit} notApplicable={r.depositNotApplicable} />
+                      </dd>
+                    </div>
+                  )}
                 </dl>
               </li>
             ))}
