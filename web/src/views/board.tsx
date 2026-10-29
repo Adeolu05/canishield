@@ -5,7 +5,8 @@ import { LISTED_CLAIM, STALE_AFTER_DAYS } from "@/lib/evidence";
 import { ADDRESS_TYPE_LABEL } from "@/lib/labels";
 import { NETWORKS, basePath, canCreateTests, type NetworkId } from "@/lib/network";
 import { OUTCOME_VISUAL, READINESS_ORDER, READINESS_VISUAL, cellView, shortDate, strongestTier, type Tone } from "@/lib/present";
-import { getBoard, getLatestProof, getServiceDetail } from "@/lib/queries";
+import { getBoard, getLatestProof, getScannerHeartbeat, getServiceDetail } from "@/lib/queries";
+import { Nu7Strip } from "@/components/nu7-countdown";
 import { readinessOf } from "@/lib/evidence";
 import { verdictFor } from "@/lib/present";
 import { SITE_URL } from "@/lib/site";
@@ -321,10 +322,17 @@ export async function BoardView({ network }: { network: NetworkId }) {
   ].slice(0, 8);
   const chips = CHIPS.filter((slug) => bySlug.has(slug)).map((slug) => ({ slug, name: bySlug.get(slug)! }));
   const exportHref = `/api/results.json${network === "testnet" ? "?network=testnet" : ""}`;
+  // NU7 is a mainnet event (testnet activated it on 4 Oct). A heartbeat failure only drops the live count.
+  const hb = network === "mainnet" ? await getScannerHeartbeat("mainnet").catch(() => null) : null;
 
   return (
     <BoardSearchProvider>
       <div className="space-y-12">
+        {network === "mainnet" && (
+          <div className="relative z-10 -mb-4">
+            <Nu7Strip initial={{ tip: hb?.tip ?? null, seenAt: hb?.seenAt.toISOString() ?? null }} />
+          </div>
+        )}
         <section className="relative isolate grid gap-8 pt-8 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-center lg:gap-12 lg:pt-16">
           {/* Full-bleed backdrop: a faint dot grid fading downward and, in dark mode on wide
               screens, the gold glow behind the receipt. Decoration only; under everything. */}

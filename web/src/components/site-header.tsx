@@ -9,8 +9,10 @@ import { ThemeToggle } from "./theme-toggle";
 import { CommandPalette } from "./command-palette";
 
 // Board stays highlighted on mainnet service pages, Testnet on testnet ones.
+// Phones show the first two (Board, NU7); Testnet and API stay in the command palette.
 const NAV = [
   { href: "/", label: "Board", match: (p: string) => p === "/" || p.startsWith("/services/") },
+  { href: "/nu7", label: "NU7", match: (p: string) => p === "/nu7" },
   { href: "/testnet", label: "Testnet", match: (p: string) => p.startsWith("/testnet") },
   { href: "/api/results.json", label: "API", match: () => false },
 ];
@@ -23,7 +25,7 @@ export function SiteHeader({ mainnetTests }: { mainnetTests: boolean }) {
         <Link href="/" aria-label={`${BRAND.compact} home`} className="rounded-md">
           <Wordmark />
         </Link>
-        <nav aria-label="Main" className="flex items-center gap-1 text-sm max-sm:[&>a:last-child]:hidden">
+        <nav aria-label="Main" className="flex items-center gap-1 text-sm max-sm:[&>a:nth-child(n+3)]:hidden">
           {NAV.map((item) => {
             const active = item.match(pathname);
             return (

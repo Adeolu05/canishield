@@ -5,7 +5,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ServiceIcon } from "./service-icon";
-import { ArrowRight, Braces, CornerDownLeft, FlaskConical, LayoutGrid, Search, Send, Store } from "lucide-react";
+import { ArrowRight, Braces, CornerDownLeft, FlaskConical, LayoutGrid, Rocket, Search, Send, Store } from "lucide-react";
 
 interface Item {
   id: string;
@@ -23,6 +23,7 @@ interface Item {
 
 const ACTIONS: Item[] = [
   { id: "a-board", label: "Mainnet board", href: "/", group: "Jump to", icon: LayoutGrid, keywords: "home results" },
+  { id: "a-nu7", label: "Ready for NU7?", hint: "upgrade", href: "/nu7", group: "Jump to", icon: Rocket, keywords: "network upgrade sprout countdown zebra" },
   { id: "a-testnet", label: "Testnet board", href: "/testnet", group: "Jump to", icon: FlaskConical, keywords: "taz rehearsal" },
   { id: "a-test", label: "Run a test", hint: "mainnet", href: "/test", group: "Jump to", icon: Send, keywords: "start new" },
   { id: "a-test-t", label: "Run a test", hint: "testnet", href: "/testnet/test", group: "Jump to", icon: Send, keywords: "start new taz" },
