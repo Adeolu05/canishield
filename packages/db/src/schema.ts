@@ -382,7 +382,7 @@ export type WorkerHeartbeat = typeof workerHeartbeats.$inferSelect;
 
 // Recent block headers seen by the worker: height and header time only.
 // Feeds the NU7 page's live chain strip and its pace estimate; not evidence.
-// The worker prunes rows older than 30 days.
+// The worker keeps the newest 2,000 per network plus the NU7 activation window.
 export const chainBlocks = pgTable(
   "chain_blocks",
   {

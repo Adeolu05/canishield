@@ -25,12 +25,16 @@ const LINE = "#2a2620";
 let fonts: Promise<{ name: string; data: Buffer; weight: 500 | 700 | 400; style: "normal" | "italic" }[]> | undefined;
 function loadFonts() {
   const dir = join(process.cwd(), "assets", "fonts");
+  // A failed read is not cached: the next card tries again instead of failing until a cold start.
   fonts ??= Promise.all([
     readFile(join(dir, "InterTight-Bold.ttf")).then((data) => ({ name: "Inter Tight", data, weight: 700 as const, style: "normal" as const })),
     readFile(join(dir, "InterTight-Medium.ttf")).then((data) => ({ name: "Inter Tight", data, weight: 500 as const, style: "normal" as const })),
     readFile(join(dir, "InstrumentSerif-Italic.ttf")).then((data) => ({ name: "Serif", data, weight: 400 as const, style: "italic" as const })),
     readFile(join(dir, "JetBrainsMono-Medium.ttf")).then((data) => ({ name: "Mono", data, weight: 500 as const, style: "normal" as const })),
-  ]);
+  ]).catch((err) => {
+    fonts = undefined;
+    throw err;
+  });
   return fonts;
 }
 
@@ -97,13 +101,17 @@ export async function nu7Card(format: CardFormat, snap: Nu7Snapshot, now = Date.
   const bigLabel = upcoming ? (state.blocksLeft === 1 ? "block to go" : "blocks to go") : live ? "activation block" : "activation block";
   const detail = upcoming
     ? remaining !== null && remaining > 0
-      ? `About ${formatRemaining(remaining)} · expected ${UTC_ETA.format(snap.etaMs!)} UTC`
+      ? `About ${formatRemaining(remaining)} · est. ${UTC_ETA.format(snap.etaMs!)} UTC`
       : "Any moment now"
     : live
       ? "Blocks now every 25 seconds"
       : `Planned for around ${NU7_PLANNED_DATE}`;
   const [t1, t2] = live ? ["NU7 is", "live."] : ["Ready for", "NU7?"];
-  const scanner = snap.tip ? `Live from our Zcash scanner · block ${fmt(snap.tip)}` : `Activates at block ${fmt(NU7_HEIGHT)}`;
+  const scanner = !snap.tip
+    ? `Activates at block ${fmt(NU7_HEIGHT)}`
+    : snap.online
+      ? `Live from our Zcash scanner · block ${fmt(snap.tip)}`
+      : `Last seen by our Zcash scanner at block ${fmt(snap.tip)}`;
   const glow = `radial-gradient(ellipse ${Math.round(width * 0.6)}px ${Math.round(height * 0.45)}px at 72% ${story ? "40%" : "58%"}, rgba(244,183,40,0.16), rgba(11,10,8,0))`;
 
   const brand = (

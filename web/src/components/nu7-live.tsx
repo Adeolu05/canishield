@@ -34,7 +34,8 @@ const Nu7Context = createContext<Live | null>(null);
 /** Better of two snapshots: the higher tip wins; a failed or older poll never moves the page backwards. */
 function newer(a: Nu7Snapshot, b: Nu7Snapshot): Nu7Snapshot {
   if ((b.tip ?? 0) > (a.tip ?? 0)) return b;
-  if ((b.tip ?? 0) === (a.tip ?? 0) && b.seenAt && b.seenAt !== a.seenAt) return b; // same tip, fresher heartbeat
+  // Same tip: only a strictly later heartbeat (a cached response can be older than the page itself).
+  if ((b.tip ?? 0) === (a.tip ?? 0) && b.seenAt && (!a.seenAt || Date.parse(b.seenAt) > Date.parse(a.seenAt))) return b;
   return a;
 }
 
@@ -66,7 +67,8 @@ export function Nu7Provider({ initial, children }: { initial: Nu7Snapshot; child
   const remainingMs =
     state.phase === "upcoming" ? (now === null || etaMs === null ? state.blocksLeft * snap.spacingS * 1000 : etaMs - now) : 0;
   const overdue = state.phase === "upcoming" && now !== null && remainingMs <= 0;
-  const stale = polled && now !== null && (!snap.seenAt || now - new Date(snap.seenAt).getTime() > ONLINE_WITHIN_MS);
+  // Before the first poll, trust the server's verdict; after it, recompute from the heartbeat age every second.
+  const stale = polled ? now !== null && (!snap.seenAt || now - new Date(snap.seenAt).getTime() > ONLINE_WITHIN_MS) : !initial.online && !!initial.tip;
   return <Nu7Context.Provider value={{ snap, state, now, remainingMs, overdue, stale }}>{children}</Nu7Context.Provider>;
 }
 

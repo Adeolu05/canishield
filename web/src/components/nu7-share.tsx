@@ -3,7 +3,7 @@
 // "Share the countdown": live PNG cards in three shapes plus one-tap sharing.
 // The card URL carries the blocks-left count, so every share gets a fresh image
 // even on sites that cache link previews by URL.
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Check, Download, Link2, Share2 } from "lucide-react";
 import { XMark } from "./share";
 import { useNu7 } from "./nu7-live";
@@ -50,15 +50,31 @@ export function Nu7Share({ siteUrl }: { siteUrl: string }) {
   const btn =
     "inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 text-sm font-medium transition-colors duration-150 hover:border-line-strong hover:bg-surface-2";
 
+  // Fetch the card ahead of the tap: Safari only allows navigator.share() straight from a click,
+  // and waiting for the image inside the click handler uses that permission up.
+  const [file, setFile] = useState<{ path: string; file: File } | null>(null);
+  useEffect(() => {
+    if (!canShare) return;
+    let cancelled = false;
+    fetch(cardPath)
+      .then((r) => (r.ok ? r.blob() : null))
+      .then((blob) => {
+        if (!cancelled && blob) setFile({ path: cardPath, file: new File([blob], `zcash-nu7-${format}.png`, { type: "image/png" }) });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [canShare, cardPath, format]);
+
   async function nativeShare() {
     setSharing(true);
+    const ready = file?.path === cardPath ? file.file : null;
     try {
-      const blob = await fetch(cardPath).then((r) => r.blob());
-      const file = new File([blob], `zcash-nu7-${format}.png`, { type: "image/png" });
-      const data: ShareData = navigator.canShare?.({ files: [file] }) ? { files: [file], text: `${text} ${pageUrl}` } : { text, url: pageUrl };
-      await navigator.share(data);
-    } catch {
-      // Cancelled or unsupported: nothing to do, the other buttons still work.
+      await navigator.share(ready && navigator.canShare?.({ files: [ready] }) ? { files: [ready], text: `${text} ${pageUrl}` } : { text, url: pageUrl });
+    } catch (err) {
+      // Refused (not cancelled): share the link alone instead.
+      if (err instanceof DOMException && err.name === "NotAllowedError") await navigator.share({ text, url: pageUrl }).catch(() => {});
     } finally {
       setSharing(false);
     }
@@ -74,13 +90,12 @@ export function Nu7Share({ siteUrl }: { siteUrl: string }) {
           </h2>
           <p className="mt-2 text-muted">These cards are drawn live from our scanner, so the count is current whenever someone opens your post.</p>
         </div>
-        <div role="tablist" aria-label="Card shape" className="inline-flex rounded-lg border border-line bg-surface p-1">
+        <div role="group" aria-label="Card shape" className="inline-flex rounded-lg border border-line bg-surface p-1">
           {FORMATS.map((x) => (
             <button
               key={x.id}
               type="button"
-              role="tab"
-              aria-selected={format === x.id}
+              aria-pressed={format === x.id}
               onClick={() => setFormat(x.id)}
               className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors duration-150 ${format === x.id ? "bg-btn text-btn-fg" : "text-muted hover:text-foreground"}`}
             >

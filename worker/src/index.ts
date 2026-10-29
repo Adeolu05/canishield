@@ -249,11 +249,12 @@ async function main() {
         await scanAwaiting(db, cfg, endpoint);
         await confirmSeen(db, cfg, endpoint);
         await backfillBlockTimes(db, cfg, endpoint);
-        await recordBlocks(db, cfg, endpoint);
       }
       // After the scan, so a payment that landed before the deadline still counts.
       // Needs no chain access, so it also runs when every endpoint is down.
       await expireUnpaid(db, cfg);
+      // Last: the NU7 page's block strip, on its own time budget, after the test work is done.
+      if (endpoint) await recordBlocks(db, cfg, endpoint);
     } catch (err) {
       // A database outage (or any other failed cycle) is logged and retried next
       // cycle instead of crashing the process into a restart loop. Each step only

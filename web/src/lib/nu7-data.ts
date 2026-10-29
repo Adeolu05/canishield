@@ -2,6 +2,7 @@
 // scanner's tip plus the block headers it recorded. One query path, so the
 // numbers on the page, in a share card and in the calendar always agree.
 import "server-only";
+import { cache } from "react";
 import { connection } from "next/server";
 import { and, between, desc, eq } from "drizzle-orm";
 import { chainBlocks } from "@zecproof/db";
@@ -34,8 +35,11 @@ export const EMPTY_SNAPSHOT: Nu7Snapshot = { tip: null, seenAt: null, online: fa
 
 const toPoint = (r: { height: number; time: Date }): BlockPoint => ({ h: r.height, t: r.time.getTime() });
 
-/** Never throws: a database problem gives an empty snapshot, and the page falls back to the planned date. */
-export async function getNu7Snapshot(): Promise<Nu7Snapshot> {
+/**
+ * Never throws: a database problem gives an empty snapshot, and the page falls back to the planned date.
+ * Cached per request, so the page and its metadata share one set of queries.
+ */
+export const getNu7Snapshot = cache(async function getNu7Snapshot(): Promise<Nu7Snapshot> {
   await connection();
   try {
     const db = getDb();
@@ -88,5 +92,5 @@ export async function getNu7Snapshot(): Promise<Nu7Snapshot> {
     console.error("nu7 snapshot", err);
     return EMPTY_SNAPSHOT;
   }
-}
+});
 
