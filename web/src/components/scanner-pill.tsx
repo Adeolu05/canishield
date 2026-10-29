@@ -54,7 +54,7 @@ export function ScannerPill() {
   return (
     <span
       title={`${network === "testnet" ? "Testnet" : "Mainnet"} scanner. ${lastSeen}.`}
-      className={`inline-flex h-7 min-w-7 items-center justify-center gap-2 rounded-full border px-2 text-xs sm:px-4 ${
+      className={`inline-flex h-7 min-w-7 items-center justify-center gap-2 whitespace-nowrap rounded-full border px-2 text-xs sm:px-4 ${
         online ? "border-ok/30 text-foreground" : "border-line text-subtle"
       }`}
     >
@@ -69,7 +69,7 @@ export function ScannerPill() {
         {label}
       </span>
       {detail && (
-        <span aria-hidden="true" className="hidden tabular-nums text-subtle sm:inline">
+        <span aria-hidden="true" className="hidden tabular-nums text-subtle lg:inline">
           · {detail}
         </span>
       )}

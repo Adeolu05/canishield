@@ -217,12 +217,12 @@ export function Nu7Countdown() {
           <dd className="font-mono text-xs tabular-nums">{fmt(NU7_HEIGHT)}</dd>
         </div>
         <div className="flex items-baseline justify-between gap-4 py-2">
-          <dt className={label}>{state.phase === "live" ? "Block time" : "Recent pace"}</dt>
+          <dt className={label}>{state.phase === "live" ? "Block time" : "Average pace"}</dt>
           <dd className="text-xs">
             {state.phase === "live"
               ? `${POST_NU7_SPACING_S} s target (was ${PRE_NU7_SPACING_S} s)`
               : snap.pace
-                ? `${secs(snap.pace.seconds)} per block (last ${snap.pace.intervals})`
+                ? `${secs(snap.pace.seconds)} per block (last ${fmt(snap.pace.intervals)})`
                 : `${PRE_NU7_SPACING_S} s target`}
           </dd>
         </div>
@@ -365,7 +365,7 @@ export function ChainStrip() {
         <div className="rounded-xl border border-line bg-surface px-4 py-3">
           <dt className="text-xs text-subtle">{afterPace ? "Average gap since NU7" : "Average gap, last 100 blocks"}</dt>
           <dd className="mt-1 font-medium tabular-nums">
-            {afterPace ? `${secs(afterPace.seconds)} (${plural(afterPace.intervals, "gap", "gaps")})` : snap.pace ? secs(snap.pace.seconds) : "…"}
+            {afterPace ? `${secs(afterPace.seconds)} (${plural(afterPace.intervals, "gap", "gaps")})` : snap.recentPace ? secs(snap.recentPace.seconds) : "…"}
           </dd>
         </div>
         <div className="rounded-xl border border-line bg-surface px-4 py-3">

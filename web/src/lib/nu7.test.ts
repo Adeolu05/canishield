@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { NU7_HEIGHT, averageSpacing, clockParts, contiguousTail, estimateSpacing, formatRemaining, nu7State } from "./nu7";
+import { NU7_HEIGHT, PACE_ANCHOR, averageSpacing, clockParts, contiguousTail, estimateSpacing, formatRemaining, nu7State, paceSince } from "./nu7";
 
 test("nu7: unknown without a tip", () => {
   assert.deepEqual(nu7State(null, null), { phase: "unknown" });
@@ -65,4 +65,12 @@ test("nu7: the estimate spacing is the measured pace kept in a sane range", () =
 test("nu7: clock parts", () => {
   assert.deepEqual(clockParts(((2 * 24 + 3) * 3600 + 4 * 60 + 5) * 1000 + 999), { d: 2, h: 3, m: 4, s: 5 });
   assert.deepEqual(clockParts(-1), { d: 0, h: 0, m: 0, s: 0 });
+});
+
+test("nu7: long-run pace from the reference block", () => {
+  const anchor = { h: 1000, t: 0 };
+  assert.equal(paceSince(anchor, undefined), null);
+  assert.equal(paceSince(anchor, { h: 1500, t: 500 * 75_000 }), null, "needs 1,000 blocks");
+  assert.deepEqual(paceSince(anchor, { h: 3000, t: 2000 * 75_400 }), { seconds: 75.4, intervals: 2000 });
+  assert.equal(PACE_ANCHOR.h, 3_520_000);
 });

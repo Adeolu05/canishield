@@ -8,7 +8,7 @@ import { and, between, desc, eq } from "drizzle-orm";
 import { chainBlocks } from "@zecproof/db";
 import { getDb } from "./db";
 import { getScannerHeartbeat } from "./queries";
-import { NU7_HEIGHT, averageSpacing, contiguousTail, estimateSpacing, nu7State, type BlockPoint, type Pace } from "./nu7";
+import { NU7_HEIGHT, PACE_ANCHOR, averageSpacing, contiguousTail, estimateSpacing, nu7State, paceSince, type BlockPoint, type Pace } from "./nu7";
 
 /** The worker polls every 30 s; two missed cycles means offline (same rule as the scanner pill). */
 const ONLINE_WITHIN_MS = 90_000;
@@ -21,8 +21,10 @@ export interface Nu7Snapshot {
   online: boolean;
   /** Newest consecutive run of recorded blocks, oldest first. */
   blocks: BlockPoint[];
-  /** Measured pre-NU7 pace (last 100 blocks below the height). */
+  /** Long-run pre-NU7 pace: from a fixed reference block to the newest recorded block. Drives the estimate. */
   pace: Pace | null;
+  /** Average over the last 100 recorded pre-NU7 blocks: shown, not used for the estimate. */
+  recentPace: Pace | null;
   /** Seconds per block used for the estimate. */
   spacingS: number;
   /** Estimated activation (ms), while upcoming. */
@@ -31,7 +33,7 @@ export interface Nu7Snapshot {
   activation: { time: number; previousTime: number | null; after: Pace | null; firstBlocks: BlockPoint[] } | null;
 }
 
-export const EMPTY_SNAPSHOT: Nu7Snapshot = { tip: null, seenAt: null, online: false, blocks: [], pace: null, spacingS: 75, etaMs: null, activation: null };
+export const EMPTY_SNAPSHOT: Nu7Snapshot = { tip: null, seenAt: null, online: false, blocks: [], pace: null, recentPace: null, spacingS: 75, etaMs: null, activation: null };
 
 const toPoint = (r: { height: number; time: Date }): BlockPoint => ({ h: r.height, t: r.time.getTime() });
 
@@ -59,7 +61,9 @@ export const getNu7Snapshot = cache(async function getNu7Snapshot(): Promise<Nu7
     ]);
     const blocks = contiguousTail(recentRows.map(toPoint));
     const tip = Math.max(hb?.tip ?? 0, blocks.at(-1)?.h ?? 0) || null;
-    const pace = averageSpacing(blocks, { maxHeight: NU7_HEIGHT - 1 });
+    const recentPace = averageSpacing(blocks, { maxHeight: NU7_HEIGHT - 1 });
+    const lastPre = blocks.filter((b) => b.h < NU7_HEIGHT).at(-1);
+    const pace = paceSince(PACE_ANCHOR, lastPre) ?? recentPace;
     const spacingS = estimateSpacing(pace);
     // Anchor the estimate on the tip block's own header time when we have it.
     const tipBlock = blocks.find((b) => b.h === tip);
@@ -84,6 +88,7 @@ export const getNu7Snapshot = cache(async function getNu7Snapshot(): Promise<Nu7
       online: !!hb && Date.now() - hb.seenAt.getTime() <= ONLINE_WITHIN_MS,
       blocks,
       pace,
+      recentPace,
       spacingS,
       etaMs: state.phase === "upcoming" ? state.etaMs : null,
       activation,

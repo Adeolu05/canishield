@@ -85,6 +85,21 @@ export function averageSpacing(
   return seconds > 0 ? { seconds, intervals } : null;
 }
 
+/**
+ * A fixed, checkable reference block for the long-run pace: height 3,520,000,
+ * header time 1792168825 (16 Oct 2026, 16:40:25 UTC). Averaging over the
+ * thousands of blocks since keeps the estimate steady; 100 blocks alone swing
+ * it by several seconds per block, which is more than half a day at this range.
+ */
+export const PACE_ANCHOR: BlockPoint = { h: 3_520_000, t: 1_792_168_825_000 };
+
+/** Average spacing from `anchor` to `block`, or null when the block isn't at least 1,000 blocks later. */
+export function paceSince(anchor: BlockPoint, block: BlockPoint | undefined): Pace | null {
+  if (!block || block.h - anchor.h < 1000) return null;
+  const seconds = (block.t - anchor.t) / 1000 / (block.h - anchor.h);
+  return seconds > 0 ? { seconds, intervals: block.h - anchor.h } : null;
+}
+
 /** The spacing to estimate with: the measured pre-NU7 pace kept within 60 to 90 s, else the 75 s target. */
 export const estimateSpacing = (pace: Pace | null) => (pace ? Math.min(90, Math.max(60, pace.seconds)) : PRE_NU7_SPACING_S);
 
