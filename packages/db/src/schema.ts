@@ -22,6 +22,7 @@ import {
   pgEnum,
   pgSequence,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -378,3 +379,22 @@ export const workerHeartbeats = pgTable(
 );
 
 export type WorkerHeartbeat = typeof workerHeartbeats.$inferSelect;
+
+// Recent block headers seen by the worker: height and header time only.
+// Feeds the NU7 page's live chain strip and its pace estimate; not evidence.
+// The worker prunes rows older than 30 days.
+export const chainBlocks = pgTable(
+  "chain_blocks",
+  {
+    network: text("network").notNull(),
+    height: integer("height").notNull(),
+    time: timestamp("time", { withTimezone: true }).notNull(),
+    seenAt: timestamp("seen_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.network, t.height] }),
+    check("chain_blocks_network_valid", sql`${t.network} IN ${NETWORK_LIST}`),
+  ],
+);
+
+export type ChainBlock = typeof chainBlocks.$inferSelect;

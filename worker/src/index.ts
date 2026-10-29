@@ -14,6 +14,7 @@ import { addressesForType, deriveTestKeys, type TestKeys } from "./keys";
 import { takePoolKey } from "./pool";
 import { getBlockTime } from "./lightwalletd";
 import { findFirstReceipt } from "./scanner";
+import { recordBlocks } from "./blocks";
 
 const once = process.argv.includes("--once");
 
@@ -248,6 +249,7 @@ async function main() {
         await scanAwaiting(db, cfg, endpoint);
         await confirmSeen(db, cfg, endpoint);
         await backfillBlockTimes(db, cfg, endpoint);
+        await recordBlocks(db, cfg, endpoint);
       }
       // After the scan, so a payment that landed before the deadline still counts.
       // Needs no chain access, so it also runs when every endpoint is down.

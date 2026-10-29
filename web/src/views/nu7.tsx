@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { Archive, ArrowDown, ArrowRight, ArrowUpRight, Building2, Clock, Server, ShieldCheck, Smartphone, Wallet } from "lucide-react";
-import { Nu7Countdown, type InitialTip } from "@/components/nu7-countdown";
+import { ActivationRecord, ChainStrip, Nu7Countdown, Nu7Provider } from "@/components/nu7-live";
+import { Nu7Share } from "@/components/nu7-share";
 import { StatusLabel } from "@/components/status";
 import { canCreateTests } from "@/lib/network";
 import { NU7_HEIGHT, NU7_PLANNED_DATE, SOURCES, nu7State } from "@/lib/nu7";
 import { READINESS_VISUAL, cellView, strongestTier } from "@/lib/present";
-import { getBoard, getScannerHeartbeat } from "@/lib/queries";
+import { getBoard } from "@/lib/queries";
+import { getNu7Snapshot } from "@/lib/nu7-data";
+import { SITE_URL } from "@/lib/site";
 
 type Source = (typeof SOURCES)[keyof typeof SOURCES];
 const H = NU7_HEIGHT.toLocaleString("en-US");
@@ -138,16 +141,6 @@ const CHANGES = [
   },
 ];
 
-async function initialTip(): Promise<InitialTip> {
-  try {
-    const hb = await getScannerHeartbeat("mainnet");
-    return { tip: hb?.tip ?? null, seenAt: hb?.seenAt.toISOString() ?? null };
-  } catch {
-    // The countdown still renders (with the planned date) if the database is down.
-    return { tip: null, seenAt: null };
-  }
-}
-
 async function testedServices() {
   try {
     const { rows } = await getBoard("mainnet");
@@ -158,7 +151,9 @@ async function testedServices() {
         const tier = strongestTier(views);
         const dates = views.filter((v) => (v.tier === "verified" || v.tier === "community") && v.dateIso).map((v) => v.dateIso!);
         const latest = dates.sort().at(-1);
-        return { service, readiness, tier, latest, label: views.find((v) => v.dateIso === latest)?.dateLabel };
+        // On a tie, the on-chain result names the date ("Verified Oct 2", not "Reported Oct 2").
+        const at = views.filter((v) => v.dateIso === latest);
+        return { service, readiness, tier, latest, label: (at.find((v) => v.tier === "verified") ?? at[0])?.dateLabel };
       })
       .filter((r) => r.tier === "verified" || r.tier === "community");
   } catch {
@@ -167,193 +162,202 @@ async function testedServices() {
 }
 
 export async function Nu7View() {
-  const [initial, tested] = await Promise.all([initialTip(), testedServices()]);
+  // getNu7Snapshot never throws: on a database problem the page falls back to the planned date.
+  const [snapshot, tested] = await Promise.all([getNu7Snapshot(), testedServices()]);
   const testHref = canCreateTests("mainnet") ? "/test" : "/testnet/test";
-  const live = nu7State(initial.tip, null).phase === "live";
+  const live = nu7State(snapshot.tip, null).phase === "live";
 
   return (
-    <div className="space-y-16">
-      <section className="relative isolate grid gap-8 pt-8 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-center lg:gap-12 lg:pt-16">
-        <div aria-hidden="true" className="zp-bleed pointer-events-none -top-10 bottom-0 -z-10">
-          <div className="zp-dots absolute inset-0" />
-          <div className="zp-hero-glow absolute inset-0 hidden lg:block" />
-        </div>
-        <div className="space-y-8">
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">Zcash network upgrade · NU7</p>
-            <h1 className="mt-4 text-balance text-4xl font-semibold tracking-tight sm:text-6xl">Ready for NU7?</h1>
-            <p className="mt-6 max-w-[60ch] text-pretty text-lg text-muted">
-              {live ? (
-                <>
-                  Zcash&apos;s NU7 upgrade activated at block <span className="tabular-nums text-foreground">{H}</span>. Blocks now come
-                  every 25 seconds and old Sprout funds can no longer be spent normally. Here is what changed and what to check, depending on
-                  how you hold ZEC.
-                </>
-              ) : (
-                <>
-                  Zcash&apos;s next network upgrade activates at block <span className="tabular-nums text-foreground">{H}</span>, planned
-                  for around {NU7_PLANNED_DATE}. Blocks get three times faster and old Sprout funds can no longer be spent normally. Here is
-                  what to check, depending on how you hold ZEC.
-                </>
-              )}
-            </p>
+    <Nu7Provider initial={snapshot}>
+      <div className="space-y-16">
+        <section className="relative isolate grid gap-8 pt-8 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-center lg:gap-12 lg:pt-16">
+          <div aria-hidden="true" className="zp-bleed pointer-events-none -top-10 bottom-0 -z-10">
+            <div className="zp-dots absolute inset-0" />
+            <div className="zp-hero-glow absolute inset-0 hidden lg:block" />
           </div>
-          <div className="flex flex-wrap items-center gap-4">
-            <a
-              href="#what-to-do"
-              className="inline-flex h-11 items-center gap-2 rounded-lg bg-accent px-6 text-sm font-semibold text-[#18181b] transition-[filter] duration-150 hover:brightness-105"
-            >
-              What do I need to do? <ArrowDown aria-hidden="true" className="size-4" />
-            </a>
-            <Link
-              href="/"
-              className="inline-flex h-11 items-center gap-2 rounded-lg border border-line-strong px-6 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-surface-2"
-            >
-              Check a service <ArrowRight aria-hidden="true" className="size-4" />
-            </Link>
-          </div>
-          <p className="text-xs text-subtle">Every claim on this page links to its source.</p>
-        </div>
-        <Nu7Countdown initial={initial} />
-      </section>
-
-      <section id="what-to-do" aria-labelledby="what-to-do-title" className="space-y-6">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">{live ? `Since block ${H}` : `Before block ${H}`}</p>
-          <h2 id="what-to-do-title" className="mt-2 text-2xl font-semibold tracking-tight">
-            What do I need to do?
-          </h2>
-        </div>
-        <ul className="grid gap-4 md:grid-cols-2">
-          {ROLES.map((r) => (
-            <li key={r.id} id={r.id} className="flex flex-col rounded-2xl border border-line bg-surface p-6">
-              <div className="flex items-start justify-between gap-4">
-                <span className="grid size-10 place-items-center rounded-xl border border-line bg-surface-2">
-                  <r.icon aria-hidden="true" className="size-5 text-accent-ink" />
-                </span>
-                {r.urgent && !live && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-warn-soft px-2 py-0.5 text-xs font-medium text-warn">
-                    <Clock aria-hidden="true" className="size-3.5" /> Before activation
-                  </span>
+          <div className="space-y-8">
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">Zcash network upgrade · NU7</p>
+              <h1 className="mt-4 text-balance text-4xl font-semibold tracking-tight sm:text-6xl">Ready for NU7?</h1>
+              <p className="mt-6 max-w-[60ch] text-pretty text-lg text-muted">
+                {live ? (
+                  <>
+                    Zcash&apos;s NU7 upgrade activated at block <span className="tabular-nums text-foreground">{H}</span>. Blocks now come
+                    every 25 seconds and old Sprout funds can no longer be spent normally. Here is what changed and what to check, depending on
+                    how you hold ZEC.
+                  </>
+                ) : (
+                  <>
+                    Zcash&apos;s next network upgrade activates at block <span className="tabular-nums text-foreground">{H}</span>, planned
+                    for around {NU7_PLANNED_DATE}. Blocks get three times faster and old Sprout funds can no longer be spent normally. Here is
+                    what to check, depending on how you hold ZEC.
+                  </>
                 )}
-              </div>
-              <h3 className="mt-4 text-lg font-semibold">{r.title}</h3>
-              <div className="mt-2 space-y-2 text-sm text-muted">
-                {((live && "liveBody" in r && r.liveBody) || r.body).map((p) => (
-                  <p key={p}>{p}</p>
-                ))}
-              </div>
-              <div className="mt-auto pt-4">
-                {r.action}
-                {r.note && <p className="mt-1 text-xs text-subtle">{r.note}</p>}
-                <Cite sources={r.sources} />
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section aria-labelledby="changes-title" className="zp-band space-y-6 py-12">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">In plain words</p>
-          <h2 id="changes-title" className="mt-2 text-2xl font-semibold tracking-tight">
-            What NU7 changes
-          </h2>
-        </div>
-        <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {CHANGES.map((c, i) => (
-            <li key={c.title} className="flex flex-col rounded-2xl border border-line bg-surface p-6">
-              <span className="grid size-8 place-items-center rounded-full border border-line-strong font-mono text-xs font-semibold tabular-nums text-accent-ink">
-                {i + 1}
-              </span>
-              <h3 className="mt-4 font-semibold">{c.title}</h3>
-              <p className="mt-2 text-sm text-muted">{c.body}</p>
-              <div className="mt-auto">
-                <Cite sources={c.sources} />
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section aria-labelledby="board-title" className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="space-y-4">
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">Can I Shield and NU7</p>
-          <h2 id="board-title" className="text-2xl font-semibold tracking-tight">
-            Before you withdraw after the upgrade
-          </h2>
-          <p className="text-muted">
-            {live
-              ? "These services have been tested on mainnet. NU7 is now live: results dated before activation were recorded before the upgrade, so check the date on each one while we retest."
-              : "These services have been tested on mainnet. Every result here was recorded before NU7, and we plan to retest them after activation. Until then, treat them as the last known behaviour."}
-          </p>
-          {tested === null ? (
-            <p className="rounded-2xl border border-dashed border-line-strong p-6 text-sm text-muted">The board couldn&apos;t be loaded right now.</p>
-          ) : tested.length > 0 ? (
-            <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
-              {tested.map(({ service, readiness, label }) => {
-                const v = READINESS_VISUAL[readiness];
-                return (
-                  <li key={service.id}>
-                    <Link
-                      href={`/services/${service.slug}`}
-                      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3 transition-colors duration-150 hover:bg-surface-2"
-                    >
-                      <span className="font-medium">{service.name}</span>
-                      <span className="flex items-center gap-4 text-sm">
-                        <StatusLabel icon={v.icon} tone={v.tone} label={v.label} />
-                        {label && <span className="text-xs text-subtle">{label}</span>}
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="rounded-2xl border border-dashed border-line-strong p-6 text-sm text-muted">No service has been tested on mainnet yet.</p>
-          )}
-          <InternalAction href="/">See the full board</InternalAction>
-        </div>
-        <aside aria-label="What the board shows" className="space-y-4">
-          {[
-            { icon: ShieldCheck, title: "Shielded or not", body: "Which pool a service's withdrawal actually landed in, with a txid and a viewing key anyone can check." },
-            { icon: Clock, title: "Time to chain", body: "How long a tested withdrawal took to reach a block. With 25-second blocks, we expect this to drop." },
-            { icon: Wallet, title: "Deposits, next", body: "We are adding deposit checks, so you can also see whether a service credits a deposit sent the way you send it." },
-          ].map((f) => (
-            <div key={f.title} className="rounded-2xl border border-line bg-surface p-4">
-              <p className="inline-flex items-center gap-2 font-semibold">
-                <f.icon aria-hidden="true" className="size-4 text-accent-ink" /> {f.title}
               </p>
-              <p className="mt-1 text-sm text-muted">{f.body}</p>
             </div>
-          ))}
-          <Link
-            href={testHref}
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-btn px-6 text-sm font-semibold text-btn-fg transition-opacity duration-150 hover:opacity-90"
-          >
-            Help retest: run a test <ArrowRight aria-hidden="true" className="size-4" />
-          </Link>
-        </aside>
-      </section>
-
-      <section aria-labelledby="sources-title" className="space-y-3 border-t border-line pt-8">
-        <h2 id="sources-title" className="text-sm font-semibold">
-          Sources
-        </h2>
-        <ul className="grid gap-2 text-sm sm:grid-cols-2">
-          {Object.values(SOURCES).map((s) => (
-            <li key={s.href}>
-              <a href={s.href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-muted underline-offset-4 hover:text-foreground hover:underline">
-                {s.label} <ArrowUpRight aria-hidden="true" className="size-3.5" />
+            <div className="flex flex-wrap items-center gap-4">
+              <a
+                href="#what-to-do"
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-accent px-6 text-sm font-semibold text-[#18181b] transition-[filter] duration-150 hover:brightness-105"
+              >
+                What do I need to do? <ArrowDown aria-hidden="true" className="size-4" />
               </a>
-            </li>
-          ))}
-        </ul>
-        <p className="text-xs text-subtle">
-          Can I Shield is independent and not part of any upgrade team. Read 29 October 2026; if a source and this page disagree, the
-          source wins.
-        </p>
-      </section>
-    </div>
+              <Link
+                href="/"
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-line-strong px-6 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-surface-2"
+              >
+                Check a service <ArrowRight aria-hidden="true" className="size-4" />
+              </Link>
+            </div>
+            <p className="text-xs text-subtle">Every claim on this page links to its source.</p>
+          </div>
+          <Nu7Countdown />
+        </section>
+
+        <ChainStrip />
+
+        <ActivationRecord />
+
+        <section id="what-to-do" aria-labelledby="what-to-do-title" className="space-y-6">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">{live ? `Since block ${H}` : `Before block ${H}`}</p>
+            <h2 id="what-to-do-title" className="mt-2 text-2xl font-semibold tracking-tight">
+              What do I need to do?
+            </h2>
+          </div>
+          <ul className="grid gap-4 md:grid-cols-2">
+            {ROLES.map((r) => (
+              <li key={r.id} id={r.id} className="flex flex-col rounded-2xl border border-line bg-surface p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <span className="grid size-10 place-items-center rounded-xl border border-line bg-surface-2">
+                    <r.icon aria-hidden="true" className="size-5 text-accent-ink" />
+                  </span>
+                  {r.urgent && !live && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-warn-soft px-2 py-0.5 text-xs font-medium text-warn">
+                      <Clock aria-hidden="true" className="size-3.5" /> Before activation
+                    </span>
+                  )}
+                </div>
+                <h3 className="mt-4 text-lg font-semibold">{r.title}</h3>
+                <div className="mt-2 space-y-2 text-sm text-muted">
+                  {((live && "liveBody" in r && r.liveBody) || r.body).map((p) => (
+                    <p key={p}>{p}</p>
+                  ))}
+                </div>
+                <div className="mt-auto pt-4">
+                  {r.action}
+                  {r.note && <p className="mt-1 text-xs text-subtle">{r.note}</p>}
+                  <Cite sources={r.sources} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section aria-labelledby="changes-title" className="zp-band space-y-6 py-12">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">In plain words</p>
+            <h2 id="changes-title" className="mt-2 text-2xl font-semibold tracking-tight">
+              What NU7 changes
+            </h2>
+          </div>
+          <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {CHANGES.map((c, i) => (
+              <li key={c.title} className="flex flex-col rounded-2xl border border-line bg-surface p-6">
+                <span className="grid size-8 place-items-center rounded-full border border-line-strong font-mono text-xs font-semibold tabular-nums text-accent-ink">
+                  {i + 1}
+                </span>
+                <h3 className="mt-4 font-semibold">{c.title}</h3>
+                <p className="mt-2 text-sm text-muted">{c.body}</p>
+                <div className="mt-auto">
+                  <Cite sources={c.sources} />
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <Nu7Share siteUrl={SITE_URL} />
+
+        <section aria-labelledby="board-title" className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="space-y-4">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">Can I Shield and NU7</p>
+            <h2 id="board-title" className="text-2xl font-semibold tracking-tight">
+              Before you withdraw after the upgrade
+            </h2>
+            <p className="text-muted">
+              {live
+                ? "These services have been tested on mainnet. NU7 is now live: results dated before activation were recorded before the upgrade, so check the date on each one while we retest."
+                : "These services have been tested on mainnet. Every result here was recorded before NU7, and we plan to retest them after activation. Until then, treat them as the last known behaviour."}
+            </p>
+            {tested === null ? (
+              <p className="rounded-2xl border border-dashed border-line-strong p-6 text-sm text-muted">The board couldn&apos;t be loaded right now.</p>
+            ) : tested.length > 0 ? (
+              <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
+                {tested.map(({ service, readiness, label }) => {
+                  const v = READINESS_VISUAL[readiness];
+                  return (
+                    <li key={service.id}>
+                      <Link
+                        href={`/services/${service.slug}`}
+                        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3 transition-colors duration-150 hover:bg-surface-2"
+                      >
+                        <span className="font-medium">{service.name}</span>
+                        <span className="flex items-center gap-4 text-sm">
+                          <StatusLabel icon={v.icon} tone={v.tone} label={v.label} />
+                          {label && <span className="text-xs text-subtle">{label}</span>}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="rounded-2xl border border-dashed border-line-strong p-6 text-sm text-muted">No service has been tested on mainnet yet.</p>
+            )}
+            <InternalAction href="/">See the full board</InternalAction>
+          </div>
+          <aside aria-label="What the board shows" className="space-y-4">
+            {[
+              { icon: ShieldCheck, title: "Shielded or not", body: "Which pool a service's withdrawal actually landed in, with a txid and a viewing key anyone can check." },
+              { icon: Clock, title: "Time to chain", body: "How long a tested withdrawal took to reach a block. With 25-second blocks, we expect this to drop." },
+              { icon: Wallet, title: "Deposits, next", body: "We are adding deposit checks, so you can also see whether a service credits a deposit sent the way you send it." },
+            ].map((f) => (
+              <div key={f.title} className="rounded-2xl border border-line bg-surface p-4">
+                <p className="inline-flex items-center gap-2 font-semibold">
+                  <f.icon aria-hidden="true" className="size-4 text-accent-ink" /> {f.title}
+                </p>
+                <p className="mt-1 text-sm text-muted">{f.body}</p>
+              </div>
+            ))}
+            <Link
+              href={testHref}
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-btn px-6 text-sm font-semibold text-btn-fg transition-opacity duration-150 hover:opacity-90"
+            >
+              Help retest: run a test <ArrowRight aria-hidden="true" className="size-4" />
+            </Link>
+          </aside>
+        </section>
+
+        <section aria-labelledby="sources-title" className="space-y-3 border-t border-line pt-8">
+          <h2 id="sources-title" className="text-sm font-semibold">
+            Sources
+          </h2>
+          <ul className="grid gap-2 text-sm sm:grid-cols-2">
+            {Object.values(SOURCES).map((s) => (
+              <li key={s.href}>
+                <a href={s.href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-muted underline-offset-4 hover:text-foreground hover:underline">
+                  {s.label} <ArrowUpRight aria-hidden="true" className="size-3.5" />
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-subtle">
+            Can I Shield is independent and not part of any upgrade team. Read 29 October 2026; if a source and this page disagree, the
+            source wins.
+          </p>
+        </section>
+      </div>
+    </Nu7Provider>
   );
 }

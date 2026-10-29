@@ -5,8 +5,9 @@ import { LISTED_CLAIM, STALE_AFTER_DAYS } from "@/lib/evidence";
 import { ADDRESS_TYPE_LABEL } from "@/lib/labels";
 import { NETWORKS, basePath, canCreateTests, type NetworkId } from "@/lib/network";
 import { OUTCOME_VISUAL, READINESS_ORDER, READINESS_VISUAL, cellView, shortDate, strongestTier, type Tone } from "@/lib/present";
-import { getBoard, getLatestProof, getScannerHeartbeat, getServiceDetail } from "@/lib/queries";
-import { Nu7Strip } from "@/components/nu7-countdown";
+import { getBoard, getLatestProof, getServiceDetail } from "@/lib/queries";
+import { Nu7Strip } from "@/components/nu7-live";
+import { getNu7Snapshot } from "@/lib/nu7-data";
 import { readinessOf } from "@/lib/evidence";
 import { verdictFor } from "@/lib/present";
 import { SITE_URL } from "@/lib/site";
@@ -271,8 +272,8 @@ function Legend() {
 
 export async function BoardView({ network }: { network: NetworkId }) {
   // NU7 is a mainnet event (testnet activated it on 4 Oct). Started alongside the board query;
-  // a heartbeat failure only drops the live count from the strip.
-  const hbPromise = network === "mainnet" ? getScannerHeartbeat("mainnet").catch(() => null) : Promise.resolve(null);
+  // getNu7Snapshot never throws; on a database problem the strip shows the planned date.
+  const nu7Promise = network === "mainnet" ? getNu7Snapshot() : null;
   const { rows, counts, total, research, visible } = await getBoard(network);
   const researchBy = Map.groupBy(research, (r) => r.serviceId);
   const base = basePath(network);
@@ -325,14 +326,14 @@ export async function BoardView({ network }: { network: NetworkId }) {
   ].slice(0, 8);
   const chips = CHIPS.filter((slug) => bySlug.has(slug)).map((slug) => ({ slug, name: bySlug.get(slug)! }));
   const exportHref = `/api/results.json${network === "testnet" ? "?network=testnet" : ""}`;
-  const hb = await hbPromise;
+  const nu7 = await nu7Promise;
 
   return (
     <BoardSearchProvider>
       <div className="space-y-12">
-        {network === "mainnet" && (
+        {nu7 && (
           <div className="relative z-10 -mb-4">
-            <Nu7Strip initial={{ tip: hb?.tip ?? null, seenAt: hb?.seenAt.toISOString() ?? null }} />
+            <Nu7Strip initial={nu7} />
           </div>
         )}
         <section className="relative isolate grid gap-8 pt-8 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-center lg:gap-12 lg:pt-16">

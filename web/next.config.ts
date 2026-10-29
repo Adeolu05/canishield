@@ -14,7 +14,8 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: fileURLToPath(new URL("..", import.meta.url)),
   // /api/evidence reads screenshots from disk at request time; ship them with
   // that function (Vercel functions only see traced files, not public/).
-  outputFileTracingIncludes: { "/api/evidence/*": ["./public/evidence/**/*"] },
+  // The NU7 share cards read their fonts from disk the same way.
+  outputFileTracingIncludes: { "/api/evidence/*": ["./public/evidence/**/*"], "/nu7/card": ["./assets/fonts/**/*"] },
   // Form-check screenshots are up to 4 MB (checked again in lib/form-check.ts);
   // the rest is room for the other fields and multipart overhead.
   experimental: { serverActions: { bodySizeLimit: "5mb" } },

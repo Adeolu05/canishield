@@ -32,14 +32,66 @@ export type Nu7State =
 
 /**
  * Where the chain is relative to NU7, from the scanner's last seen tip.
- * The estimate counts from when that tip was seen, at the pre-NU7 75 s spacing.
+ * The estimate counts from `anchorMs` (the tip block's header time, or when the
+ * tip was seen) at `spacingS` per block: the measured pace, or the 75 s target.
  */
-export function nu7State(tip: number | null | undefined, seenAtMs: number | null | undefined, height = NU7_HEIGHT): Nu7State {
+export function nu7State(
+  tip: number | null | undefined,
+  anchorMs: number | null | undefined,
+  height = NU7_HEIGHT,
+  spacingS = PRE_NU7_SPACING_S,
+): Nu7State {
   if (tip == null || !Number.isFinite(tip) || tip <= 0) return { phase: "unknown" };
   if (tip >= height) return { phase: "live", tip, blocksSince: tip - height };
   const blocksLeft = height - tip;
-  const from = seenAtMs ?? Date.now();
-  return { phase: "upcoming", tip, blocksLeft, etaMs: from + blocksLeft * PRE_NU7_SPACING_S * 1000 };
+  const from = anchorMs ?? Date.now();
+  return { phase: "upcoming", tip, blocksLeft, etaMs: from + blocksLeft * spacingS * 1000 };
+}
+
+/** One recorded block: height and header time (ms since epoch). */
+export interface BlockPoint {
+  h: number;
+  t: number;
+}
+
+/** The newest run of consecutive heights, oldest first. Input in any order; duplicates ignored. */
+export function contiguousTail(blocks: BlockPoint[]): BlockPoint[] {
+  const sorted = [...new Map(blocks.map((b) => [b.h, b])).values()].sort((a, b) => a.h - b.h);
+  let i = sorted.length - 1;
+  while (i > 0 && sorted[i - 1].h === sorted[i].h - 1) i--;
+  return sorted.slice(Math.max(i, 0));
+}
+
+export interface Pace {
+  /** Average seconds per block. */
+  seconds: number;
+  /** How many block intervals it was measured over. */
+  intervals: number;
+}
+
+/**
+ * Average block spacing over the newest consecutive run of blocks within
+ * [minHeight, maxHeight], at most `n` intervals; null if fewer than `minIntervals`.
+ * End-to-end time over block count, so one odd header time can't skew it much.
+ */
+export function averageSpacing(
+  blocks: BlockPoint[],
+  { minHeight = -Infinity, maxHeight = Infinity, n = 100, minIntervals = 10 }: { minHeight?: number; maxHeight?: number; n?: number; minIntervals?: number } = {},
+): Pace | null {
+  const run = contiguousTail(blocks.filter((b) => b.h >= minHeight && b.h <= maxHeight)).slice(-(n + 1));
+  const intervals = run.length - 1;
+  if (intervals < minIntervals) return null;
+  const seconds = (run[run.length - 1].t - run[0].t) / 1000 / intervals;
+  return seconds > 0 ? { seconds, intervals } : null;
+}
+
+/** The spacing to estimate with: the measured pre-NU7 pace kept within 60 to 90 s, else the 75 s target. */
+export const estimateSpacing = (pace: Pace | null) => (pace ? Math.min(90, Math.max(60, pace.seconds)) : PRE_NU7_SPACING_S);
+
+/** Days, hours, minutes, seconds left (never negative). */
+export function clockParts(ms: number) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return { d: Math.floor(s / 86_400), h: Math.floor((s % 86_400) / 3600), m: Math.floor((s % 3600) / 60), s: s % 60 };
 }
 
 /** "6 d 14 h", "3 h 12 min", "12 min", "under a minute". */
