@@ -1,5 +1,5 @@
 {
-  "id": "c7f5a7e5-d76d-48af-bed5-50c4cb60a4a1",
+  "id": "05cb5642-b179-422a-8b34-d2ad36f1dbe3",
   "prevId": "81f6328f-5cd5-43bb-a348-e66121228fb2",
   "version": "7",
   "dialect": "postgresql",
@@ -313,7 +313,7 @@
         },
         "deposit_checks_has_tx": {
           "name": "deposit_checks_has_tx",
-          "value": "\"deposit_checks\".\"status\" IN ('awaiting_tx', 'expired', 'wallet_refused') OR \"deposit_checks\".\"txid_hmac\" IS NOT NULL"
+          "value": "\"deposit_checks\".\"status\" IN ('awaiting_tx', 'expired', 'wallet_refused') OR \"deposit_checks\".\"result\" = 'wallet_refused' OR \"deposit_checks\".\"txid_hmac\" IS NOT NULL"
         },
         "deposit_checks_wallet_refused": {
           "name": "deposit_checks_wallet_refused",

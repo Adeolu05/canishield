@@ -6,16 +6,28 @@ export const TEST_STEPS = ["Choose", "Address", "Send", "Verified"] as const;
  * Numbered progress for the test flow. `current` is 0-based; `failed` marks
  * the current step as an end state (rejected / expired / failed).
  */
-export function Stepper({ current, done = false, failed = false }: { current: number; done?: boolean; failed?: boolean }) {
+export function Stepper({
+  current,
+  done = false,
+  failed = false,
+  steps = TEST_STEPS,
+  label = "Test progress",
+}: {
+  current: number;
+  done?: boolean;
+  failed?: boolean;
+  steps?: readonly string[];
+  label?: string;
+}) {
   return (
     <div className="space-y-2">
-      <ol aria-label="Test progress" className="flex w-full items-center gap-2 text-xs sm:gap-4">
-      {TEST_STEPS.map((label, i) => {
+      <ol aria-label={label} className="flex w-full items-center gap-2 text-xs sm:gap-4">
+      {steps.map((name, i) => {
         const complete = done || i < current;
         const active = !done && i === current;
         const state = complete ? "complete" : active ? (failed ? "stopped" : "current") : "upcoming";
         return (
-          <li key={label} className="flex flex-1 items-center gap-2 last:flex-none sm:gap-4" aria-current={active ? "step" : undefined}>
+          <li key={name} className="flex flex-1 items-center gap-2 last:flex-none sm:gap-4" aria-current={active ? "step" : undefined}>
             <span className="flex items-center gap-2">
               <span
                 className={`grid size-6 shrink-0 place-items-center rounded-full border text-[11px] font-semibold tabular-nums transition-colors duration-500 ${
@@ -37,18 +49,18 @@ export function Stepper({ current, done = false, failed = false }: { current: nu
                 )}
               </span>
               <span className={`hidden font-medium sm:inline ${state === "upcoming" ? "text-subtle" : "text-foreground"}`}>
-                {label}
+                {name}
                 <span className="sr-only"> ({state})</span>
               </span>
             </span>
-            {i < TEST_STEPS.length - 1 && <span aria-hidden="true" className={`h-px flex-1 transition-colors duration-500 ${complete ? "bg-ok-solid" : "bg-line"}`} />}
+            {i < steps.length - 1 && <span aria-hidden="true" className={`h-px flex-1 transition-colors duration-500 ${complete ? "bg-ok-solid" : "bg-line"}`} />}
           </li>
         );
       })}
       </ol>
       {/* Step names are hidden on narrow screens; say where we are in words. */}
       <p aria-hidden="true" className="text-xs text-subtle sm:hidden">
-        {done ? "All steps complete" : `Step ${current + 1} of ${TEST_STEPS.length} · ${TEST_STEPS[current]}${failed ? " (stopped)" : ""}`}
+        {done ? "All steps complete" : `Step ${current + 1} of ${steps.length} · ${steps[current]}${failed ? " (stopped)" : ""}`}
       </p>
     </div>
   );

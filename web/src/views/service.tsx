@@ -15,6 +15,8 @@ import { ADDRESS_TYPE_LABEL, POOL_LABEL } from "@/lib/labels";
 import { NETWORKS, basePath, canCreateTests, formatAmount, type NetworkId } from "@/lib/network";
 import { isoDay, reviewedLabel, shortDate, verdictFor } from "@/lib/present";
 import { getServiceDetail } from "@/lib/queries";
+import { depositsEnabled, publishedDeposits } from "@/lib/deposit-checks";
+import { DepositResults } from "@/components/deposit-results";
 import { SITE_URL } from "@/lib/site";
 import { ShareProof } from "@/components/share";
 
@@ -304,6 +306,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
   const testsOpen = canCreateTests(network);
   const timing = summarizeTiming(tests);
   const nothing = tests.length === 0 && communityReports.length === 0;
+  const deposits = await publishedDeposits(network, service.id);
 
   return (
     <div className="space-y-10">
@@ -421,6 +424,8 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
           </Link>
         )}
       </section>
+
+      <DepositResults deposits={deposits} base={base} serviceId={service.id} open={depositsEnabled(network)} now={now} />
 
       {(listings.length > 0 || research.length > 0) && (
         <section className="space-y-4">

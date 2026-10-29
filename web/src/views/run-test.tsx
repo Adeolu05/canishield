@@ -3,7 +3,8 @@ import { ArrowRight } from "lucide-react";
 import { createTest } from "@/app/actions";
 import { Stepper } from "@/components/stepper";
 import { ADDRESS_TYPES, ADDRESS_TYPE_HINT, ADDRESS_TYPE_LABEL } from "@/lib/labels";
-import { NETWORKS, canCreateTests, type NetworkId } from "@/lib/network";
+import { NETWORKS, basePath, canCreateTests, type NetworkId } from "@/lib/network";
+import { depositsEnabled } from "@/lib/deposit-checks";
 import { listServices } from "@/lib/queries";
 
 export async function RunTestView({ network, preselected }: { network: NetworkId; preselected?: string }) {
@@ -88,6 +89,15 @@ export async function RunTestView({ network, preselected }: { network: NetworkId
           Generate test address <ArrowRight aria-hidden="true" className="size-4" />
         </button>
       </form>
+      {depositsEnabled(network) && (
+        <p className="text-sm text-muted">
+          Want to know if a service accepts deposits from a shielded wallet?{" "}
+          <Link href={`${basePath(network)}/test/deposit`} className="font-medium text-foreground underline underline-offset-2">
+            Check a deposit
+          </Link>
+          .
+        </p>
+      )}
     </div>
   );
 }

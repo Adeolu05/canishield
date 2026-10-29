@@ -34,7 +34,7 @@ CREATE TABLE "deposit_checks" (
 	CONSTRAINT "deposit_checks_wallet_len" CHECK (char_length("deposit_checks"."wallet") BETWEEN 1 AND 80),
 	CONSTRAINT "deposit_checks_published_is_clean" CHECK ("deposit_checks"."status" <> 'published' OR ("deposit_checks"."reviewed_by" IS NOT NULL AND "deposit_checks"."reviewed_at" IS NOT NULL AND "deposit_checks"."txid" IS NULL AND "deposit_checks"."check_amount_zat" IS NULL AND "deposit_checks"."height" IS NULL AND "deposit_checks"."evidence_url" IS NULL)),
 	CONSTRAINT "deposit_checks_credited_time" CHECK ("deposit_checks"."result" IS DISTINCT FROM 'credited' OR ("deposit_checks"."credited_at" IS NOT NULL AND ("deposit_checks"."block_time" IS NULL OR "deposit_checks"."credited_at" >= "deposit_checks"."block_time" - interval '5 minutes'))),
-	CONSTRAINT "deposit_checks_has_tx" CHECK ("deposit_checks"."status" IN ('awaiting_tx', 'expired', 'wallet_refused') OR "deposit_checks"."txid_hmac" IS NOT NULL),
+	CONSTRAINT "deposit_checks_has_tx" CHECK ("deposit_checks"."status" IN ('awaiting_tx', 'expired', 'wallet_refused') OR "deposit_checks"."result" = 'wallet_refused' OR "deposit_checks"."txid_hmac" IS NOT NULL),
 	CONSTRAINT "deposit_checks_wallet_refused" CHECK ("deposit_checks"."status" <> 'wallet_refused' OR "deposit_checks"."result" = 'wallet_refused'),
 	CONSTRAINT "deposit_checks_refused_reason" CHECK ("deposit_checks"."status" <> 'refused' OR "deposit_checks"."refused_reason" IS NOT NULL),
 	CONSTRAINT "deposit_checks_amount_positive" CHECK ("deposit_checks"."check_amount_zat" IS NULL OR "deposit_checks"."check_amount_zat" > 0)

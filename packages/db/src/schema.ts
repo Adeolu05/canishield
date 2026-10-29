@@ -386,7 +386,10 @@ export const depositChecks = pgTable(
     ),
     check("deposit_checks_credited_time", sql`${t.result} IS DISTINCT FROM 'credited' OR (${t.creditedAt} IS NOT NULL AND (${t.blockTime} IS NULL OR ${t.creditedAt} >= ${t.blockTime} - interval '5 minutes'))`),
     // Past awaiting_tx, every check has a txid, except one the wallet refused (or that expired waiting).
-    check("deposit_checks_has_tx", sql`${t.status} IN ('awaiting_tx', 'expired', 'wallet_refused') OR ${t.txidHmac} IS NOT NULL`),
+    check(
+      "deposit_checks_has_tx",
+      sql`${t.status} IN ('awaiting_tx', 'expired', 'wallet_refused') OR ${t.result} = 'wallet_refused' OR ${t.txidHmac} IS NOT NULL`,
+    ),
     check("deposit_checks_wallet_refused", sql`${t.status} <> 'wallet_refused' OR ${t.result} = 'wallet_refused'`),
     check("deposit_checks_refused_reason", sql`${t.status} <> 'refused' OR ${t.refusedReason} IS NOT NULL`),
     check("deposit_checks_amount_positive", sql`${t.checkAmountZat} IS NULL OR ${t.checkAmountZat} > 0`),

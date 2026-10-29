@@ -8,6 +8,7 @@ import type { Report, Test } from "@zecproof/db";
 import { LISTED_CLAIM, READINESS, STALE_AFTER_DAYS, isStale, reportDate, sourceName, testDate, type Cell } from "@/lib/evidence";
 import { NETWORKS, basePath } from "@/lib/network";
 import { getResults } from "@/lib/queries";
+import { publishedDeposits } from "@/lib/deposit-checks";
 import { BRAND } from "@/lib/brand";
 import { SITE_URL } from "@/lib/site";
 import { RESEARCH_CLAIM, RESEARCH_SOURCES, researchJson } from "@/lib/research";
@@ -135,7 +136,7 @@ export async function GET(request: NextRequest) {
   const network = param;
   const origin = request.nextUrl.origin;
   const now = new Date();
-  const { services, verified, visible, research, summary } = await getResults(network);
+  const [{ services, verified, visible, research, summary }, deposits] = await Promise.all([getResults(network), publishedDeposits(network)]);
   const slugOf = new Map(services.map((s) => [s.id, s.slug]));
 
   const body = {
@@ -149,6 +150,8 @@ export async function GET(request: NextRequest) {
       community:
         "Observed but not provable on-chain (e.g. a form rejected the address). reviewStatus shows admin review. method \"withdrawal_form_check\": a reference address was pasted into the withdrawal form and not submitted (no key, no funds); form_accepted is never a verification.",
       listing: "Imported from an existing list, never tested. Carries listedClaim (not outcome); sourceUrl and sourceReadAt say where and when it was read.",
+      onchain_checked_private:
+        "Deposit checks: a tester paid a unique amount from a shielded wallet to their own deposit address at the service; our scanner matched the txid, amount and address on-chain, and a maintainer reviewed the credit screenshot. The txid is not published, so it can't be re-checked by others.",
       research:
         "Community research: a product-level claim read from the product's official page by a contributor. Never tested, never in cells or readiness. Carries researchClaim (not outcome or listedClaim) and officialUrl; see the research field.",
     },
@@ -170,6 +173,23 @@ export async function GET(request: NextRequest) {
     communityReports: visible.filter((r) => r.tier === "community").map((r) => communityJson(r, slugOf.get(r.serviceId)!)),
     listings: visible.filter((r) => r.tier === "listing").map((r) => listingJson(r, slugOf.get(r.serviceId)!, now)),
     research: research.map((r) => researchJson(r, slugOf.get(r.serviceId)!, now, visible)),
+    // Published deposit checks only. The deposit address, txid, exact amount and block are never stored
+    // after review (the database refuses to publish a check that still holds them), so they can't appear here.
+    depositChecks: deposits.map((d) => ({
+      id: d.id,
+      service: d.serviceSlug,
+      tier: "onchain_checked_private",
+      addressType: d.addressType,
+      uaReceivers: d.uaReceivers,
+      wallet: d.wallet,
+      source: d.source,
+      result: d.result,
+      afterNu7: d.afterNu7,
+      date: d.blockTime ? d.blockTime.toISOString().slice(0, 10) : null,
+      timeToCreditSeconds: d.creditedAt && d.blockTime ? Math.max(0, Math.round((d.creditedAt.getTime() - d.blockTime.getTime()) / 1000)) : null,
+      confirmationsShown: d.confirmationsShown,
+      reviewedAt: iso(d.reviewedAt),
+    })),
     listedClaimCodes: Object.fromEntries(Object.values(LISTED_CLAIM).map((c) => [c.code, c.label])),
     researchClaimCodes: Object.fromEntries(Object.entries(RESEARCH_CLAIM).map(([code, c]) => [code, c.label])),
     researchCredit: RESEARCH_CREDIT,

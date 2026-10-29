@@ -130,7 +130,7 @@ A deposit address belongs to the tester's verified exchange account. Publishing 
 ## 8. Data model
 
 New enums:
-- `deposit_address_type`: `transparent_p2pkh`, `transparent_p2sh`, `tex`, `unified`
+- `deposit_address_type`: `transparent_p2pkh`, `transparent_p2sh`, `tex`, `unified`, `sapling` (added while building: some services show a zs1 address; treated like unified, destination not visible on-chain)
 - `deposit_source`: `ironwood`, `orchard`, `sapling`, `via_tex_ironwood`, `via_tex_orchard`, `via_tex_sapling`
 - `deposit_result`: `credited`, `not_credited_24h`, `held_for_review`, `wallet_refused`
 - `deposit_status`: `awaiting_tx`, `verifying`, `onchain_ok`, `reported`, `published`, `refused`, `expired`, `wallet_refused`
@@ -198,9 +198,9 @@ Pure functions, unit tested with saved explorer JSON:
 
   Plus a short explainer of TEX.
 - **New flow:** `/test/deposit` (testnet: `/testnet/test/deposit`) with the six steps in section 5, a progress view, and the privacy notice up front.
-- **Admin review:** list `reported` checks with the screenshot; accept (moves to `published` and clears private fields in the same transaction) or reject with a reason.
+- **Admin review:** `web/scripts/review-deposits.mts` (there is no login on the site, same as form checks): `list` shows `reported` and `wallet_refused` checks with the screenshot link; `accept` moves one to `published` and clears the private fields in the same update; `reject` refuses it with a reason.
 - **Export:** `results.json` gains `depositChecks` with only the published columns, and `canishield-results/1` stays backward compatible (new key only).
-- **Switch:** `ZECPROOF_ENABLE_DEPOSIT_CHECKS=yes` on the web app, per network, so testnet goes first.
+- **Switch:** `ZECPROOF_ENABLE_DEPOSIT_CHECKS` on the web app: `testnet`, `mainnet,testnet` or `yes`, so testnet goes first. Both the web app and the workers need the same `ZECPROOF_DEPOSIT_SECRET` (32+ random characters); without it the flow stays closed and the worker only expires checks.
 
 ## 11. NU7
 
@@ -219,9 +219,9 @@ Pure functions, unit tested with saved explorer JSON:
 | 5 to 7 Nov | NU7 retest campaign; publish "which exchanges take shielded deposits, and how long withdrawals take, after NU7". |
 | by 13 Nov | Results feed the retro grant application. |
 
-## 13. Open questions
+## 13. Open questions (answers as built, 29 Oct)
 
-1. Minimum deposit per exchange: collect from each exchange's deposit page at check time, or let the tester enter it?
-2. Is a screenshot enough for "credited", or do we also accept the exchange's deposit-history CSV (more reliable, but more personal data to clean)?
-3. Swap services (for example NEAR Intents-based ones) also take deposits: include them in the first release or after?
+1. Minimum deposit per exchange: collect from each exchange's deposit page at check time, or let the tester enter it? **Built: the tester enters their amount, at or above the minimum.**
+2. Is a screenshot enough for "credited", or do we also accept the exchange's deposit-history CSV (more reliable, but more personal data to clean)? **Built: a screenshot link, reviewed, then deleted.**
+3. Swap services (for example NEAR Intents-based ones) also take deposits: include them in the first release or after? **Built: exchanges, swaps and "other" services can be picked; wallets, hardware wallets and faucets can't.**
 4. Ask squirrel: would ZecHub link the deposit results from its exchanges page, and is there interest in a ZecHub bounty for the post-NU7 retest campaign (testers need exchange accounts and small amounts)?
