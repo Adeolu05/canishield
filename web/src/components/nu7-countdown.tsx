@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CircleCheck } from "lucide-react";
+import { ArrowRight, CircleCheck, TriangleAlert } from "lucide-react";
 import { useNow } from "./live";
 import { useScannerStatus } from "./scanner-pill";
 import { NU7_HEIGHT, NU7_PLANNED_DATE, POST_NU7_SPACING_S, PRE_NU7_SPACING_S, formatRemaining, nu7State } from "@/lib/nu7";
@@ -13,17 +14,29 @@ export interface InitialTip {
   seenAt: string | null;
 }
 
-/** NU7 progress from the mainnet scanner's heartbeat; the server's tip until the first poll lands. */
+const plural = (n: number, one: string, many: string) => `${fmt(n)} ${n === 1 ? one : many}`;
+
+/**
+ * NU7 progress from the mainnet scanner's heartbeat; the server's tip until the first poll lands.
+ * Keeps the highest tip seen, so a failed poll (status null) can't send "live" back to a countdown.
+ */
 function useNu7(initial: InitialTip) {
-  const { status } = useScannerStatus("mainnet");
+  const { status, online, known } = useScannerStatus("mainnet");
   const now = useNow();
-  const tip = status?.tip ?? initial.tip;
-  const seenAt = status?.tip ? status.seenAt : initial.seenAt;
-  const state = nu7State(tip, seenAt ? new Date(seenAt).getTime() : null);
+  const [best, setBest] = useState<InitialTip>(initial);
+  // Derived state, updated during render (no effect): only ever moves forward.
+  if (status?.tip && status.seenAt && (best.tip == null || status.tip > best.tip)) {
+    setBest({ tip: status.tip, seenAt: status.seenAt });
+  }
+  const state = nu7State(best.tip, best.seenAt ? new Date(best.seenAt).getTime() : null);
   // Before hydration there is no clock: count the remaining blocks at 75 s, which
   // server and client agree on. After it, count down to the estimate.
   const remainingMs = state.phase === "upcoming" ? (now === null ? state.blocksLeft * PRE_NU7_SPACING_S * 1000 : state.etaMs - now) : 0;
-  return { state, now, remainingMs };
+  // Past the estimate but not yet at the height: blocks have been slower than 75 s.
+  const overdue = state.phase === "upcoming" && now !== null && remainingMs <= 0;
+  // Only say "offline" once a poll has answered; before that the server's tip stands.
+  const stale = known && !online;
+  return { state, now, remainingMs, overdue, stale };
 }
 
 const ETA_PARTS = { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" } as const;
@@ -32,7 +45,7 @@ const UTC_ETA = new Intl.DateTimeFormat("en-GB", { ...ETA_PARTS, timeZone: "UTC"
 
 /** The big countdown card on /nu7. */
 export function Nu7Countdown({ initial }: { initial: InitialTip }) {
-  const { state, now, remainingMs } = useNu7(initial);
+  const { state, now, remainingMs, overdue, stale } = useNu7(initial);
   const label = "font-mono text-[11px] uppercase tracking-[0.14em] text-subtle";
   return (
     <aside
@@ -46,12 +59,12 @@ export function Nu7Countdown({ initial }: { initial: InitialTip }) {
       {state.phase === "upcoming" && (
         <>
           <p className="mt-6 text-6xl font-semibold leading-none tracking-tight tabular-nums sm:text-7xl">{fmt(state.blocksLeft)}</p>
-          <p className="mt-2 text-sm text-muted">blocks to go</p>
+          <p className="mt-2 text-sm text-muted">{state.blocksLeft === 1 ? "block" : "blocks"} to go</p>
           <p className="mt-6 text-lg font-medium">
-            About <span className="tabular-nums">{formatRemaining(remainingMs)}</span>
+            {overdue ? "Any moment now" : <>About <span className="tabular-nums">{formatRemaining(remainingMs)}</span></>}
           </p>
           <p className="mt-1 min-h-5 text-sm text-muted">
-            {now !== null && (
+            {now !== null && !overdue && (
               <>
                 Expected around{" "}
                 <time dateTime={new Date(state.etaMs).toISOString()} title={new Date(state.etaMs).toUTCString()} className="tabular-nums">
@@ -70,9 +83,9 @@ export function Nu7Countdown({ initial }: { initial: InitialTip }) {
             <CircleCheck aria-hidden="true" className="size-8 text-ok" /> NU7 is live
           </p>
           <p className="mt-4 text-sm text-muted">
-            Activated at block <span className="tabular-nums">{fmt(NU7_HEIGHT)}</span>,{" "}
-            <span className="tabular-nums">{fmt(state.blocksSince)}</span> {state.blocksSince === 1 ? "block" : "blocks"} ago. Blocks
-            now target {POST_NU7_SPACING_S} seconds.
+            Activated at block <span className="tabular-nums">{fmt(NU7_HEIGHT)}</span>
+            {state.blocksSince > 0 ? <>, <span className="tabular-nums">{plural(state.blocksSince, "block", "blocks")}</span> ago</> : ", the latest block"}.
+            Blocks now target {POST_NU7_SPACING_S} seconds.
           </p>
         </>
       )}
@@ -81,6 +94,13 @@ export function Nu7Countdown({ initial }: { initial: InitialTip }) {
         <p className="mt-6 text-lg">
           Activates at block <span className="font-semibold tabular-nums">{fmt(NU7_HEIGHT)}</span>, planned for around {NU7_PLANNED_DATE}.
           The live countdown appears when our scanner is reachable.
+        </p>
+      )}
+
+      {stale && state.phase !== "unknown" && (
+        <p role="status" className="mt-6 flex items-start gap-2 rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn">
+          <TriangleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+          Our scanner is offline right now. Last seen at block {fmt(state.tip)}, so this may be behind the chain.
         </p>
       )}
 
@@ -112,7 +132,7 @@ export function Nu7Countdown({ initial }: { initial: InitialTip }) {
 
 /** One line above the home hero: how far away NU7 is, and where to read what to do. */
 export function Nu7Strip({ initial }: { initial: InitialTip }) {
-  const { state, remainingMs } = useNu7(initial);
+  const { state, remainingMs, overdue } = useNu7(initial);
   return (
     <Link
       href="/nu7"
@@ -124,8 +144,11 @@ export function Nu7Strip({ initial }: { initial: InitialTip }) {
       <span className="min-w-0 flex-1 text-muted">
         {state.phase === "upcoming" && (
           <>
-            <span className="font-medium text-foreground">Network upgrade in about {formatRemaining(remainingMs)}</span>, at block{" "}
-            <span className="tabular-nums">{fmt(NU7_HEIGHT)}</span> (<span className="tabular-nums">{fmt(state.blocksLeft)}</span> blocks to go).
+            <span className="font-medium text-foreground">
+              {overdue ? "Network upgrade any moment now" : `Network upgrade in about ${formatRemaining(remainingMs)}`}
+            </span>
+            , at block <span className="tabular-nums">{fmt(NU7_HEIGHT)}</span> (
+            <span className="tabular-nums">{plural(state.blocksLeft, "block", "blocks")}</span> to go).
           </>
         )}
         {state.phase === "live" && (

@@ -270,6 +270,9 @@ function Legend() {
 }
 
 export async function BoardView({ network }: { network: NetworkId }) {
+  // NU7 is a mainnet event (testnet activated it on 4 Oct). Started alongside the board query;
+  // a heartbeat failure only drops the live count from the strip.
+  const hbPromise = network === "mainnet" ? getScannerHeartbeat("mainnet").catch(() => null) : Promise.resolve(null);
   const { rows, counts, total, research, visible } = await getBoard(network);
   const researchBy = Map.groupBy(research, (r) => r.serviceId);
   const base = basePath(network);
@@ -322,8 +325,7 @@ export async function BoardView({ network }: { network: NetworkId }) {
   ].slice(0, 8);
   const chips = CHIPS.filter((slug) => bySlug.has(slug)).map((slug) => ({ slug, name: bySlug.get(slug)! }));
   const exportHref = `/api/results.json${network === "testnet" ? "?network=testnet" : ""}`;
-  // NU7 is a mainnet event (testnet activated it on 4 Oct). A heartbeat failure only drops the live count.
-  const hb = network === "mainnet" ? await getScannerHeartbeat("mainnet").catch(() => null) : null;
+  const hb = await hbPromise;
 
   return (
     <BoardSearchProvider>

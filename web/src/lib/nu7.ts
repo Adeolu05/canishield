@@ -21,6 +21,8 @@ export const SOURCES = {
   },
   zip218: { label: "ZIP 218", href: "https://zips.z.cash/zip-0218" },
   zip235: { label: "ZIP 235", href: "https://zips.z.cash/zip-0235" },
+  zip237: { label: "ZIP 237", href: "https://zips.z.cash/zip-0237" },
+  zip259: { label: "ZIP 259", href: "https://zips.z.cash/zip-0259" },
 } as const;
 
 export type Nu7State =

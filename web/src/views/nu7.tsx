@@ -3,7 +3,7 @@ import { Archive, ArrowDown, ArrowRight, ArrowUpRight, Building2, Clock, Server,
 import { Nu7Countdown, type InitialTip } from "@/components/nu7-countdown";
 import { StatusLabel } from "@/components/status";
 import { canCreateTests } from "@/lib/network";
-import { NU7_HEIGHT, NU7_PLANNED_DATE, SOURCES } from "@/lib/nu7";
+import { NU7_HEIGHT, NU7_PLANNED_DATE, SOURCES, nu7State } from "@/lib/nu7";
 import { READINESS_VISUAL, cellView, strongestTier } from "@/lib/present";
 import { getBoard, getScannerHeartbeat } from "@/lib/queries";
 
@@ -54,12 +54,15 @@ const ROLES = [
     title: "I keep ZEC in a wallet app",
     urgent: true,
     body: [
-      "Update the app before activation. Every network upgrade changes the consensus branch ID a transaction must commit to, so a wallet that doesn't know NU7 can't send once it activates.",
-      "Hardware wallets may need a firmware update as well.",
+      "Update the app before activation. The upgrade team expects NU7 not to affect wallets in any significant way, but each app still has to ship a version built for NU7, and one that hasn't may not be able to send after activation.",
+      "An independent check found several apps and hardware wallets still waiting on an NU7 update a week before activation.",
+    ],
+    liveBody: [
+      "Make sure the app you use has an NU7 version installed. The upgrade team expected NU7 not to affect wallets in any significant way, but an app not built for it may not be able to send.",
     ],
     action: <ExternalAction href={SOURCES.readiness.href}>Check your wallet on the NU7 readiness tracker</ExternalAction>,
     note: "An independent list: every line links to the issue, pull request or code it is based on.",
-    sources: [SOURCES.readiness],
+    sources: [SOURCES.timeline, SOURCES.readiness],
   },
   {
     id: "sprout",
@@ -69,6 +72,10 @@ const ROLES = [
     body: [
       `Move them out before block ${H}. NU7 disables v4 transactions, the only kind that can spend Sprout, so Sprout funds left behind can't be spent normally after activation.`,
       "An old zcashd wallet.dat can hold Sprout funds you have forgotten about. Check it now.",
+    ],
+    liveBody: [
+      "NU7 disabled v4 transactions, the only kind that can spend Sprout, so Sprout funds can no longer be spent normally.",
+      "Any recovery would need a separate mechanism that doesn't exist today. Follow the forum thread for news.",
     ],
     action: <ExternalAction href={SOURCES.sprout.href}>Read the recovery thread</ExternalAction>,
     sources: [SOURCES.timeline, SOURCES.zebra],
@@ -94,6 +101,10 @@ const ROLES = [
       `Upgrade before block ${H}: Zebra 7.0.0 or later. After activation, NU7 nodes disconnect older peers, and nodes that haven't upgraded follow a different chain.`,
       "Zebra 7.0.0 migrates its database on first start, and a downgrade means a full resync, so back up first. Indexers and explorers may need changes too.",
     ],
+    liveBody: [
+      "Nodes that haven't upgraded to Zebra 7.0.0 or later are following a different chain. Upgrade now.",
+      "Zebra 7.0.0 migrates its database on first start, and a downgrade means a full resync, so back up first. Indexers and explorers may need changes too.",
+    ],
     action: <ExternalAction href={SOURCES.zebra.href}>Zebra 7.0.0 release notes</ExternalAction>,
     sources: [SOURCES.zebra, SOURCES.timeline],
   },
@@ -112,17 +123,17 @@ const CHANGES = [
   },
   {
     title: "Part of every fee is set aside",
-    body: "60% of each block's transaction fees go into a reserve and miners keep 40%. From block 8,939,664, blocks start reissuing a small part of that reserve on top of the normal reward.",
-    sources: [SOURCES.zip235, SOURCES.zebra],
+    body: "60% of each block's transaction fees go into a reserve and miners keep 40%. From block 8,939,664, blocks start reissuing a small, predictable part of that reserve on top of the normal reward.",
+    sources: [SOURCES.zip235, SOURCES.zip237, SOURCES.zip259, SOURCES.zebra],
   },
   {
     title: "More shielded capacity, lighter sync",
-    body: "Per-block limits on Orchard, Ironwood and Sapling activity more than double Orchard throughput (2.9 to 6.6 transactions per second) and cut the worst-case spam a light wallet has to download by about 37%.",
-    sources: [SOURCES.zebra],
+    body: "With 25-second blocks and new per-block limits on Orchard, Ironwood and Sapling activity, Orchard capacity goes from 2.9 to 6.6 transactions per second, and the worst-case spam a light wallet has to download falls by about 37%.",
+    sources: [SOURCES.zip218, SOURCES.zebra],
   },
   {
     title: "What stays the same",
-    body: "The four-year halving schedule, the 21 million ZEC cap and the transaction format. NU7 adds no new transaction format.",
+    body: "The four-year halving schedule and the 21 million ZEC supply cap. NU7 also adds no new transaction format; it switches off the old v4 one.",
     sources: [SOURCES.zebra, SOURCES.timeline],
   },
 ];
@@ -151,13 +162,14 @@ async function testedServices() {
       })
       .filter((r) => r.tier === "verified" || r.tier === "community");
   } catch {
-    return [];
+    return null; // the board couldn't be read, as opposed to "nothing tested yet"
   }
 }
 
 export async function Nu7View() {
   const [initial, tested] = await Promise.all([initialTip(), testedServices()]);
   const testHref = canCreateTests("mainnet") ? "/test" : "/testnet/test";
+  const live = nu7State(initial.tip, null).phase === "live";
 
   return (
     <div className="space-y-16">
@@ -171,9 +183,19 @@ export async function Nu7View() {
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">Zcash network upgrade · NU7</p>
             <h1 className="mt-4 text-balance text-4xl font-semibold tracking-tight sm:text-6xl">Ready for NU7?</h1>
             <p className="mt-6 max-w-[60ch] text-pretty text-lg text-muted">
-              Zcash&apos;s next network upgrade activates at block <span className="tabular-nums text-foreground">{H}</span>, planned for
-              around {NU7_PLANNED_DATE}. Blocks get three times faster and old Sprout funds stop being spendable. Here is what to check,
-              depending on how you hold ZEC.
+              {live ? (
+                <>
+                  Zcash&apos;s NU7 upgrade activated at block <span className="tabular-nums text-foreground">{H}</span>. Blocks now come
+                  every 25 seconds and old Sprout funds can no longer be spent normally. Here is what changed and what to check, depending on
+                  how you hold ZEC.
+                </>
+              ) : (
+                <>
+                  Zcash&apos;s next network upgrade activates at block <span className="tabular-nums text-foreground">{H}</span>, planned
+                  for around {NU7_PLANNED_DATE}. Blocks get three times faster and old Sprout funds can no longer be spent normally. Here is
+                  what to check, depending on how you hold ZEC.
+                </>
+              )}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-4">
@@ -197,7 +219,7 @@ export async function Nu7View() {
 
       <section id="what-to-do" aria-labelledby="what-to-do-title" className="space-y-6">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">Before block {H}</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">{live ? `Since block ${H}` : `Before block ${H}`}</p>
           <h2 id="what-to-do-title" className="mt-2 text-2xl font-semibold tracking-tight">
             What do I need to do?
           </h2>
@@ -209,7 +231,7 @@ export async function Nu7View() {
                 <span className="grid size-10 place-items-center rounded-xl border border-line bg-surface-2">
                   <r.icon aria-hidden="true" className="size-5 text-accent-ink" />
                 </span>
-                {r.urgent && (
+                {r.urgent && !live && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-warn-soft px-2 py-0.5 text-xs font-medium text-warn">
                     <Clock aria-hidden="true" className="size-3.5" /> Before activation
                   </span>
@@ -217,7 +239,7 @@ export async function Nu7View() {
               </div>
               <h3 className="mt-4 text-lg font-semibold">{r.title}</h3>
               <div className="mt-2 space-y-2 text-sm text-muted">
-                {r.body.map((p) => (
+                {((live && "liveBody" in r && r.liveBody) || r.body).map((p) => (
                   <p key={p}>{p}</p>
                 ))}
               </div>
@@ -261,10 +283,13 @@ export async function Nu7View() {
             Before you withdraw after the upgrade
           </h2>
           <p className="text-muted">
-            These services have been tested on mainnet. Every result here was recorded before NU7, and we plan to retest them after
-            activation. Until then, treat them as the last known behaviour.
+            {live
+              ? "These services have been tested on mainnet. NU7 is now live: results dated before activation were recorded before the upgrade, so check the date on each one while we retest."
+              : "These services have been tested on mainnet. Every result here was recorded before NU7, and we plan to retest them after activation. Until then, treat them as the last known behaviour."}
           </p>
-          {tested.length > 0 ? (
+          {tested === null ? (
+            <p className="rounded-2xl border border-dashed border-line-strong p-6 text-sm text-muted">The board couldn&apos;t be loaded right now.</p>
+          ) : tested.length > 0 ? (
             <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
               {tested.map(({ service, readiness, label }) => {
                 const v = READINESS_VISUAL[readiness];
@@ -285,7 +310,7 @@ export async function Nu7View() {
               })}
             </ul>
           ) : (
-            <p className="rounded-2xl border border-dashed border-line-strong p-6 text-sm text-muted">The board couldn&apos;t be loaded right now.</p>
+            <p className="rounded-2xl border border-dashed border-line-strong p-6 text-sm text-muted">No service has been tested on mainnet yet.</p>
           )}
           <InternalAction href="/">See the full board</InternalAction>
         </div>
