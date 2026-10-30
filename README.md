@@ -96,7 +96,7 @@ Sapling is deferred: the scanner detects Sapling notes, but nothing in the stack
 
 ## Local setup
 
-Requires Node 20+ and Docker.
+Requires Node 24 (see `.nvmrc`) and Docker. Contributing? Read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
 ```bash
 npm install
@@ -109,7 +109,7 @@ npm run dev:worker                   # terminal 1
 npm run dev:web                      # terminal 2 → http://localhost:3000
 ```
 
-`npm run build` typechecks every package and builds the web app. `npm test` runs the zcash, keygen and worker tests.
+`npm run build` typechecks every package and builds the web app. `npm test` runs the unit tests of every workspace, and `npm run typecheck` typechecks them all.
 
 ## Withdrawal form checks
 
