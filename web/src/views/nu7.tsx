@@ -189,7 +189,7 @@ export async function Nu7View() {
                 ) : (
                   <>
                     Zcash&apos;s next network upgrade activates at block <span className="tabular-nums text-foreground">{H}</span>, planned
-                    for around {NU7_PLANNED_DATE}. Blocks get three times faster and old Sprout funds can no longer be spent normally. Here is
+                    for around {NU7_PLANNED_DATE}, which falls on the night of 5 to 6 November depending on your time zone. Blocks get three times faster and old Sprout funds can no longer be spent normally. Here is
                     what to check, depending on how you hold ZEC.
                   </>
                 )}
