@@ -20,13 +20,15 @@ const noop = () => () => {};
 const useCanShare = () => useSyncExternalStore(noop, () => typeof navigator !== "undefined" && typeof navigator.share === "function", () => false);
 
 export function Nu7Share({ siteUrl }: { siteUrl: string }) {
-  const { state, remainingMs, overdue } = useNu7();
+  const { snap, state, remainingMs, overdue } = useNu7();
+  const before = snap.stopwatch?.before ?? null;
+  const since = snap.stopwatch?.since && snap.stopwatch.since.intervals >= 10 ? snap.stopwatch.since : null;
   const [format, setFormat] = useState<FormatId>("wide");
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
   const canShare = useCanShare();
 
-  const key = state.phase === "upcoming" ? String(state.blocksLeft) : state.phase;
+  const key = state.phase === "upcoming" ? String(state.blocksLeft) : state.phase === "live" ? `live${state.blocksSince}` : state.phase;
   const pageUrl = `${siteUrl}/nu7?b=${key}`;
   const cardPath = `/nu7/card?f=${format}&b=${key}`;
   const text =
@@ -35,7 +37,9 @@ export function Nu7Share({ siteUrl }: { siteUrl: string }) {
         ? `Zcash NU7 activates any moment now, at block ${NU7_HEIGHT.toLocaleString("en-US")}. Is your ZEC ready?`
         : `Zcash NU7 activates in about ${formatRemaining(remainingMs)} (${state.blocksLeft.toLocaleString("en-US")} blocks to go). Is your ZEC ready?`
       : state.phase === "live"
-        ? "NU7 is live on Zcash. Here's what changed and what to check:"
+        ? since && before
+          ? `NU7 is live on Zcash: blocks now ${since.seconds.toFixed(1)} s apart on average, down from ${before.seconds.toFixed(1)} s. Measured live:`
+          : "NU7 is live on Zcash. Here's what changed and what to check:"
         : `Zcash NU7 activates at block ${NU7_HEIGHT.toLocaleString("en-US")}. Is your ZEC ready?`;
   const e = encodeURIComponent;
   const links = [

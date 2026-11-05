@@ -8,7 +8,7 @@ import { and, between, desc, eq } from "drizzle-orm";
 import { chainBlocks } from "@zecproof/db";
 import { getDb } from "./db";
 import { getScannerHeartbeat } from "./queries";
-import { NU7_HEIGHT, PACE_ANCHOR, averageSpacing, contiguousTail, estimateSpacing, nu7State, paceSince, type BlockPoint, type Pace } from "./nu7";
+import { NU7_HEIGHT, PACE_ANCHOR, averageSpacing, contiguousTail, estimateSpacing, nu7State, paceBetween, paceSince, type BlockPoint, type Pace } from "./nu7";
 
 /** The worker polls every 30 s; two missed cycles means offline (same rule as the scanner pill). */
 const ONLINE_WITHIN_MS = 90_000;
@@ -31,9 +31,15 @@ export interface Nu7Snapshot {
   etaMs: number | null;
   /** Header time of block 3,543,405 and the pace after it, once recorded. */
   activation: { time: number; previousTime: number | null; after: Pace | null; firstBlocks: BlockPoint[] } | null;
+  /**
+   * The NU7 stopwatch. `before`: from the fixed reference block to the last block before NU7 (or to the newest
+   * block while NU7 is still ahead). `since`: from block 3,543,405 to the newest recorded block. Both use blocks
+   * the worker keeps, so the numbers stay checkable after older blocks are pruned.
+   */
+  stopwatch: { before: Pace | null; since: Pace | null };
 }
 
-export const EMPTY_SNAPSHOT: Nu7Snapshot = { tip: null, seenAt: null, online: false, blocks: [], pace: null, recentPace: null, spacingS: 75, etaMs: null, activation: null };
+export const EMPTY_SNAPSHOT: Nu7Snapshot = { tip: null, seenAt: null, online: false, blocks: [], pace: null, recentPace: null, spacingS: 75, etaMs: null, activation: null, stopwatch: { before: null, since: null } };
 
 const toPoint = (r: { height: number; time: Date }): BlockPoint => ({ h: r.height, t: r.time.getTime() });
 
@@ -81,6 +87,11 @@ export const getNu7Snapshot = cache(async function getNu7Snapshot(): Promise<Nu7
           firstBlocks: after.slice(0, 12),
         }
       : null;
+    const prev = around.find((b) => b.h === NU7_HEIGHT - 1);
+    const stopwatch = {
+      before: prev ? paceSince(PACE_ANCHOR, prev) : pace,
+      since: act ? paceBetween(act, blocks.at(-1), 5) : null,
+    };
 
     return {
       tip,
@@ -92,6 +103,7 @@ export const getNu7Snapshot = cache(async function getNu7Snapshot(): Promise<Nu7
       spacingS,
       etaMs: state.phase === "upcoming" ? state.etaMs : null,
       activation,
+      stopwatch,
     };
   } catch (err) {
     console.error("nu7 snapshot", err);

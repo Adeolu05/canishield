@@ -7,7 +7,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import Link from "next/link";
 import { ArrowRight, CalendarPlus, CircleCheck, TriangleAlert } from "lucide-react";
 import { useNow } from "./live";
-import { NU7_HEIGHT, NU7_PLANNED_DATE, POST_NU7_SPACING_S, PRE_NU7_SPACING_S, clockParts, formatRemaining, nu7State, type Nu7State } from "@/lib/nu7";
+import { NU7_HEIGHT, NU7_PLANNED_DATE, PACE_ANCHOR, POST_NU7_SPACING_S, PRE_NU7_SPACING_S, SOURCES, clockParts, formatRemaining, nu7State, speedup, type Nu7State } from "@/lib/nu7";
 import type { Nu7Snapshot } from "@/lib/nu7-data";
 
 const POLL_MS = 10_000;
@@ -269,7 +269,7 @@ export function ChainStrip() {
   const visible = ready ? blocks.filter((b) => b.t >= left - 120_000) : [];
   const since = latest && now !== null ? Math.max(0, Math.round((now - latest.t) / 1000)) : null;
   const actTime = snap.activation?.time;
-  const afterPace = snap.activation?.after;
+  const afterPace = snap.stopwatch?.since ?? snap.activation?.after;
 
   return (
     <section aria-labelledby="chain-title" className="space-y-4">
@@ -403,7 +403,7 @@ export function ActivationRecord() {
         ) : (
           <>The block&apos;s timestamp: {new Date(a.time).toUTCString()}.</>
         )}{" "}
-        {a.after && <>The blocks since have averaged {secs(a.after.seconds)} apart.</>}
+        {a.after && <>The first {plural(a.after.intervals, "gap", "gaps")} after it averaged {secs(a.after.seconds)}.</>}
       </p>
       {gaps.length > 0 && (
         <div className="mt-6">
@@ -420,6 +420,80 @@ export function ActivationRecord() {
         </div>
       )}
       <p className="mt-4 text-xs text-subtle">Header times as recorded by our mainnet scanner. Miners set them, so single gaps can look odd; the average is the useful number.</p>
+    </section>
+  );
+}
+
+/**
+ * Before and after, measured: the average block gap before NU7 (from the fixed reference block) next to the
+ * average since block 3,543,405, from our scanner's block headers. Before activation the "after" side waits.
+ */
+export function Nu7Stopwatch() {
+  const { snap, state } = useNu7();
+  const before = snap.stopwatch?.before ?? null;
+  const since = snap.stopwatch?.since ?? null;
+  if (state.phase === "unknown" || !before) return null;
+  const x = speedup(before, since);
+  const max = Math.max(before.seconds, since?.seconds ?? 0, PRE_NU7_SPACING_S);
+  const bar = (v: number) => `${Math.max(2, (v / max) * 100)}%`;
+  const lastPre = state.phase === "live" ? NU7_HEIGHT - 1 : (snap.blocks.at(-1)?.h ?? null);
+  return (
+    <section aria-labelledby="stopwatch-title" className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">NU7 stopwatch</p>
+          <h2 id="stopwatch-title" className="mt-2 text-2xl font-semibold tracking-tight">
+            Before and after, measured
+          </h2>
+        </div>
+        <p className="text-xs text-subtle">
+          {since && x !== null ? (
+            <span className="font-medium text-foreground">Blocks now come {x}x as often.</span>
+          ) : (
+            "The after side starts counting at the activation block."
+          )}
+        </p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl border border-line bg-surface p-5">
+          <p className="text-xs text-subtle">Before NU7, average block gap</p>
+          <p className="mt-2 text-4xl font-semibold tabular-nums tracking-tight">{secs(before.seconds)}</p>
+          <div aria-hidden="true" className="mt-4 h-2 rounded-full bg-surface-2">
+            <div className="h-2 rounded-full bg-line-strong" style={{ width: bar(before.seconds) }} />
+          </div>
+          <p className="mt-3 text-xs text-subtle">
+            Over {plural(before.intervals, "block", "blocks")}, from block {fmt(PACE_ANCHOR.h)}
+            {lastPre !== null ? <> to {fmt(lastPre)}</> : null}. Target {PRE_NU7_SPACING_S} s.
+          </p>
+        </div>
+        <div className={`rounded-2xl border p-5 ${since ? "border-accent bg-surface" : "border-dashed border-line bg-surface"}`}>
+          <p className="text-xs text-subtle">Since NU7, average block gap</p>
+          {since ? (
+            <>
+              <p className="mt-2 text-4xl font-semibold tabular-nums tracking-tight text-accent-ink">{secs(since.seconds)}</p>
+              <div aria-hidden="true" className="mt-4 h-2 rounded-full bg-surface-2">
+                <div className="h-2 rounded-full bg-accent" style={{ width: bar(since.seconds) }} />
+              </div>
+              <p className="mt-3 text-xs text-subtle">
+                Over {plural(since.intervals, "block", "blocks")}, from block {fmt(NU7_HEIGHT)}. Target {POST_NU7_SPACING_S} s.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-4xl font-semibold tracking-tight text-subtle">{state.phase === "live" ? "counting" : "waiting"}</p>
+              <div aria-hidden="true" className="mt-4 h-2 rounded-full bg-surface-2" />
+              <p className="mt-3 text-xs text-subtle">
+                {state.phase === "live"
+                  ? "Shown once a few NU7 blocks are in."
+                  : `Starts at block ${fmt(NU7_HEIGHT)}. Target ${POST_NU7_SPACING_S} s.`}
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+      <p className="text-xs text-subtle">
+        The average gap is also about how long a payment waits for its first confirmation, on average (<a href={SOURCES.zip218.href} className="underline underline-offset-2 hover:text-foreground">ZIP 218</a>). Header times as recorded by our mainnet scanner; miners set them, so the long averages are the useful numbers.
+      </p>
     </section>
   );
 }

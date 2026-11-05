@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { NU7_HEIGHT, PACE_ANCHOR, averageSpacing, clockParts, contiguousTail, estimateSpacing, formatRemaining, nu7State, paceSince } from "./nu7";
+import { NU7_HEIGHT, PACE_ANCHOR, averageSpacing, clockParts, contiguousTail, estimateSpacing, formatRemaining, nu7State, paceBetween, paceSince, speedup } from "./nu7";
 
 test("nu7: unknown without a tip", () => {
   assert.deepEqual(nu7State(null, null), { phase: "unknown" });
@@ -73,4 +73,25 @@ test("nu7: long-run pace from the reference block", () => {
   assert.equal(paceSince(anchor, { h: 1500, t: 500 * 75_000 }), null, "needs 1,000 blocks");
   assert.deepEqual(paceSince(anchor, { h: 3000, t: 2000 * 75_400 }), { seconds: 75.4, intervals: 2000 });
   assert.equal(PACE_ANCHOR.h, 3_520_000);
+});
+
+test("nu7 stopwatch: pace between two blocks is end-to-end time over the height difference", () => {
+  const act = { h: NU7_HEIGHT, t: 1_000_000 };
+  assert.deepEqual(paceBetween(act, { h: NU7_HEIGHT + 40, t: 1_000_000 + 40 * 25_000 }), { seconds: 25, intervals: 40 });
+  assert.equal(paceBetween(act, { h: NU7_HEIGHT + 4, t: 1_100_000 }, 5), null);
+  assert.equal(paceBetween(act, act), null);
+  assert.equal(paceBetween(act, undefined), null);
+  assert.equal(paceBetween(act, { h: NU7_HEIGHT + 10, t: 900_000 }), null, "a later block with an earlier header time is not a pace");
+});
+
+test("nu7 stopwatch: paceSince still needs 1,000 blocks", () => {
+  assert.equal(paceSince(PACE_ANCHOR, { h: PACE_ANCHOR.h + 999, t: PACE_ANCHOR.t + 999 * 75_000 }), null);
+  assert.deepEqual(paceSince(PACE_ANCHOR, { h: PACE_ANCHOR.h + 1000, t: PACE_ANCHOR.t + 1000 * 75_000 }), { seconds: 75, intervals: 1000 });
+});
+
+test("nu7 stopwatch: speedup to one decimal, null without both sides", () => {
+  assert.equal(speedup({ seconds: 75.3, intervals: 23_404 }, { seconds: 25.1, intervals: 300 }), 3);
+  assert.equal(speedup({ seconds: 75.3, intervals: 23_404 }, { seconds: 26.4, intervals: 300 }), 2.9);
+  assert.equal(speedup(null, { seconds: 25, intervals: 10 }), null);
+  assert.equal(speedup({ seconds: 75, intervals: 10 }, null), null);
 });

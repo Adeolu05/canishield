@@ -93,11 +93,24 @@ export function averageSpacing(
  */
 export const PACE_ANCHOR: BlockPoint = { h: 3_520_000, t: 1_792_168_825_000 };
 
+/** Average spacing between two recorded blocks (end-to-end time over the height difference), or null under `minIntervals`. */
+export function paceBetween(from: BlockPoint | undefined, to: BlockPoint | undefined, minIntervals = 1): Pace | null {
+  if (!from || !to) return null;
+  const intervals = to.h - from.h;
+  if (intervals < Math.max(1, minIntervals)) return null;
+  const seconds = (to.t - from.t) / 1000 / intervals;
+  return seconds > 0 ? { seconds, intervals } : null;
+}
+
 /** Average spacing from `anchor` to `block`, or null when the block isn't at least 1,000 blocks later. */
 export function paceSince(anchor: BlockPoint, block: BlockPoint | undefined): Pace | null {
-  if (!block || block.h - anchor.h < 1000) return null;
-  const seconds = (block.t - anchor.t) / 1000 / (block.h - anchor.h);
-  return seconds > 0 ? { seconds, intervals: block.h - anchor.h } : null;
+  return paceBetween(anchor, block, 1000);
+}
+
+/** How many times as often blocks come after NU7 than before, to one decimal; null without both paces. */
+export function speedup(before: Pace | null | undefined, after: Pace | null | undefined): number | null {
+  if (!before || !after || after.seconds <= 0) return null;
+  return Math.round((before.seconds / after.seconds) * 10) / 10;
 }
 
 /** The spacing to estimate with: the measured pre-NU7 pace kept within 60 to 90 s, else the 75 s target. */

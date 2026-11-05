@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { MARK_CHECK, MARK_SHIELD } from "./brand";
-import { NU7_HEIGHT, NU7_PLANNED_DATE, formatRemaining, nu7State } from "./nu7";
+import { NU7_HEIGHT, NU7_PLANNED_DATE, formatRemaining, nu7State, speedup } from "./nu7";
 import type { Nu7Snapshot } from "./nu7-data";
 
 export const CARD_FORMATS = {
@@ -97,14 +97,20 @@ export async function nu7Card(format: CardFormat, snap: Nu7Snapshot, now = Date.
   const live = state.phase === "live";
   const remaining = upcoming && snap.etaMs ? snap.etaMs - now : null;
 
-  const big = upcoming ? fmt(state.blocksLeft) : live ? fmt(NU7_HEIGHT) : fmt(NU7_HEIGHT);
-  const bigLabel = upcoming ? (state.blocksLeft === 1 ? "block to go" : "blocks to go") : live ? "activation block" : "activation block";
+  // Once NU7 is live and at least 10 NU7 gaps are in, the card shows the measured stopwatch instead of the target.
+  const before = snap.stopwatch?.before ?? null;
+  const since = live && snap.stopwatch?.since && snap.stopwatch.since.intervals >= 10 ? snap.stopwatch.since : null;
+  const x = speedup(before, since);
+  const big = upcoming ? fmt(state.blocksLeft) : since ? `${since.seconds.toFixed(1)} s` : fmt(NU7_HEIGHT);
+  const bigLabel = upcoming ? (state.blocksLeft === 1 ? "block to go" : "blocks to go") : since ? "average block gap since NU7" : "activation block";
   const detail = upcoming
     ? remaining !== null && remaining > 0
       ? `About ${formatRemaining(remaining)} · est. ${UTC_ETA.format(snap.etaMs!)} UTC`
       : "Any moment now"
     : live
-      ? "Blocks now every 25 seconds"
+      ? since && before
+        ? `Was ${before.seconds.toFixed(1)} s before NU7${x !== null ? ` · ${x}x as often` : ""}`
+        : "Blocks now every 25 seconds"
       : `Planned for around ${NU7_PLANNED_DATE}`;
   const [t1, t2] = live ? ["NU7 is", "live."] : ["Ready for", "NU7?"];
   const scanner = !snap.tip

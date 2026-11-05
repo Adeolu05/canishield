@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Archive, ArrowDown, ArrowRight, ArrowUpRight, Building2, Clock, Server, ShieldCheck, Smartphone, Wallet } from "lucide-react";
-import { ActivationRecord, ChainStrip, Nu7Countdown, Nu7Provider } from "@/components/nu7-live";
+import { ActivationRecord, ChainStrip, Nu7Countdown, Nu7Provider, Nu7Stopwatch } from "@/components/nu7-live";
 import { Nu7Share } from "@/components/nu7-share";
 import { StatusLabel } from "@/components/status";
 import { canCreateTests } from "@/lib/network";
@@ -215,6 +215,8 @@ export async function Nu7View() {
         </section>
 
         <ChainStrip />
+
+        <Nu7Stopwatch />
 
         <ActivationRecord />
 
