@@ -11,13 +11,21 @@ export async function generateMetadata(): Promise<Metadata> {
   const snap = await getNu7Snapshot();
   const state = nu7State(snap.tip, null, NU7_HEIGHT, snap.spacingS);
   const key = cardKey(state);
-  const image = { url: `/nu7/card?f=wide&b=${key}`, width: 1200, height: 630, alt: "Ready for NU7? A live countdown to Zcash's network upgrade" };
-  const description = `Zcash's NU7 upgrade activates at block ${H}. A live countdown from our own scanner, what wallet users, Sprout holders, exchange users and node operators need to do, and what changes, with sources.`;
+  // After activation the title and text follow the upgrade: a link shared now reads "NU7 is live", not a countdown.
+  const live = state.phase === "live";
+  const title = live ? "NU7 is live" : "Ready for NU7?";
+  const alt = live
+    ? "NU7 is live: the average Zcash block gap since NU7, measured by our scanner"
+    : "Ready for NU7? A live countdown to Zcash's network upgrade";
+  const image = { url: `/nu7/card?f=wide&b=${key}`, width: 1200, height: 630, alt };
+  const description = live
+    ? `Zcash's NU7 upgrade activated at block ${H}. A live stopwatch from our own scanner: the average block gap before and after NU7, what changed, and what wallet users, Sprout holders, exchange users and node operators should check, with sources.`
+    : `Zcash's NU7 upgrade activates at block ${H}. A live countdown from our own scanner, what wallet users, Sprout holders, exchange users and node operators need to do, and what changes, with sources.`;
   return {
-    title: "Ready for NU7?",
+    title,
     description,
-    openGraph: { title: "Ready for NU7?", description, images: [image] },
-    twitter: { card: "summary_large_image", title: "Ready for NU7?", description, images: [image.url] },
+    openGraph: { title, description, images: [image] },
+    twitter: { card: "summary_large_image", title, description, images: [image.url] },
   };
 }
 

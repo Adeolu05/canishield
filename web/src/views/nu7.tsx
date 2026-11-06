@@ -178,7 +178,7 @@ export async function Nu7View() {
           <div className="space-y-8">
             <div>
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">Zcash network upgrade · NU7</p>
-              <h1 className="mt-4 text-balance text-4xl font-semibold tracking-tight sm:text-6xl">Ready for NU7?</h1>
+              <h1 className="mt-4 text-balance text-4xl font-semibold tracking-tight sm:text-6xl">{live ? "NU7 is live" : "Ready for NU7?"}</h1>
               <p className="mt-6 max-w-[60ch] text-pretty text-lg text-muted">
                 {live ? (
                   <>
