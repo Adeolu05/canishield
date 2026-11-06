@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { NU7_HEIGHT, PACE_ANCHOR, averageSpacing, clockParts, contiguousTail, estimateSpacing, formatRemaining, nu7State, paceBetween, paceSince, speedup } from "./nu7";
+import { NU7_HEIGHT, PACE_ANCHOR, averageSpacing, cardKey, clockParts, contiguousTail, estimateSpacing, formatRemaining, nu7State, paceBetween, paceSince, speedup } from "./nu7";
 
 test("nu7: unknown without a tip", () => {
   assert.deepEqual(nu7State(null, null), { phase: "unknown" });
@@ -94,4 +94,19 @@ test("nu7 stopwatch: speedup to one decimal, null without both sides", () => {
   assert.equal(speedup({ seconds: 75.3, intervals: 23_404 }, { seconds: 26.4, intervals: 300 }), 2.9);
   assert.equal(speedup(null, { seconds: 25, intervals: 10 }), null);
   assert.equal(speedup({ seconds: 75, intervals: 10 }, null), null);
+});
+
+test("cardKey steps by 10 blocks far out, every block in the final approach, by 20 once live", () => {
+  const up = (blocksLeft: number) => ({ phase: "upcoming" as const, tip: NU7_HEIGHT - blocksLeft, blocksLeft, etaMs: 0 });
+  assert.equal(cardKey(up(1234)), "1240");
+  assert.equal(cardKey(up(1231)), "1240");
+  assert.equal(cardKey(up(101)), "110");
+  assert.equal(cardKey(up(100)), "100");
+  assert.equal(cardKey(up(37)), "37");
+  const live = (blocksSince: number) => ({ phase: "live" as const, tip: NU7_HEIGHT + blocksSince, blocksSince });
+  assert.equal(cardKey(live(0)), "live0");
+  assert.equal(cardKey(live(19)), "live0");
+  assert.equal(cardKey(live(20)), "live20");
+  assert.equal(cardKey(live(47)), "live40");
+  assert.equal(cardKey({ phase: "unknown" }), "unknown");
 });

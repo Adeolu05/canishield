@@ -3,14 +3,16 @@
 // The live parts of the NU7 page: one poll of /api/nu7 shared by the countdown,
 // the chain strip and the activation record. Everything shown comes from our
 // mainnet scanner; the only estimate is the activation time, and it says so.
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarPlus, CircleCheck, TriangleAlert } from "lucide-react";
 import { useNow } from "./live";
+import { useVisiblePoll } from "./use-visible-poll";
 import { NU7_HEIGHT, NU7_PLANNED_DATE, PACE_ANCHOR, POST_NU7_SPACING_S, PRE_NU7_SPACING_S, SOURCES, clockParts, formatRemaining, nu7State, speedup, type Nu7State } from "@/lib/nu7";
 import type { Nu7Snapshot } from "@/lib/nu7-data";
 
-const POLL_MS = 10_000;
+// Blocks come about every 25 s after NU7, so a 15 s poll still shows each one promptly.
+const POLL_MS = 15_000;
 const ONLINE_WITHIN_MS = 90_000;
 const FINAL_APPROACH = 100;
 
@@ -42,24 +44,25 @@ function newer(a: Nu7Snapshot, b: Nu7Snapshot): Nu7Snapshot {
 export function Nu7Provider({ initial, children }: { initial: Nu7Snapshot; children: ReactNode }) {
   const [snap, setSnap] = useState(initial);
   const [polled, setPolled] = useState(false);
+  const mounted = useRef(true);
   useEffect(() => {
-    let cancelled = false;
-    const load = () =>
-      fetch("/api/nu7", { cache: "no-store" })
-        .then((r) => (r.ok ? (r.json() as Promise<Nu7Snapshot>) : null))
-        .then((s) => {
-          if (cancelled || !s) return;
-          setPolled(true);
-          setSnap((cur) => newer(cur, s));
-        })
-        .catch(() => {});
-    load();
-    const id = setInterval(load, POLL_MS);
+    mounted.current = true;
     return () => {
-      cancelled = true;
-      clearInterval(id);
+      mounted.current = false;
     };
   }, []);
+  const load = useCallback(() => {
+    fetch("/api/nu7", { cache: "no-store" })
+      .then((r) => (r.ok ? (r.json() as Promise<Nu7Snapshot>) : null))
+      .then((s) => {
+        if (!mounted.current || !s) return;
+        setPolled(true);
+        setSnap((cur) => newer(cur, s));
+      })
+      .catch(() => {});
+  }, []);
+  // Only while the tab is visible: a countdown left open in a background tab makes no requests.
+  useVisiblePoll(load, POLL_MS);
 
   const now = useNow();
   const state = nu7State(snap.tip, null, NU7_HEIGHT, snap.spacingS);

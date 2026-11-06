@@ -20,6 +20,9 @@ export async function GET(request: NextRequest) {
       seenAt: hb?.seenAt.toISOString() ?? null,
       ageSeconds,
     },
-    { headers: { "Cache-Control": "no-store" } },
+    // Cached at the CDN for 15 s: every open tab polls this, and the heartbeat only
+    // changes every 30 s anyway. The pill recomputes liveness from seenAt on the
+    // client, so a cached answer never shows a dead scanner as online for long.
+    { headers: { "Cache-Control": "public, max-age=0, s-maxage=15, stale-while-revalidate=15" } },
   );
 }

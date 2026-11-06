@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useNow } from "./live";
+import { useVisiblePoll } from "./use-visible-poll";
 
 interface Status {
   online: boolean;
@@ -10,32 +11,34 @@ interface Status {
   seenAt: string | null;
 }
 
-const POLL_MS = 15_000;
+// The worker writes its heartbeat every 30 s, so polling faster than that only
+// re-reads the same row. The pill is in the header of every page, so this poll
+// runs for every open tab on the site.
+const POLL_MS = 30_000;
 const ONLINE_WITHIN_SECONDS = 90;
 
-/** Polls the worker heartbeat for a network; liveness is recomputed every second. */
+/** Polls the worker heartbeat for a network while the tab is visible; liveness is recomputed every second. */
 export function useScannerStatus(network: "mainnet" | "testnet") {
   const [status, setStatus] = useState<Status | null>(null);
   const now = useNow();
 
+  // Drop answers from a previous network (the pill switches when the path does).
+  const current = useRef(network);
   useEffect(() => {
-    let cancelled = false;
-    const load = () =>
-      fetch(`/api/scanner-status?network=${network}`, { cache: "no-store" })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((s: Status | null) => {
-          if (!cancelled) setStatus(s);
-        })
-        .catch(() => {
-          if (!cancelled) setStatus(null);
-        });
-    load();
-    const id = setInterval(load, POLL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
+    current.current = network;
   }, [network]);
+
+  const load = useCallback(() => {
+    fetch(`/api/scanner-status?network=${network}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s: Status | null) => {
+        if (current.current === network) setStatus(s);
+      })
+      .catch(() => {
+        if (current.current === network) setStatus(null);
+      });
+  }, [network]);
+  useVisiblePoll(load, POLL_MS);
 
   const age = status?.seenAt && now !== null ? Math.max(0, Math.round((now - new Date(status.seenAt).getTime()) / 1000)) : null;
   // Recompute liveness locally so the state turns offline even between polls.

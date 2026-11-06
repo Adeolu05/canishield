@@ -6,6 +6,6 @@ import { getNu7Snapshot } from "@/lib/nu7-data";
 export async function GET() {
   const snapshot = await getNu7Snapshot();
   return Response.json(snapshot, {
-    headers: { "Cache-Control": "public, max-age=0, s-maxage=5, stale-while-revalidate=25", "Access-Control-Allow-Origin": "*" },
+    headers: { "Cache-Control": "public, max-age=0, s-maxage=10, stale-while-revalidate=20", "Access-Control-Allow-Origin": "*" },
   });
 }

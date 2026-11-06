@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Nu7View } from "@/views/nu7";
-import { NU7_HEIGHT, nu7State } from "@/lib/nu7";
+import { NU7_HEIGHT, cardKey, nu7State } from "@/lib/nu7";
 import { getNu7Snapshot } from "@/lib/nu7-data";
 
 const H = NU7_HEIGHT.toLocaleString("en-US");
@@ -10,7 +10,7 @@ const H = NU7_HEIGHT.toLocaleString("en-US");
 export async function generateMetadata(): Promise<Metadata> {
   const snap = await getNu7Snapshot();
   const state = nu7State(snap.tip, null, NU7_HEIGHT, snap.spacingS);
-  const key = state.phase === "upcoming" ? String(state.blocksLeft) : state.phase === "live" ? `live${state.blocksSince}` : state.phase;
+  const key = cardKey(state);
   const image = { url: `/nu7/card?f=wide&b=${key}`, width: 1200, height: 630, alt: "Ready for NU7? A live countdown to Zcash's network upgrade" };
   const description = `Zcash's NU7 upgrade activates at block ${H}. A live countdown from our own scanner, what wallet users, Sprout holders, exchange users and node operators need to do, and what changes, with sources.`;
   return {

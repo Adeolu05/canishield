@@ -7,7 +7,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { Check, Download, Link2, Share2 } from "lucide-react";
 import { XMark } from "./share";
 import { useNu7 } from "./nu7-live";
-import { NU7_HEIGHT, formatRemaining } from "@/lib/nu7";
+import { NU7_HEIGHT, cardKey, formatRemaining } from "@/lib/nu7";
 
 const FORMATS = [
   { id: "wide", label: "Wide", use: "X, LinkedIn, Facebook", w: 1200, h: 630 },
@@ -28,7 +28,7 @@ export function Nu7Share({ siteUrl }: { siteUrl: string }) {
   const [sharing, setSharing] = useState(false);
   const canShare = useCanShare();
 
-  const key = state.phase === "upcoming" ? String(state.blocksLeft) : state.phase === "live" ? `live${state.blocksSince}` : state.phase;
+  const key = cardKey(state);
   const pageUrl = `${siteUrl}/nu7?b=${key}`;
   const cardPath = `/nu7/card?f=${format}&b=${key}`;
   const text =
@@ -112,7 +112,7 @@ export function Nu7Share({ siteUrl }: { siteUrl: string }) {
         </p>
         <div className={`overflow-hidden rounded-2xl border border-line bg-[#0b0a08] ${format === "story" ? "mx-auto max-w-[18rem]" : format === "square" ? "max-w-md" : ""}`}>
           {/* eslint-disable-next-line @next/next/no-img-element -- a live PNG from our own route, not a static asset */}
-          <img key={cardPath} src={cardPath} alt={`${f.label} share card: ${text}`} width={f.w} height={f.h} className="block h-auto w-full" />
+          <img key={cardPath} src={cardPath} loading="lazy" alt={`${f.label} share card: ${text}`} width={f.w} height={f.h} className="block h-auto w-full" />
         </div>
       </div>
 
