@@ -1,4 +1,6 @@
 // OG image renderers for the board and service pages, per network.
+import { publishedDeposits } from "./deposit-checks";
+import { depositSummary, newestDeposit } from "./deposit-core";
 import { readinessOf } from "./evidence";
 import type { NetworkId } from "./network";
 import { ogImage } from "./og";
@@ -26,10 +28,13 @@ export async function serviceOgImage(network: NetworkId, slug: string) {
   }
   const visible = [...detail.communityReports, ...detail.listings];
   const v = verdictFor(readinessOf(detail.tests, visible), detail.tests, visible, new Date(), detail.research);
+  // A published deposit check is evidence too: the card shows it under the verdict.
+  const deposit = newestDeposit(await publishedDeposits(network, detail.service.id).catch(() => []));
+  const summary = deposit ? depositSummary(deposit) : null;
   return ogImage({
     network,
     eyebrow: detail.service.kind,
     title: detail.service.name,
-    lines: [{ text: v.title, tone: v.tone }, { text: v.detail }],
+    lines: [{ text: v.title, tone: v.tone }, { text: v.detail }, ...(summary ? [summary] : [])],
   });
 }

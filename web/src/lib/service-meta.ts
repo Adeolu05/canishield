@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { publishedDeposits } from "./deposit-checks";
+import { depositSummary, newestDeposit } from "./deposit-core";
 import { readinessOf } from "./evidence";
 import type { NetworkId } from "./network";
 import { verdictFor } from "./present";
@@ -11,5 +13,8 @@ export async function serviceMetadata(network: NetworkId, slug: string): Promise
   const visible = [...detail.communityReports, ...detail.listings];
   const v = verdictFor(readinessOf(detail.tests, visible), detail.tests, visible, new Date(), detail.research);
   const title = network === "testnet" ? `${detail.service.name} (testnet)` : detail.service.name;
-  return { title, description: `${v.title}: ${v.detail}. On-chain evidence with txids and viewing keys.` };
+  const deposit = newestDeposit(await publishedDeposits(network, detail.service.id).catch(() => []));
+  const summary = deposit ? depositSummary(deposit) : null;
+  const depositText = summary ? ` ${summary.text}.` : "";
+  return { title, description: `${v.title}: ${v.detail}.${depositText} On-chain evidence with txids and viewing keys.` };
 }

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { canReportNotCredited, depositsEnabledFor, isPlainText, parseCreditedAt, parseTxid, parseZec, roundedDuration, roundedMinutes, zecExact } from "./deposit-core";
+import { canReportNotCredited, depositSummary, depositsEnabledFor, newestDeposit, isPlainText, parseCreditedAt, parseTxid, parseZec, roundedDuration, roundedMinutes, zecExact } from "./deposit-core";
 
 test("deposit-core: durations are coarse", () => {
   const min = 60_000;
@@ -59,4 +59,28 @@ test("deposit-core: credited time is after the block and not in the future", () 
   assert.equal(canReportNotCredited(block, new Date("2026-11-07T09:59:00Z")), false);
   assert.equal(canReportNotCredited(block, new Date("2026-11-07T10:00:00Z")), true);
   assert.equal(canReportNotCredited(null), false);
+});
+
+test("deposit-core: a service is summarised by its newest result, after NU7 first", () => {
+  const at = (iso: string) => new Date(iso);
+  const before = { id: "a", afterNu7: false, reviewedAt: at("2026-11-08T10:00:00Z") };
+  const after1 = { id: "b", afterNu7: true, reviewedAt: at("2026-11-07T10:00:00Z") };
+  const after2 = { id: "c", afterNu7: true, reviewedAt: at("2026-11-07T12:00:00Z") };
+  assert.equal(newestDeposit([before, after1, after2])?.id, "c");
+  assert.equal(newestDeposit([before])?.id, "a");
+  assert.equal(newestDeposit([]), undefined);
+});
+
+test("deposit-core: the preview line is coarse and names the address kind", () => {
+  const blockTime = new Date("2026-11-07T13:24:04Z");
+  const creditedAt = new Date("2026-11-07T13:30:00Z");
+  assert.deepEqual(depositSummary({ result: "credited", addressType: "tex", blockTime, creditedAt, afterNu7: true }), {
+    text: "Shielded deposit credited · TEX address · about 5 min",
+    tone: "ok",
+  });
+  assert.deepEqual(depositSummary({ result: "held_for_review", addressType: "transparent_p2pkh", blockTime, creditedAt: null, afterNu7: false }), {
+    text: "Shielded deposit held for review · transparent address · before NU7",
+    tone: "warn",
+  });
+  assert.equal(depositSummary({ result: null, addressType: "tex", blockTime, creditedAt, afterNu7: true }), null);
 });

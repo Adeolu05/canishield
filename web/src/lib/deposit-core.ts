@@ -136,3 +136,43 @@ export const isPlainText = (s: string) => /^[\p{L}\p{M}\p{N}\p{P}\p{S} ]+$/u.tes
 
 /** "Not credited after 24 hours" can only be reported 24 hours after the payment landed. */
 export const canReportNotCredited = (blockTime: Date | null, now = new Date()) => !!blockTime && now.getTime() - blockTime.getTime() >= 24 * 3600_000;
+
+/** The deposit result a service is summarised by: results from after NU7 first, then the most recently reviewed. */
+export function newestDeposit<T extends { afterNu7: boolean | null; reviewedAt: Date | null }>(deposits: T[]): T | undefined {
+  let best: T | undefined;
+  const reviewed = (x: T) => x.reviewedAt?.getTime() ?? 0;
+  for (const d of deposits) {
+    if (!best || (d.afterNu7 && !best.afterNu7) || (d.afterNu7 === best.afterNu7 && reviewed(d) > reviewed(best))) best = d;
+  }
+  return best;
+}
+
+const DEPOSIT_ADDRESS_SHORT: Record<DepositAddressType, string> = {
+  transparent_p2pkh: "transparent",
+  transparent_p2sh: "transparent",
+  tex: "TEX",
+  unified: "unified",
+  sapling: "Sapling",
+};
+
+const DEPOSIT_SUMMARY: Record<DepositResult, { text: string; tone: "ok" | "warn" | "bad" }> = {
+  credited: { text: "Shielded deposit credited", tone: "ok" },
+  held_for_review: { text: "Shielded deposit held for review", tone: "warn" },
+  not_credited_24h: { text: "Shielded deposit not credited after 24 h", tone: "bad" },
+  wallet_refused: { text: "Wallet couldn't pay its deposit address", tone: "bad" },
+};
+
+/** One line for link previews, e.g. "Shielded deposit credited · TEX address · about 5 min". Coarse time only (section 7). */
+export function depositSummary(d: {
+  result: DepositResult | null;
+  addressType: DepositAddressType;
+  blockTime: Date | null;
+  creditedAt: Date | null;
+  afterNu7: boolean | null;
+}): { text: string; tone: "ok" | "warn" | "bad" } | null {
+  if (!d.result) return null;
+  const s = DEPOSIT_SUMMARY[d.result];
+  const time = d.result === "credited" && d.creditedAt && d.blockTime ? roundedDuration(d.creditedAt.getTime() - d.blockTime.getTime()) : null;
+  const parts = [s.text, `${DEPOSIT_ADDRESS_SHORT[d.addressType]} address`, time, d.afterNu7 === false ? "before NU7" : null];
+  return { text: parts.filter(Boolean).join(" · "), tone: s.tone };
+}
