@@ -3,7 +3,7 @@ import { publishedDeposits } from "./deposit-checks";
 import { depositSummary, newestDeposit } from "./deposit-core";
 import { readinessOf } from "./evidence";
 import type { NetworkId } from "./network";
-import { ogImage } from "./og";
+import { ogImage, serviceCard, type EvidenceRow } from "./og";
 import { READINESS_ORDER, READINESS_VISUAL, verdictFor } from "./present";
 import { getBoard, getServiceDetail } from "./queries";
 
@@ -28,13 +28,10 @@ export async function serviceOgImage(network: NetworkId, slug: string) {
   }
   const visible = [...detail.communityReports, ...detail.listings];
   const v = verdictFor(readinessOf(detail.tests, visible), detail.tests, visible, new Date(), detail.research);
-  // A published deposit check is evidence too: the card shows it under the verdict.
+  // A published deposit check is evidence too: its own panel under the verdict, as on the service page.
   const deposit = newestDeposit(await publishedDeposits(network, detail.service.id).catch(() => []));
   const summary = deposit ? depositSummary(deposit) : null;
-  return ogImage({
-    network,
-    eyebrow: detail.service.kind,
-    title: detail.service.name,
-    lines: [{ text: v.title, tone: v.tone }, { text: v.detail }, ...(summary ? [summary] : [])],
-  });
+  const rows: EvidenceRow[] = [{ label: "Ironwood readiness", status: v.title, tone: v.tone, detail: v.detail }];
+  if (summary) rows.push({ label: "Shielded deposits", status: summary.status, tone: summary.tone, detail: summary.detail });
+  return serviceCard({ network, slug: detail.service.slug, kind: detail.service.kind, name: detail.service.name, rows });
 }

@@ -76,10 +76,14 @@ test("deposit-core: the preview line is coarse and names the address kind", () =
   const creditedAt = new Date("2026-11-07T13:30:00Z");
   assert.deepEqual(depositSummary({ result: "credited", addressType: "tex", blockTime, creditedAt, afterNu7: true }), {
     text: "Shielded deposit credited · TEX address · about 5 min",
+    status: "Credited",
+    detail: "TEX address · about 5 min",
     tone: "ok",
   });
   assert.deepEqual(depositSummary({ result: "held_for_review", addressType: "transparent_p2pkh", blockTime, creditedAt: null, afterNu7: false }), {
     text: "Shielded deposit held for review · transparent address · before NU7",
+    status: "Held for review",
+    detail: "transparent address · before NU7",
     tone: "warn",
   });
   assert.equal(depositSummary({ result: null, addressType: "tex", blockTime, creditedAt, afterNu7: true }), null);

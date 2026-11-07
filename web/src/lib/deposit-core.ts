@@ -155,24 +155,27 @@ const DEPOSIT_ADDRESS_SHORT: Record<DepositAddressType, string> = {
   sapling: "Sapling",
 };
 
-const DEPOSIT_SUMMARY: Record<DepositResult, { text: string; tone: "ok" | "warn" | "bad" }> = {
-  credited: { text: "Shielded deposit credited", tone: "ok" },
-  held_for_review: { text: "Shielded deposit held for review", tone: "warn" },
-  not_credited_24h: { text: "Shielded deposit not credited after 24 h", tone: "bad" },
-  wallet_refused: { text: "Wallet couldn't pay its deposit address", tone: "bad" },
+const DEPOSIT_SUMMARY: Record<DepositResult, { text: string; status: string; tone: "ok" | "warn" | "bad" }> = {
+  credited: { text: "Shielded deposit credited", status: "Credited", tone: "ok" },
+  held_for_review: { text: "Shielded deposit held for review", status: "Held for review", tone: "warn" },
+  not_credited_24h: { text: "Shielded deposit not credited after 24 h", status: "Not credited after 24 h", tone: "bad" },
+  wallet_refused: { text: "Wallet couldn't pay its deposit address", status: "Wallet couldn't pay it", tone: "bad" },
 };
 
-/** One line for link previews, e.g. "Shielded deposit credited · TEX address · about 5 min". Coarse time only (section 7). */
+/**
+ * A deposit result for link previews: `text` is one line ("Shielded deposit credited · TEX address · about 5 min"),
+ * `status` and `detail` are its two halves for the card. Coarse time only (spec section 7).
+ */
 export function depositSummary(d: {
   result: DepositResult | null;
   addressType: DepositAddressType;
   blockTime: Date | null;
   creditedAt: Date | null;
   afterNu7: boolean | null;
-}): { text: string; tone: "ok" | "warn" | "bad" } | null {
+}): { text: string; status: string; detail: string; tone: "ok" | "warn" | "bad" } | null {
   if (!d.result) return null;
   const s = DEPOSIT_SUMMARY[d.result];
   const time = d.result === "credited" && d.creditedAt && d.blockTime ? roundedDuration(d.creditedAt.getTime() - d.blockTime.getTime()) : null;
-  const parts = [s.text, `${DEPOSIT_ADDRESS_SHORT[d.addressType]} address`, time, d.afterNu7 === false ? "before NU7" : null];
-  return { text: parts.filter(Boolean).join(" · "), tone: s.tone };
+  const detail = [`${DEPOSIT_ADDRESS_SHORT[d.addressType]} address`, time, d.afterNu7 === false ? "before NU7" : null].filter(Boolean).join(" · ");
+  return { text: `${s.text} · ${detail}`, status: s.status, detail, tone: s.tone };
 }

@@ -15,7 +15,15 @@ const nextConfig: NextConfig = {
   // /api/evidence reads screenshots from disk at request time; ship them with
   // that function (Vercel functions only see traced files, not public/).
   // The NU7 share cards read their fonts from disk the same way.
-  outputFileTracingIncludes: { "/api/evidence/*": ["./public/evidence/**/*"], "/nu7/card": ["./assets/fonts/**/*"] },
+  outputFileTracingIncludes: {
+    "/api/evidence/*": ["./public/evidence/**/*"],
+    "/nu7/card": ["./assets/fonts/**/*"],
+    // Board and service link previews: Geist, and the service logos drawn on the card.
+    "/opengraph-image": ["./assets/fonts/**/*"],
+    "/testnet/opengraph-image": ["./assets/fonts/**/*"],
+    "/services/[slug]/opengraph-image": ["./assets/fonts/**/*", "./public/service-icons/**/*"],
+    "/testnet/services/[slug]/opengraph-image": ["./assets/fonts/**/*", "./public/service-icons/**/*"],
+  },
   // Form-check screenshots are up to 4 MB (checked again in lib/form-check.ts);
   // the rest is room for the other fields and multipart overhead.
   experimental: { serverActions: { bodySizeLimit: "5mb" } },
