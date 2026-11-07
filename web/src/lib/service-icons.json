@@ -1,11 +1,13 @@
 {
   "atomic-wallet": "/service-icons/atomic-wallet.png",
   "backpack": "/service-icons/backpack.png",
+  "binance": "/service-icons/binance.png",
   "bitfinex": "/service-icons/bitfinex.png",
   "bitget": "/service-icons/bitget.png",
   "cake-wallet": "/service-icons/cake-wallet.png",
   "changenow": "/service-icons/changenow.png",
   "coinbase": "/service-icons/coinbase.png",
+  "coindcx": "/service-icons/coindcx.png",
   "edge": "/service-icons/edge.png",
   "exodus": "/service-icons/exodus.svg",
   "fauzec": "/service-icons/fauzec.svg",
@@ -21,6 +23,7 @@
   "leodex": "/service-icons/leodex.svg",
   "mane-wallet": "/service-icons/mane-wallet.svg",
   "mexc": "/service-icons/mexc.png",
+  "nighthawk": "/service-icons/nighthawk.png",
   "noir-wallet": "/service-icons/noir-wallet.png",
   "okx": "/service-icons/okx.png",
   "onekey": "/service-icons/onekey.png",
@@ -31,7 +34,10 @@
   "trust-wallet": "/service-icons/trust-wallet.svg",
   "unstoppable": "/service-icons/unstoppable.png",
   "valar-faucet": "/service-icons/valar-faucet.png",
+  "vizor": "/service-icons/vizor.png",
   "vultisig": "/service-icons/vultisig.svg",
+  "ywallet": "/service-icons/ywallet.png",
   "zingo": "/service-icons/zingo.svg",
+  "zkool": "/service-icons/zkool.png",
   "zodl": "/service-icons/zodl.png"
 }
