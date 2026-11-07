@@ -141,7 +141,7 @@ export function verdictFor(
         ? { ...v, title: "Transparent only", detail: `rejected unified addresses, ${d(latest(uaRejections, reportDate))}` }
         : { ...v, title: "Transparent only", detail: `paid the transparent receiver of a unified address, ${d(latest(verified, testDate))}` };
     case "rejected":
-      return { ...v, title: "Rejects unified addresses", detail: `reported ${d(latest(uaRejections, reportDate))}; no payment verified yet` };
+      return { ...v, title: "Rejects unified addresses", detail: `reported ${d(latest(uaRejections, reportDate))}; no withdrawal verified yet` };
     case "untested": {
       // Each source's claim in its own clause: never merged, never ranked.
       const listings = visible.filter((r) => r.tier === "listing");

@@ -51,7 +51,7 @@ export const READINESS: Record<Readiness, { label: string; meaning: string }> = 
     label: "Transparent only",
     meaning: "Transparent payments verified, while unified addresses were rejected or the transparent receiver was paid instead.",
   },
-  rejected: { label: "Rejected", meaning: "Unified addresses were rejected; no payment verified yet." },
+  rejected: { label: "Rejected", meaning: "Unified addresses were rejected; no withdrawal verified yet." },
   untested: {
     label: "Untested",
     meaning: "No on-chain or community evidence about shielded withdrawals yet (unverified listings don't count).",

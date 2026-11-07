@@ -179,7 +179,7 @@ export async function DepositStatusView({ network, id }: { network: NetworkId; i
           <p className="text-sm text-muted">
             Our scanner looks the transaction up on an independent explorer and checks the amount, the address and that the money came from a
             shielded pool. It needs {NETWORKS[network].requiredConfirmations} confirmation{NETWORKS[network].requiredConfirmations > 1 ? "s" : ""}, so
-            this can take {network === "mainnet" ? "around 15 minutes" : "a few minutes"}. This page updates by itself.
+            this can take {network === "mainnet" ? "around 5 minutes" : "a few minutes"}. This page updates by itself.
           </p>
         </Panel>
       )}
