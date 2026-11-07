@@ -96,7 +96,7 @@ test("nu7 stopwatch: speedup to one decimal, null without both sides", () => {
   assert.equal(speedup({ seconds: 75, intervals: 10 }, null), null);
 });
 
-test("cardKey steps by 10 blocks far out, every block in the final approach, by 20 once live", () => {
+test("cardKey steps by 10 blocks far out, every block in the final approach, by 100 once live", () => {
   const up = (blocksLeft: number) => ({ phase: "upcoming" as const, tip: NU7_HEIGHT - blocksLeft, blocksLeft, etaMs: 0 });
   assert.equal(cardKey(up(1234)), "1240");
   assert.equal(cardKey(up(1231)), "1240");
@@ -105,8 +105,8 @@ test("cardKey steps by 10 blocks far out, every block in the final approach, by 
   assert.equal(cardKey(up(37)), "37");
   const live = (blocksSince: number) => ({ phase: "live" as const, tip: NU7_HEIGHT + blocksSince, blocksSince });
   assert.equal(cardKey(live(0)), "live0");
-  assert.equal(cardKey(live(19)), "live0");
-  assert.equal(cardKey(live(20)), "live20");
-  assert.equal(cardKey(live(47)), "live40");
+  assert.equal(cardKey(live(99)), "live0");
+  assert.equal(cardKey(live(100)), "live100");
+  assert.equal(cardKey(live(2247)), "live2200");
   assert.equal(cardKey({ phase: "unknown" }), "unknown");
 });

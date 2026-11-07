@@ -52,15 +52,17 @@ export function nu7State(
  * The version key in share-card and share-link URLs (`?b=`). Each new key makes the
  * card route draw a fresh PNG, the heaviest work on the site, so it moves in steps
  * instead of on every block: every 10 blocks while more than 100 are left, then on
- * every block for the final approach, and every 20 blocks (about 8 minutes) once
- * NU7 is live. A card drawn inside a step still shows the numbers at that moment.
+ * every block for the final approach, and every 100 blocks (about 40 minutes at
+ * the 25 s spacing) once NU7 is live, when the stopwatch averages barely move from
+ * one block to the next. A card drawn inside a step still shows the numbers at that
+ * moment.
  */
 export function cardKey(state: Nu7State): string {
   if (state.phase === "upcoming") {
     const left = state.blocksLeft > 100 ? Math.ceil(state.blocksLeft / 10) * 10 : state.blocksLeft;
     return String(left);
   }
-  if (state.phase === "live") return `live${Math.floor(state.blocksSince / 20) * 20}`;
+  if (state.phase === "live") return `live${Math.floor(state.blocksSince / 100) * 100}`;
   return state.phase;
 }
 
