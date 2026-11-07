@@ -6,10 +6,15 @@
 //   npx tsx --env-file=../.env scripts/review-deposits.mts list
 //   npx tsx --env-file=../.env scripts/review-deposits.mts accept <id> "David Peluola (maintainer)"
 //   npx tsx --env-file=../.env scripts/review-deposits.mts reject <id> "reason shown to the tester"
+//   npx tsx --env-file=../.env scripts/review-deposits.mts correct-credit <id> <ISO time, e.g. 2026-11-07T13:32:13Z>
+//
+// correct-credit fixes the credit time of a credited check after review, when the service
+// itself later shows a more exact one (for example its own "deposit confirmed" email).
 //
 // For the hosted database, set DATABASE_URL with Read-Host first instead of --env-file.
 import { and, eq, inArray } from "drizzle-orm";
 import { createDb, depositChecks, services } from "@zecproof/db";
+import { roundedDuration } from "../src/lib/deposit-core";
 
 const [cmd, id, text] = process.argv.slice(2);
 const db = createDb();
@@ -48,8 +53,27 @@ try {
       .where(and(eq(depositChecks.id, id), inArray(depositChecks.status, [...REVIEWABLE])))
       .returning({ id: depositChecks.id, status: depositChecks.status });
     console.log(done.length ? `${done[0].id} → ${done[0].status}` : "No reviewable check with that id.");
+  } else if (cmd === "correct-credit" && id && text) {
+    const at = new Date(text);
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?Z$/.test(text) || Number.isNaN(at.getTime())) {
+      console.log("Give the time in UTC, e.g. 2026-11-07T13:32:13Z");
+      process.exitCode = 1;
+    } else {
+      const [c] = await db.select().from(depositChecks).where(eq(depositChecks.id, id));
+      if (!c || c.result !== "credited" || !c.blockTime) {
+        console.log("No credited check with a landing time has that id.");
+        process.exitCode = 1;
+      } else if (at < c.blockTime || at > new Date()) {
+        console.log(`That time is before the payment landed (${c.blockTime.toISOString()}) or in the future.`);
+        process.exitCode = 1;
+      } else {
+        const before = c.creditedAt ? roundedDuration(c.creditedAt.getTime() - c.blockTime.getTime()) : "n/a";
+        await db.update(depositChecks).set({ creditedAt: at }).where(eq(depositChecks.id, id));
+        console.log(`${id}: credited ${c.creditedAt?.toISOString() ?? "n/a"} → ${at.toISOString()} (shown: ${before} → ${roundedDuration(at.getTime() - c.blockTime.getTime())})`);
+      }
+    }
   } else {
-    console.log('Usage: review-deposits.mts list | accept <id> "<reviewer>" | reject <id> "<reason>"');
+    console.log('Usage: review-deposits.mts list | accept <id> "<reviewer>" | reject <id> "<reason>" | correct-credit <id> <UTC time>');
     process.exitCode = 1;
   }
 } finally {
