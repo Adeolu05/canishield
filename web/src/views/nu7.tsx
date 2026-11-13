@@ -293,7 +293,7 @@ export async function Nu7View() {
                 : "These services have been tested on mainnet. Every result here was recorded before NU7, and we plan to retest them after activation. Until then, treat them as the last known behaviour."}
             </p>
             {tested === null ? (
-              <p className="rounded-2xl border border-dashed border-line-strong p-6 text-sm text-muted">The board couldn&apos;t be loaded right now.</p>
+              <p className="max-w-none rounded-2xl border border-dashed border-line-strong p-6 text-sm text-muted">The board couldn&apos;t be loaded right now.</p>
             ) : tested.length > 0 ? (
               <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
                 {tested.map(({ service, readiness, label }) => {
@@ -315,7 +315,7 @@ export async function Nu7View() {
                 })}
               </ul>
             ) : (
-              <p className="rounded-2xl border border-dashed border-line-strong p-6 text-sm text-muted">No service has been tested on mainnet yet.</p>
+              <p className="max-w-none rounded-2xl border border-dashed border-line-strong p-6 text-sm text-muted">No service has been tested on mainnet yet.</p>
             )}
             <InternalAction href="/">See the full board</InternalAction>
           </div>

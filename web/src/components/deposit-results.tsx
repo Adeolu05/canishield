@@ -24,7 +24,7 @@ export function DepositResults({ deposits, base, serviceId, open, now }: { depos
         <p className="text-xs text-subtle">on-chain checked, privately: the payment was verified by our scanner but its txid isn&apos;t published</p>
       </div>
       {deposits.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-line-strong px-4 py-6 text-center text-sm text-muted">No deposit checks yet.</p>
+        <p className="max-w-none rounded-xl border border-dashed border-line-strong px-4 py-6 text-center text-sm text-muted">No deposit checks yet.</p>
       ) : (
         <ul className="space-y-4">
           {deposits.map((d) => {

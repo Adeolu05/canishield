@@ -406,7 +406,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
       <section className="space-y-4">
         <SectionTitle title="On-chain evidence" hint="txid, block and viewing key for every verified payment" />
         {timing && (
-          <p className="rounded-lg border border-line bg-surface px-4 py-2 text-sm text-muted">
+          <p className="max-w-none rounded-lg border border-line bg-surface px-4 py-2 text-sm text-muted">
             Withdrawals reached the chain in <strong className="font-semibold text-foreground">{describeTiming(timing)}</strong> after they were
             requested <span className="text-subtle">(request times reported by testers; block times from the chain)</span>.
           </p>
@@ -437,7 +437,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
       <section className="space-y-4">
         <SectionTitle title="Community reports" hint="observed, not provable on-chain" />
         {communityReports.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-line-strong px-4 py-6 text-center text-sm text-muted">
+          <p className="max-w-none rounded-xl border border-dashed border-line-strong px-4 py-6 text-center text-sm text-muted">
             No community reports {nothing ? "or tests " : ""}yet.
           </p>
         ) : (

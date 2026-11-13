@@ -207,7 +207,7 @@ export function TestedMatrix({ rows, showDeposit = false }: { rows: TestedRowVie
         <p className="text-xs text-subtle">On-chain verified results and community reports</p>
       </div>
       {shown.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-line-strong px-6 py-8 text-center text-sm text-muted">
+        <p className="max-w-none rounded-xl border border-dashed border-line-strong px-6 py-8 text-center text-sm text-muted">
           {q ? `No tested service matches “${q}”.` : "Nothing has been tested on this board yet."}
         </p>
       ) : (
@@ -320,7 +320,7 @@ export function UntestedList({ rows, note }: { rows: UntestedRowView[]; note?: s
         <p className="text-xs text-subtle">{note ?? "Listings and research are other people's claims; a test turns them into evidence"}</p>
       </div>
       {shown.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-line-strong px-6 py-8 text-center text-sm text-muted">
+        <p className="max-w-none rounded-xl border border-dashed border-line-strong px-6 py-8 text-center text-sm text-muted">
           {q ? `No untested service matches “${q}”.` : "Every service on this board has been tested."}
         </p>
       ) : (

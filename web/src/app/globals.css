@@ -182,6 +182,11 @@ body {
   main p {
     max-width: 65ch;
   }
+  /* Centred text stays centred: the capped line sits in the middle of its row. */
+  main p.text-center,
+  main .text-center > p {
+    margin-inline: auto;
+  }
   :focus-visible {
     outline: 2px solid var(--accent-ink);
     outline-offset: 2px;

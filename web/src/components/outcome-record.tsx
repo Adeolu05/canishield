@@ -119,7 +119,7 @@ export function OutcomeRecordSection({ record, serviceId, reportOpen }: { record
         <p className="text-xs text-subtle">reviewed reports; amounts as ranges, dates by week</p>
       </div>
       {record.total === 0 ? (
-        <p className="rounded-xl border border-dashed border-line-strong px-4 py-6 text-center text-sm text-muted">No outcome reports yet.</p>
+        <p className="max-w-none rounded-xl border border-dashed border-line-strong px-4 py-6 text-center text-sm text-muted">No outcome reports yet.</p>
       ) : (
         <>
           <ul aria-label="Outcomes by result" className="flex flex-wrap gap-2">

@@ -346,7 +346,7 @@ export function ChainStrip() {
           </div>
         )}
         {(!ready || blocks.length === 0) && (
-          <p className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-muted">
+          <p className="max-w-none absolute inset-0 grid place-items-center px-6 text-center text-sm text-muted">
             {blocks.length === 0 ? "The live chain view appears once our scanner has recorded a few blocks." : "Loading the chain…"}
           </p>
         )}
