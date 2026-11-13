@@ -19,6 +19,17 @@ import { acceptedOutcomes, getServiceDetail } from "@/lib/queries";
 import { recordFor } from "@/lib/outcome-record";
 import { BeforeYouSend, OutcomeRecordSection } from "@/components/outcome-record";
 import { depositsEnabled, publishedDeposits } from "@/lib/deposit-checks";
+import type { DepositAddressType } from "@zecproof/db";
+import { DEPOSIT_RESULT_LABEL, roundedDuration } from "@/lib/deposit-core";
+
+// How the before-you-send card names a deposit address type, article included.
+const DEPOSIT_TO: Record<DepositAddressType, string> = {
+  transparent_p2pkh: "a transparent",
+  transparent_p2sh: "a transparent (P2SH)",
+  tex: "a TEX",
+  unified: "a unified",
+  sapling: "a Sapling",
+};
 import { DepositResults } from "@/components/deposit-results";
 import { SITE_URL } from "@/lib/site";
 import { ShareProof } from "@/components/share";
@@ -316,6 +327,17 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
   ]);
   const record = outcomesShown ? recordFor(outcomes) : null;
   const reportOpen = outcomesShown && outcomeReportsEnabled();
+  // Our own evidence first on the card: the newest published deposit check, if any.
+  const lastDeposit = [...deposits].filter((d) => d.result && d.blockTime).sort((a, b) => b.blockTime!.getTime() - a.blockTime!.getTime())[0];
+  const depositLine = lastDeposit
+    ? {
+        label: DEPOSIT_RESULT_LABEL[lastDeposit.result!],
+        to: DEPOSIT_TO[lastDeposit.addressType],
+        when: shortDate(lastDeposit.blockTime!, now),
+        toCredit: lastDeposit.result === "credited" && lastDeposit.creditedAt ? roundedDuration(lastDeposit.creditedAt.getTime() - lastDeposit.blockTime!.getTime()) : null,
+        ok: lastDeposit.result === "credited",
+      }
+    : null;
 
   return (
     <div className="space-y-10">
@@ -378,7 +400,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
             {service.notes && <p className="mt-1 text-sm text-subtle">{service.notes}</p>}
           </div>
         </div>
-        {record && <BeforeYouSend record={record} serviceId={service.id} reportOpen={reportOpen} />}
+        {record && <BeforeYouSend record={record} serviceId={service.id} reportOpen={reportOpen} deposit={depositLine} />}
       </div>
 
       <section className="space-y-4">

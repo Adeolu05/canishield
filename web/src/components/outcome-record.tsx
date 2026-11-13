@@ -1,7 +1,7 @@
 // Exit outcomes, shown: the before-you-send card and the record on a service page, and the
 // latest outcomes on the board. What may be shown is decided in lib/outcome-record.ts.
 import Link from "next/link";
-import { ArrowRight, ExternalLink, FlaskConical, MessageSquareWarning, Route } from "lucide-react";
+import { ArrowRight, ExternalLink, FlaskConical, Lock, MessageSquareWarning, Route } from "lucide-react";
 import { StatusIcon, StatusLabel, TONE_SOFT } from "@/components/status";
 import { ServiceIcon } from "@/components/service-icon";
 import { AMOUNT_BAND_LABEL, OUTCOME_RESULT_LABEL, OUTCOME_RESULTS, OUTCOME_ROUTE_LABEL } from "@/lib/outcome";
@@ -16,7 +16,10 @@ function ResultLabel({ result, className }: { result: OutcomeRow["result"]; clas
 }
 
 /** Top of a service page: the one card to read before sending. */
-export function BeforeYouSend({ record, serviceId, reportOpen }: { record: ServiceRecord; serviceId: string; reportOpen: boolean }) {
+/** Our own newest published deposit check, already worded for the card. */
+export type DepositLine = { label: string; to: string; when: string; toCredit: string | null; ok: boolean };
+
+export function BeforeYouSend({ record, serviceId, reportOpen, deposit }: { record: ServiceRecord; serviceId: string; reportOpen: boolean; deposit?: DepositLine | null }) {
   const { latest, total, trouble, worked } = record;
   const tone = latest ? OUTCOME_RESULT_VISUAL[latest.result].tone : "neutral";
   return (
@@ -25,6 +28,17 @@ export function BeforeYouSend({ record, serviceId, reportOpen }: { record: Servi
         Before you send shielded ZEC
       </h2>
       <ul className="mt-3 space-y-2 text-sm">
+        {deposit && (
+          <li className="flex items-start gap-3">
+            <span className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-md ${TONE_SOFT[deposit.ok ? "ok" : "warn"]}`}>
+              <Lock aria-hidden="true" className="size-3.5" />
+            </span>
+            <span>
+              Our latest deposit check (from a shielded wallet to {deposit.to} deposit address): <strong className="font-semibold">{deposit.label}</strong>
+              {deposit.toCredit ? `, ${deposit.toCredit}` : ""} <span className="text-muted">({deposit.when}, checked on-chain)</span>.
+            </span>
+          </li>
+        )}
         <li className="flex items-start gap-3">
           <span className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-md ${TONE_SOFT[tone]}`}>
             <StatusIcon icon={latest ? OUTCOME_RESULT_VISUAL[latest.result].icon : "circle-dashed"} className="size-3.5" />
