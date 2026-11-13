@@ -3,9 +3,11 @@ import { ArrowDown, ArrowRight, BadgeCheck, Braces, Clock, FileText, KeyRound, S
 import type { Readiness } from "@/lib/evidence";
 import { LISTED_CLAIM, STALE_AFTER_DAYS } from "@/lib/evidence";
 import { ADDRESS_TYPE_LABEL } from "@/lib/labels";
-import { NETWORKS, basePath, canCreateTests, type NetworkId } from "@/lib/network";
+import { NETWORKS, basePath, canCreateTests, outcomeReportsEnabled, type NetworkId } from "@/lib/network";
 import { OUTCOME_VISUAL, READINESS_ORDER, READINESS_VISUAL, cellView, shortDate, strongestTier, type Tone } from "@/lib/present";
-import { getBoard, getLatestProof, getServiceDetail } from "@/lib/queries";
+import { acceptedOutcomes, getBoard, getLatestProof, getServiceDetail } from "@/lib/queries";
+import { latestAcross } from "@/lib/outcome-record";
+import { LatestOutcomes } from "@/components/outcome-record";
 import { Nu7Strip } from "@/components/nu7-live";
 import { depositsEnabled, publishedDeposits, type PublishedDeposit } from "@/lib/deposit-checks";
 import { DEPOSIT_ADDRESS_LABEL, DEPOSIT_RESULT_LABEL, DEPOSIT_SERVICE_KINDS, roundedDuration } from "@/lib/deposit-core";
@@ -310,6 +312,8 @@ export async function BoardView({ network }: { network: NetworkId }) {
   // getNu7Snapshot never throws; on a database problem the strip shows the planned date.
   const nu7Promise = network === "mainnet" ? getNu7Snapshot() : null;
   const depositsPromise = publishedDeposits(network).catch(() => [] as PublishedDeposit[]);
+  // Exit outcomes are a mainnet record; a database problem only hides the strip.
+  const outcomesPromise = network === "mainnet" ? acceptedOutcomes(network).catch(() => []) : Promise.resolve([]);
   const { rows, counts, total, research, visible } = await getBoard(network);
   const researchBy = Map.groupBy(research, (r) => r.serviceId);
   const base = basePath(network);
@@ -365,6 +369,7 @@ export async function BoardView({ network }: { network: NetworkId }) {
   const chips = CHIPS.filter((slug) => bySlug.has(slug)).map((slug) => ({ slug, name: bySlug.get(slug)! }));
   const exportHref = `/api/results.json${network === "testnet" ? "?network=testnet" : ""}`;
   const nu7 = await nu7Promise;
+  const latestOutcomes = latestAcross(await outcomesPromise, 4);
 
   return (
     <BoardSearchProvider>
@@ -443,6 +448,8 @@ export async function BoardView({ network }: { network: NetworkId }) {
         <ReadinessBar counts={counts} total={total} tested={tested.length} />
 
         <TestedMatrix rows={tested} showDeposit={depositsEnabled(network) || deposits.size > 0} />
+
+        <LatestOutcomes rows={latestOutcomes} reportOpen={outcomeReportsEnabled()} />
 
         <UntestedList
           rows={inactiveLast(untested)}

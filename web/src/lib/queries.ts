@@ -1,7 +1,8 @@
 import "server-only";
 import { connection } from "next/server";
 import { and, arrayContains, asc, desc, eq, isNotNull, ne } from "drizzle-orm";
-import { reports, researchClaims, services, tests, workerHeartbeats, type AddressType } from "@zecproof/db";
+import { outcomeReports, reports, researchClaims, services, tests, workerHeartbeats, type AddressType } from "@zecproof/db";
+import type { OutcomeRow } from "./outcome-record";
 import { summarize } from "./evidence";
 import { getDb } from "./db";
 import type { NetworkId } from "./network";
@@ -163,4 +164,38 @@ export async function getScannerHeartbeat(network: NetworkId) {
   await connection();
   const [row] = await getDb().select().from(workerHeartbeats).where(eq(workerHeartbeats.network, network));
   return row ?? null;
+}
+
+/**
+ * Accepted exit outcome reports, newest week first, with only the columns that may be shown
+ * (see lib/outcome-record.ts for which of them a page actually shows). Never the evidence link
+ * or the reporter token hash. Unreviewed and rejected reports never leave the database.
+ */
+export async function acceptedOutcomes(network: NetworkId, serviceId?: string): Promise<(OutcomeRow & { serviceSlug: string; serviceName: string })[]> {
+  await connection();
+  return getDb()
+    .select({
+      id: outcomeReports.id,
+      serviceId: outcomeReports.serviceId,
+      serviceSlug: services.slug,
+      serviceName: services.name,
+      result: outcomeReports.result,
+      amountBand: outcomeReports.amountBand,
+      route: outcomeReports.route,
+      weekOf: outcomeReports.weekOf,
+      daysHeld: outcomeReports.daysHeld,
+      creditMinutes: outcomeReports.creditMinutes,
+      sourceUrl: outcomeReports.sourceUrl,
+      note: outcomeReports.note,
+    })
+    .from(outcomeReports)
+    .innerJoin(services, eq(services.id, outcomeReports.serviceId))
+    .where(
+      and(
+        eq(outcomeReports.network, network),
+        eq(outcomeReports.status, "accepted"),
+        serviceId ? eq(outcomeReports.serviceId, serviceId) : undefined,
+      ),
+    )
+    .orderBy(desc(outcomeReports.weekOf), desc(outcomeReports.createdAt));
 }

@@ -7,7 +7,8 @@ import { isNetworkId } from "@zecproof/zcash/networks";
 import type { Report, Test } from "@zecproof/db";
 import { LISTED_CLAIM, READINESS, STALE_AFTER_DAYS, isStale, reportDate, sourceName, testDate, type Cell } from "@/lib/evidence";
 import { NETWORKS, basePath } from "@/lib/network";
-import { getResults } from "@/lib/queries";
+import { acceptedOutcomes, getResults } from "@/lib/queries";
+import { DETAIL_MIN, recordFor } from "@/lib/outcome-record";
 import { publishedDeposits } from "@/lib/deposit-checks";
 import { roundedMinutes } from "@/lib/deposit-core";
 import { BRAND } from "@/lib/brand";
@@ -26,7 +27,7 @@ const HEADERS = {
 const RESULTS_LICENSE = {
   name: "CC BY 4.0",
   url: "https://creativecommons.org/licenses/by/4.0/",
-  appliesTo: ["tests", "communityReports", "readiness", "services[].cells with tier verified or community"],
+  appliesTo: ["tests", "communityReports", "readiness", "services[].cells with tier verified or community", "services[].outcomes", "exitOutcomes"],
   attribution: BRAND.compact,
   note: "Unverified listings are licensed separately; see listingsLicense. The code is MIT.",
 };
@@ -137,7 +138,13 @@ export async function GET(request: NextRequest) {
   const network = param;
   const origin = request.nextUrl.origin;
   const now = new Date();
-  const [{ services, verified, visible, research, summary }, deposits] = await Promise.all([getResults(network), publishedDeposits(network)]);
+  const [{ services, verified, visible, research, summary }, deposits, outcomes] = await Promise.all([
+    getResults(network),
+    publishedDeposits(network),
+    network === "mainnet" ? acceptedOutcomes(network) : Promise.resolve([]),
+  ]);
+  const outcomesBy = Map.groupBy(outcomes, (o) => o.serviceId);
+  const records = new Map([...outcomesBy].map(([id, rows]) => [id, recordFor(rows)]));
   const slugOf = new Map(services.map((s) => [s.id, s.slug]));
 
   const body = {
@@ -157,6 +164,7 @@ export async function GET(request: NextRequest) {
         "Deposit checks to an address that keeps a shielded payment shielded (unified or Sapling): our scanner checked only that the money left a shielded pool; the amount and destination aren't visible on-chain and rest on the reviewed credit screenshot.",
       research:
         "Community research: a product-level claim read from the product's official page by a contributor. Never tested, never in cells or readiness. Carries researchClaim (not outcome or listedClaim) and officialUrl; see the research field.",
+      exit_outcome: `Exit outcomes: what a service did with ZEC sent from the shielded pool (credited, held, documents asked, refused, refunded), reported by the person who sent it and reviewed by a maintainer. Amounts are ranges and dates are weeks (weekOf, a Monday). Each service carries counts and its latest result; a report's details are published only when the service has ${DETAIL_MIN} or more reports, or when the report links a public write-up. Never in cells or readiness.`,
     },
     readiness: {
       total: summary.total,
@@ -171,6 +179,12 @@ export async function GET(request: NextRequest) {
       readiness,
       page: `${origin}${basePath(network)}/services/${service.slug}`,
       cells: Object.fromEntries(Object.entries(cells).map(([type, cell]) => [type, cellJson(cell)])),
+      ...(records.has(service.id)
+        ? (() => {
+            const r = records.get(service.id)!;
+            return { outcomes: { total: r.total, counts: r.counts, latestResult: r.latest?.result ?? null, latestWeekOf: r.latest?.weekOf ?? null } };
+          })()
+        : {}),
     })),
     tests: verified.map((t) => testJson(t, slugOf.get(t.serviceId)!, origin, network)),
     communityReports: visible.filter((r) => r.tier === "community").map((r) => communityJson(r, slugOf.get(r.serviceId)!)),
@@ -194,6 +208,20 @@ export async function GET(request: NextRequest) {
       confirmationsShown: d.confirmationsShown,
       reviewedAt: iso(d.reviewedAt),
     })),
+    // Only reports a service page also shows in full (see the exit_outcome tier). No ids, no review times.
+    exitOutcomes: [...records.entries()].flatMap(([serviceId, r]) =>
+      r.cases.map((c) => ({
+        service: slugOf.get(serviceId)!,
+        result: c.result,
+        amountBand: c.amountBand,
+        route: c.route,
+        weekOf: c.weekOf,
+        daysHeld: c.daysHeld,
+        creditMinutes: c.creditMinutes,
+        sourceUrl: c.sourceUrl,
+        note: c.note,
+      })),
+    ),
     listedClaimCodes: Object.fromEntries(Object.values(LISTED_CLAIM).map((c) => [c.code, c.label])),
     researchClaimCodes: Object.fromEntries(Object.entries(RESEARCH_CLAIM).map(([code, c]) => [code, c.label])),
     researchCredit: RESEARCH_CREDIT,

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Ban, CircleCheck, ClipboardCheck, ExternalLink, FileSearch, MessageSquareWarning } from "lucide-react";
+import { ArrowRight, Ban, CircleCheck, ClipboardCheck, ExternalLink, FileSearch } from "lucide-react";
 import type { Report, ResearchClaimRow, Test } from "@zecproof/db";
 import { RESEARCH_CLAIM, researchLabel, researchSource, resolutionFor } from "@/lib/research";
 import { FORM_CHECK_LABEL, FORM_CHECK_METHOD, canLogFormChecks } from "@/lib/form-check";
@@ -15,7 +15,9 @@ import { ADDRESS_TYPE_LABEL, POOL_LABEL } from "@/lib/labels";
 import { NETWORKS, basePath, canCreateTests, formatAmount, outcomeReportsEnabled, type NetworkId } from "@/lib/network";
 import { OUTCOME_SERVICE_KINDS } from "@/lib/outcome-store";
 import { isoDay, reviewedLabel, shortDate, verdictFor } from "@/lib/present";
-import { getServiceDetail } from "@/lib/queries";
+import { acceptedOutcomes, getServiceDetail } from "@/lib/queries";
+import { recordFor } from "@/lib/outcome-record";
+import { BeforeYouSend, OutcomeRecordSection } from "@/components/outcome-record";
 import { depositsEnabled, publishedDeposits } from "@/lib/deposit-checks";
 import { DepositResults } from "@/components/deposit-results";
 import { SITE_URL } from "@/lib/site";
@@ -307,7 +309,13 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
   const testsOpen = canCreateTests(network);
   const timing = summarizeTiming(tests);
   const nothing = tests.length === 0 && communityReports.length === 0;
-  const deposits = await publishedDeposits(network, service.id);
+  const outcomesShown = network === "mainnet" && (OUTCOME_SERVICE_KINDS as readonly string[]).includes(service.kind);
+  const [deposits, outcomes] = await Promise.all([
+    publishedDeposits(network, service.id),
+    outcomesShown ? acceptedOutcomes(network, service.id) : Promise.resolve([]),
+  ]);
+  const record = outcomesShown ? recordFor(outcomes) : null;
+  const reportOpen = outcomesShown && outcomeReportsEnabled();
 
   return (
     <div className="space-y-10">
@@ -370,6 +378,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
             {service.notes && <p className="mt-1 text-sm text-subtle">{service.notes}</p>}
           </div>
         </div>
+        {record && <BeforeYouSend record={record} serviceId={service.id} reportOpen={reportOpen} />}
       </div>
 
       <section className="space-y-4">
@@ -424,15 +433,9 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
             <ClipboardCheck aria-hidden="true" className="size-4" /> Log a withdrawal form check
           </Link>
         )}
-        {network === "mainnet" && outcomeReportsEnabled() && (OUTCOME_SERVICE_KINDS as readonly string[]).includes(service.kind) && (
-          <Link
-            href={`/report/outcome?service=${service.id}`}
-            className="flex w-fit items-center gap-2 text-sm font-medium text-accent-ink underline-offset-4 hover:underline"
-          >
-            <MessageSquareWarning aria-hidden="true" className="size-4" /> Sent shielded ZEC here? Report what happened
-          </Link>
-        )}
       </section>
+
+      {record && <OutcomeRecordSection record={record} serviceId={service.id} reportOpen={reportOpen} />}
 
       <DepositResults deposits={deposits} base={base} serviceId={service.id} open={depositsEnabled(network)} now={now} />
 
