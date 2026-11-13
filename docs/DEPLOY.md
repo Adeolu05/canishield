@@ -233,6 +233,7 @@ Then merge: Vercel and Railway redeploy `main` by themselves.
 | `ZECPROOF_SITE_URL` | Vercel | `https://your-domain`, no trailing slash |
 | `ZECPROOF_ENABLE_MAINNET_TESTS` | Vercel | unset (off). `yes` only once a mainnet worker runs |
 | `ZECPROOF_ENABLE_FORM_CHECKS` | Vercel | unset (off). Leave it off on any public deployment |
+| `ZECPROOF_DISABLE_OUTCOME_REPORTS` | Vercel | unset (outcome reports on). `yes` pauses /report/outcome |
 | `DATABASE_URL` | Railway | Neon **direct** string (no `-pooler`), `sslmode=require` |
 | `ZECPROOF_NETWORK` | Railway | `testnet` (or `mainnet` on the second service) |
 | `ZECPROOF_ALLOW_MAINNET` | Railway | unset, or `yes` on the mainnet service only |

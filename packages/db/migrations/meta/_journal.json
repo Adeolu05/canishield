@@ -78,6 +78,13 @@
       "when": 1793278236234,
       "tag": "0010_deposit_checks",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794568655666,
+      "tag": "0011_outcome_reports",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Ban, CircleCheck, ClipboardCheck, ExternalLink, FileSearch } from "lucide-react";
+import { ArrowRight, Ban, CircleCheck, ClipboardCheck, ExternalLink, FileSearch, MessageSquareWarning } from "lucide-react";
 import type { Report, ResearchClaimRow, Test } from "@zecproof/db";
 import { RESEARCH_CLAIM, researchLabel, researchSource, resolutionFor } from "@/lib/research";
 import { FORM_CHECK_LABEL, FORM_CHECK_METHOD, canLogFormChecks } from "@/lib/form-check";
@@ -12,7 +12,8 @@ import { PendingChip, ReviewedChip, StaleChip, StatusIcon, TONE_SOFT, TONE_TEXT,
 import { isStale, readinessOf, reportDate, testDate } from "@/lib/evidence";
 import { describeTiming, formatDuration, summarizeTiming, timeToChainMs } from "@/lib/timing";
 import { ADDRESS_TYPE_LABEL, POOL_LABEL } from "@/lib/labels";
-import { NETWORKS, basePath, canCreateTests, formatAmount, type NetworkId } from "@/lib/network";
+import { NETWORKS, basePath, canCreateTests, formatAmount, outcomeReportsEnabled, type NetworkId } from "@/lib/network";
+import { OUTCOME_SERVICE_KINDS } from "@/lib/outcome-store";
 import { isoDay, reviewedLabel, shortDate, verdictFor } from "@/lib/present";
 import { getServiceDetail } from "@/lib/queries";
 import { depositsEnabled, publishedDeposits } from "@/lib/deposit-checks";
@@ -421,6 +422,14 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
             className="inline-flex items-center gap-2 text-sm font-medium text-accent-ink underline-offset-4 hover:underline"
           >
             <ClipboardCheck aria-hidden="true" className="size-4" /> Log a withdrawal form check
+          </Link>
+        )}
+        {network === "mainnet" && outcomeReportsEnabled() && (OUTCOME_SERVICE_KINDS as readonly string[]).includes(service.kind) && (
+          <Link
+            href={`/report/outcome?service=${service.id}`}
+            className="flex w-fit items-center gap-2 text-sm font-medium text-accent-ink underline-offset-4 hover:underline"
+          >
+            <MessageSquareWarning aria-hidden="true" className="size-4" /> Sent shielded ZEC here? Report what happened
           </Link>
         )}
       </section>

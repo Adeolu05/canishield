@@ -18,6 +18,7 @@ import {
   bigint,
   boolean,
   check,
+  date,
   index,
   integer,
   pgEnum,
@@ -409,6 +410,76 @@ export type DepositAddressType = (typeof depositAddressType.enumValues)[number];
 export type DepositSource = (typeof depositSource.enumValues)[number];
 export type DepositResult = (typeof depositResult.enumValues)[number];
 export type DepositStatus = (typeof depositStatus.enumValues)[number];
+
+// Exit outcomes (docs/PLAN-exit-outcomes.md): what a service did with ZEC that came from the
+// shielded pool, as reported by the person who sent it. Coarse on purpose: an amount range, the
+// week, the route. Never an address, txid, exact amount or exact time, so a report can't be
+// matched to a transaction. Nothing counts until the maintainer has reviewed it.
+export const outcomeResult = pgEnum("outcome_result", [
+  "credited", // arrived
+  "held_then_credited", // paused for review, released after days_held
+  "documents_requested", // asked for source of funds or ID
+  "rejected", // refused the deposit, return promised but not yet made
+  "refunded", // sent back
+  "held_open", // not credited, not returned, still open after days_held
+]);
+export const amountBand = pgEnum("amount_band", ["under_1", "1_to_10", "10_to_100", "over_100", "unknown"]);
+export const outcomeRoute = pgEnum("outcome_route", [
+  "direct_shielded", // straight from a shielded address to the service
+  "via_tex", // through the service's TEX address
+  "via_transparent", // unshielded to a transparent address first
+  "swap", // a swap or bridge (NEAR Intents and the like)
+  "unknown",
+]);
+
+export const outcomeReports = pgTable(
+  "outcome_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
+    network: text("network").notNull(),
+    result: outcomeResult("result").notNull(),
+    amountBand: amountBand("amount_band").notNull(),
+    route: outcomeRoute("route").notNull().default("unknown"),
+    weekOf: date("week_of").notNull(), // the Monday of the week it was sent, never the day
+    daysHeld: integer("days_held"), // for held results: days until released, or held so far
+    creditMinutes: integer("credit_minutes"), // for "credited": minutes until credited, rounded to 5
+    sourceUrl: text("source_url"), // a public write-up of the case, when there is one; shown
+    evidenceUrl: text("evidence_url"), // a screenshot link for the reviewer only; cleared on review, never shown
+    note: text("note"),
+    status: reportStatus("status").notNull().default("unreviewed"),
+    reporterTokenHash: text("reporter_token_hash"), // sha256 of the reporter's cookie: one report per service per month
+    reviewedBy: text("reviewed_by"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    index("outcome_reports_service_idx").on(t.network, t.serviceId, t.status),
+    index("outcome_reports_status_idx").on(t.network, t.status),
+    check("outcome_reports_network_valid", sql`${t.network} IN ${NETWORK_LIST}`),
+    check("outcome_reports_week_is_monday", sql`extract(isodow from ${t.weekOf}) = 1`),
+    check("outcome_reports_days_held_range", sql`${t.daysHeld} IS NULL OR ${t.daysHeld} BETWEEN 0 AND 3650`),
+    check(
+      "outcome_reports_days_held_when_held",
+      sql`(${t.result} IN ('held_then_credited', 'held_open')) = (${t.daysHeld} IS NOT NULL)`,
+    ),
+    check(
+      "outcome_reports_credit_minutes",
+      sql`${t.creditMinutes} IS NULL OR (${t.result} = 'credited' AND ${t.creditMinutes} BETWEEN 0 AND 43200 AND ${t.creditMinutes} % 5 = 0)`,
+    ),
+    check("outcome_reports_evidence_https", sql`${t.evidenceUrl} IS NULL OR (${t.evidenceUrl} LIKE 'https://%' AND char_length(${t.evidenceUrl}) <= 500)`),
+    check("outcome_reports_note_len", sql`${t.note} IS NULL OR char_length(${t.note}) BETWEEN 1 AND 280`),
+    check("outcome_reports_source_https", sql`${t.sourceUrl} IS NULL OR (${t.sourceUrl} LIKE 'https://%' AND char_length(${t.sourceUrl}) <= 500)`),
+    check("outcome_reports_reviewed", sql`${t.status} = 'unreviewed' OR (${t.reviewedBy} IS NOT NULL AND ${t.reviewedAt} IS NOT NULL)`),
+  ],
+);
+
+export type OutcomeReport = typeof outcomeReports.$inferSelect;
+export type OutcomeResult = (typeof outcomeResult.enumValues)[number];
+export type AmountBand = (typeof amountBand.enumValues)[number];
+export type OutcomeRoute = (typeof outcomeRoute.enumValues)[number];
 
 // A product-level claim from community research (docs/research/), read from
 // the product's official pages by a contributor. Not a test, not a listing:
