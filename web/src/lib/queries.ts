@@ -6,6 +6,7 @@ import type { OutcomeRow } from "./outcome-record";
 import { summarize } from "./evidence";
 import { getDb } from "./db";
 import type { NetworkId } from "./network";
+import { DEPOSIT_SERVICE_KINDS } from "./deposit-core";
 
 // Every query takes the network explicitly; nothing defaults to one.
 
@@ -127,6 +128,17 @@ export async function getTest(network: NetworkId, id: string) {
 }
 
 /** Cheap existence checks, run in segment layouts before the page streams, so unknown ids get a real 404. */
+/** A mainnet service that takes deposits (exchanges and swaps), for the embed and its JSON. */
+export async function depositService(slug: string) {
+  await connection();
+  if (!/^[a-z0-9-]{1,64}$/.test(slug)) return null;
+  const [row] = await getDb()
+    .select({ id: services.id, slug: services.slug, name: services.name, kind: services.kind })
+    .from(services)
+    .where(and(eq(services.slug, slug), arrayContains(services.networks, ["mainnet"])));
+  return row && (DEPOSIT_SERVICE_KINDS as readonly string[]).includes(row.kind) ? row : null;
+}
+
 export async function serviceExists(network: NetworkId, slug: string) {
   await connection();
   const [row] = await getDb()

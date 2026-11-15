@@ -19,17 +19,9 @@ import { acceptedOutcomes, getServiceDetail } from "@/lib/queries";
 import { recordFor } from "@/lib/outcome-record";
 import { BeforeYouSend, OutcomeRecordSection } from "@/components/outcome-record";
 import { depositsEnabled, publishedDeposits } from "@/lib/deposit-checks";
-import type { DepositAddressType } from "@zecproof/db";
-import { DEPOSIT_RESULT_LABEL, roundedDuration } from "@/lib/deposit-core";
-
-// How the before-you-send card names a deposit address type, article included.
-const DEPOSIT_TO: Record<DepositAddressType, string> = {
-  transparent_p2pkh: "a transparent",
-  transparent_p2sh: "a transparent (P2SH)",
-  tex: "a TEX",
-  unified: "a unified",
-  sapling: "a Sapling",
-};
+import { DEPOSIT_RESULT_LABEL, DEPOSIT_TO, roundedDuration } from "@/lib/deposit-core";
+import { latestDeposit } from "@/lib/embed";
+import { escapeHtml } from "@/lib/embed-html";
 import { DepositResults } from "@/components/deposit-results";
 import { SITE_URL } from "@/lib/site";
 import { ShareProof } from "@/components/share";
@@ -328,7 +320,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
   const record = outcomesShown ? recordFor(outcomes) : null;
   const reportOpen = outcomesShown && outcomeReportsEnabled();
   // Our own evidence first on the card: the newest published deposit check, if any.
-  const lastDeposit = [...deposits].filter((d) => d.result && d.blockTime).sort((a, b) => b.blockTime!.getTime() - a.blockTime!.getTime())[0];
+  const lastDeposit = latestDeposit(deposits);
   const depositLine = lastDeposit
     ? {
         label: DEPOSIT_RESULT_LABEL[lastDeposit.result!],
@@ -486,6 +478,33 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
           </div>
         </section>
       )}
+
+      {record && <EmbedSnippet slug={service.slug} name={service.name} />}
     </div>
+  );
+}
+
+/** For wikis, wallets and explorers: the before-you-send card as an iframe, or its JSON. */
+function EmbedSnippet({ slug, name }: { slug: string; name: string }) {
+  const src = `${SITE_URL}/embed/${slug}`;
+  const code = `<iframe src="${src}" title="Before you send shielded ZEC to ${escapeHtml(name)}" width="100%" height="280" style="border:0;max-width:560px" loading="lazy"></iframe>`;
+  return (
+    <details className="group rounded-xl border border-line bg-surface p-4 shadow-card">
+      <summary className="cursor-pointer text-sm font-medium marker:text-subtle">Show this card on your site</summary>
+      <div className="mt-3 space-y-3 text-sm text-muted">
+        <p>Paste this where the card should appear. It follows the visitor&rsquo;s light or dark setting; add ?theme=light or ?theme=dark to fix one. It runs no script.</p>
+        <div className="flex items-start gap-2">
+          <code className="block min-w-0 flex-1 overflow-x-auto whitespace-pre rounded-lg bg-surface-2 px-3 py-2 font-mono text-xs text-foreground">{code}</code>
+          <CopyButton value={code} label="embed code" />
+        </div>
+        <p>
+          Drawing your own?{" "}
+          <a href={`/api/services/${slug}`} className="font-medium text-accent-ink underline-offset-4 hover:underline">
+            The same data as JSON
+          </a>
+          , CORS-open, CC BY 4.0.
+        </p>
+      </div>
+    </details>
   );
 }

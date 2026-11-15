@@ -30,6 +30,15 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Only the embeddable card (/embed/*, which sets its own headers) may be
+        // framed by other sites; every other page, forms included, may not.
+        source: "/((?!embed/).*)",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+        ],
+      },
+      {
         // Service logos are third-party files served from our origin: never let one
         // run script or load anything, even if opened directly.
         source: "/service-icons/:file*",

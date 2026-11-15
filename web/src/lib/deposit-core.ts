@@ -48,6 +48,15 @@ export const DEPOSIT_SOURCE_LABEL: Record<DepositSource, string> = {
   via_tex_sapling: "From Sapling, in two steps (TEX)",
 };
 
+/** How the before-you-send card names a deposit address type, article included. */
+export const DEPOSIT_TO: Record<DepositAddressType, string> = {
+  transparent_p2pkh: "a transparent",
+  transparent_p2sh: "a transparent (P2SH)",
+  tex: "a TEX",
+  unified: "a unified",
+  sapling: "a Sapling",
+};
+
 export const DEPOSIT_RESULT_LABEL: Record<DepositResult, string> = {
   credited: "Credited",
   not_credited_24h: "Not credited after 24 hours",
