@@ -234,12 +234,15 @@ Then merge: Vercel and Railway redeploy `main` by themselves.
 | `ZECPROOF_ENABLE_MAINNET_TESTS` | Vercel | unset (off). `yes` only once a mainnet worker runs |
 | `ZECPROOF_ENABLE_FORM_CHECKS` | Vercel | unset (off). Leave it off on any public deployment |
 | `ZECPROOF_DISABLE_OUTCOME_REPORTS` | Vercel | unset (outcome reports on). `yes` pauses /report/outcome |
+| `STATUS_TELEGRAM_URL` | Vercel | optional; `https://t.me/<channel>`, linked from /status |
 | `DATABASE_URL` | Railway | Neon **direct** string (no `-pooler`), `sslmode=require` |
 | `ZECPROOF_NETWORK` | Railway | `testnet` (or `mainnet` on the second service) |
 | `ZECPROOF_ALLOW_MAINNET` | Railway | unset, or `yes` on the mainnet service only |
 | `ZECPROOF_TESTNET_GRPC_URLS` / `ZECPROOF_MAINNET_GRPC_URLS` | Railway | optional; defaults are built in |
 | `TEST_TTL_HOURS` | Railway | optional; default 48 |
 | `ZECPROOF_KEY_SOURCE` | Railway | **don't set**; the image pins `pool` |
+| `ZECPROOF_STATUS_CHECKS` | Railway | unset (live status on, mainnet worker only). `off` stops it |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Railway | optional, mainnet service only; both needed for /status alerts. The token is a secret: paste it only into Railway |
 | `WORKER_TEST_MNEMONIC` | — | **never** on Vercel or Railway |
 
 Templates with placeholders only: `web/.env.example` (Vercel), `worker/.env.example` (Railway), `.env.example` (local).

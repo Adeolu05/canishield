@@ -15,6 +15,7 @@ import { takePoolKey } from "./pool";
 import { getBlockTime } from "./lightwalletd";
 import { findFirstReceipt } from "./scanner";
 import { recordBlocks } from "./blocks";
+import { statusStep } from "./status-step";
 import { depositStep } from "./deposit-step";
 
 const once = process.argv.includes("--once");
@@ -266,6 +267,9 @@ async function main() {
     // Deposit checks need only the explorer, not lightwalletd, and run even when the cycle above failed.
     // depositStep catches its own errors and stops after its time budget.
     await depositStep(db, cfg);
+    // Exchanges' public ZEC deposit/withdrawal status: mainnet only, every 5 minutes,
+    // short timeouts, catches its own errors. Last, so it never delays the scanner.
+    await statusStep(db, cfg);
     if (once) break;
     await sleep(POLL_INTERVAL_MS);
   }

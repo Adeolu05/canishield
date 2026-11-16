@@ -567,3 +567,67 @@ export const chainBlocks = pgTable(
 );
 
 export type ChainBlock = typeof chainBlocks.$inferSelect;
+
+// Live ZEC deposit and withdrawal status, read by the mainnet worker every few
+// minutes from exchanges' own public APIs (worker/src/status-sources.ts).
+// About the exchange taking ZEC at all, not shielded ZEC: never evidence, and
+// never shown as a verdict. "unknown" whenever the feed can't be read.
+// A state only becomes the shown one after two readings in a row agree, so one
+// bad reply can't flip it. Not per network: exchanges have one mainnet status.
+const FUNDING_STATES = sql.raw("('open', 'paused', 'unknown')");
+const KNOWN_STATES = sql.raw("('open', 'paused')");
+
+export const fundingStatus = pgTable(
+  "funding_status",
+  {
+    serviceId: uuid("service_id")
+      .primaryKey()
+      .references(() => services.id, { onDelete: "cascade" }),
+    source: text("source").notNull(), // where the data comes from, e.g. "Kraken public API"
+    deposit: text("deposit").notNull().default("unknown"), // shown state
+    withdraw: text("withdraw").notNull().default("unknown"),
+    seenDeposit: text("seen_deposit").notNull().default("unknown"), // last raw reading, waiting for a second one
+    seenWithdraw: text("seen_withdraw").notNull().default("unknown"),
+    knownDeposit: text("known_deposit"), // last shown state that wasn't unknown: changes are announced against it
+    knownWithdraw: text("known_withdraw"),
+    confirmations: integer("confirmations"),
+    note: text("note"),
+    lastOkAt: timestamp("last_ok_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    checkedAt: timestamp("checked_at", { withTimezone: true }).notNull(),
+    changedAt: timestamp("changed_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    check("funding_status_states", sql`${t.deposit} IN ${FUNDING_STATES} AND ${t.withdraw} IN ${FUNDING_STATES} AND ${t.seenDeposit} IN ${FUNDING_STATES} AND ${t.seenWithdraw} IN ${FUNDING_STATES}`),
+    check("funding_status_known", sql`(${t.knownDeposit} IS NULL OR ${t.knownDeposit} IN ${KNOWN_STATES}) AND (${t.knownWithdraw} IS NULL OR ${t.knownWithdraw} IN ${KNOWN_STATES})`),
+    check("funding_status_confirmations", sql`${t.confirmations} IS NULL OR ${t.confirmations} BETWEEN 1 AND 10000`),
+    check("funding_status_text_len", sql`char_length(${t.source}) BETWEEN 1 AND 80 AND (${t.note} IS NULL OR char_length(${t.note}) <= 80) AND (${t.lastError} IS NULL OR char_length(${t.lastError}) <= 120)`),
+  ],
+);
+
+export type FundingStatus = typeof fundingStatus.$inferSelect;
+
+// A confirmed change between open and paused, for the site's feed and alerts.
+// Changes to or from unknown are not events.
+export const fundingEvents = pgTable(
+  "funding_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
+    side: text("side").notNull(),
+    fromState: text("from_state").notNull(),
+    toState: text("to_state").notNull(),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+    notifiedAt: timestamp("notified_at", { withTimezone: true }), // when the alert went out; NULL until then
+  },
+  (t) => [
+    index("funding_events_at_idx").on(t.at),
+    check("funding_events_side", sql`${t.side} IN ('deposit', 'withdraw')`),
+    check("funding_events_states", sql`${t.fromState} IN ${KNOWN_STATES} AND ${t.toState} IN ${KNOWN_STATES} AND ${t.fromState} <> ${t.toState}`),
+  ],
+);
+
+export type FundingEvent = typeof fundingEvents.$inferSelect;

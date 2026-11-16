@@ -15,7 +15,9 @@ import { ADDRESS_TYPE_LABEL, POOL_LABEL } from "@/lib/labels";
 import { NETWORKS, basePath, canCreateTests, formatAmount, outcomeReportsEnabled, type NetworkId } from "@/lib/network";
 import { OUTCOME_SERVICE_KINDS } from "@/lib/outcome-store";
 import { isoDay, reviewedLabel, shortDate, verdictFor } from "@/lib/present";
-import { acceptedOutcomes, getServiceDetail } from "@/lib/queries";
+import { acceptedOutcomes, getServiceDetail, liveStatusFor } from "@/lib/queries";
+import { presentLive } from "@/lib/live";
+import { LiveLine } from "@/components/live-status";
 import { recordFor } from "@/lib/outcome-record";
 import { BeforeYouSend, OutcomeRecordSection } from "@/components/outcome-record";
 import { depositsEnabled, publishedDeposits } from "@/lib/deposit-checks";
@@ -313,10 +315,13 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
   const timing = summarizeTiming(tests);
   const nothing = tests.length === 0 && communityReports.length === 0;
   const outcomesShown = network === "mainnet" && (OUTCOME_SERVICE_KINDS as readonly string[]).includes(service.kind);
-  const [deposits, outcomes] = await Promise.all([
+  const [deposits, outcomes, liveRow] = await Promise.all([
     publishedDeposits(network, service.id),
     outcomesShown ? acceptedOutcomes(network, service.id) : Promise.resolve([]),
+    // Live status is extra: a database problem (or the table not migrated yet) only hides the line.
+    network === "mainnet" ? liveStatusFor(service.id).catch(() => null) : Promise.resolve(null),
   ]);
+  const live = liveRow ? presentLive(liveRow, now) : null;
   const record = outcomesShown ? recordFor(outcomes) : null;
   const reportOpen = outcomesShown && outcomeReportsEnabled();
   // Our own evidence first on the card: the newest published deposit check, if any.
@@ -392,6 +397,7 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
             {service.notes && <p className="mt-1 text-sm text-subtle">{service.notes}</p>}
           </div>
         </div>
+        {live && <LiveLine v={live} now={now} />}
         {record && <BeforeYouSend record={record} serviceId={service.id} reportOpen={reportOpen} deposit={depositLine} />}
       </div>
 

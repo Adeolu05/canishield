@@ -42,6 +42,7 @@ const ICON = {
   bad: svg('<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>'),
   warn: svg('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>'),
   none: svg('<circle cx="12" cy="12" r="10" stroke-dasharray="3 3"/>'),
+  live: svg('<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'),
   flask: svg('<path d="M10 2v7.31M14 9.3V2M8.5 2h7M14 9.3a6.5 6.5 0 1 1-4 0M5.52 16h12.96"/>'),
 };
 
@@ -60,6 +61,14 @@ export function renderEmbedHtml(s: EmbedSummary, opts: { theme: EmbedTheme; now?
     : `<span class="svc mono" aria-hidden="true">${escapeHtml((s.service.name.match(/[\p{L}\p{N}]/u)?.[0] ?? "?").toUpperCase())}</span>`;
 
   const rows: string[] = [];
+  // Live status first, only when fresh and at least one side is known. About ZEC at all, not shielded ZEC.
+  const lv = s.live;
+  if (lv && lv.fresh && (lv.deposits !== "unknown" || lv.withdrawals !== "unknown")) {
+    const both = lv.deposits === lv.withdrawals;
+    const text = both ? `ZEC deposits and withdrawals ${lv.deposits}` : `ZEC deposits ${lv.deposits}, withdrawals ${lv.withdrawals}`;
+    const tone = lv.deposits === "paused" || lv.withdrawals === "paused" ? "bad" : both && lv.deposits === "open" ? "ok" : "info";
+    rows.push(row(tone, ICON.live, `Right now: <b>${escapeHtml(text)}</b> <span class="m">(${escapeHtml(lv.source)}; not about shielded support)</span>`));
+  }
   if (s.deposit) {
     const d = s.deposit;
     const day = shortDate(new Date(`${d.date}T12:00:00Z`), now);
@@ -84,7 +93,8 @@ export function renderEmbedHtml(s: EmbedSummary, opts: { theme: EmbedTheme; now?
   } else {
     rows.push(row("info", ICON.none, `<span class="m">No reports yet of what happened after sending shielded ZEC here.</span>`));
   }
-  rows.push(row("info", ICON.flask, "Send a small test amount first."));
+  // The card is sized for three rows; the tip gives way when all three facts are there.
+  if (rows.length < 3) rows.push(row("info", ICON.flask, "Send a small test amount first."));
 
   const themeCss =
     opts.theme === "light"

@@ -7,6 +7,9 @@ import type { DepositAddressType, DepositResult, OutcomeResult } from "@zecproof
 import { DEPOSIT_RESULT_LABEL, DEPOSIT_TO, roundedDuration, roundedMinutes } from "./deposit-core";
 import { OUTCOME_RESULT_LABEL } from "./outcome";
 import { recordFor, weekLabel, type OutcomeRow } from "./outcome-record";
+import type { liveJson } from "./live";
+
+type LiveJson = ReturnType<typeof liveJson>;
 
 export const EMBED_THEMES = ["auto", "light", "dark"] as const;
 export type EmbedTheme = (typeof EMBED_THEMES)[number];
@@ -31,6 +34,8 @@ export function latestDeposit<T extends DepositInput>(deposits: readonly T[]): T
 
 export type EmbedSummary = {
   service: { slug: string; name: string };
+  /** Live ZEC deposit/withdrawal status from the exchange's own API (lib/live.ts); null when not read live. */
+  live?: LiveJson | null;
   /** The service page, where the full record and the sources are. */
   url: string;
   /** Where to report an outcome, when reports are open. */

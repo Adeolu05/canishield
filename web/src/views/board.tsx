@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ArrowDown, ArrowRight, BadgeCheck, Braces, Clock, FileText, KeyRound, ScanSearch, Send, Users } from "lucide-react";
+import { ArrowDown, ArrowRight, BadgeCheck, Braces, Clock, FileText, KeyRound, Radio, ScanSearch, Send, Users } from "lucide-react";
 import type { Readiness } from "@/lib/evidence";
 import { LISTED_CLAIM, STALE_AFTER_DAYS } from "@/lib/evidence";
 import { ADDRESS_TYPE_LABEL } from "@/lib/labels";
 import { NETWORKS, basePath, canCreateTests, outcomeReportsEnabled, type NetworkId } from "@/lib/network";
 import { OUTCOME_VISUAL, READINESS_ORDER, READINESS_VISUAL, cellView, shortDate, strongestTier, type Tone } from "@/lib/present";
-import { acceptedOutcomes, getBoard, getLatestProof, getServiceDetail } from "@/lib/queries";
+import { acceptedOutcomes, getBoard, getLatestProof, getServiceDetail, liveStatuses } from "@/lib/queries";
+import { presentLive } from "@/lib/live";
 import { latestAcross } from "@/lib/outcome-record";
 import { LatestOutcomes } from "@/components/outcome-record";
 import { Nu7Strip } from "@/components/nu7-live";
@@ -314,6 +315,8 @@ export async function BoardView({ network }: { network: NetworkId }) {
   const depositsPromise = publishedDeposits(network).catch(() => [] as PublishedDeposit[]);
   // Exit outcomes are a mainnet record; a database problem only hides the strip.
   const outcomesPromise = network === "mainnet" ? acceptedOutcomes(network).catch(() => []) : Promise.resolve([]);
+  // Live ZEC status (mainnet): extra, so a database problem only hides the paused names.
+  const livePromise = network === "mainnet" ? liveStatuses().catch(() => []) : Promise.resolve([]);
   const { rows, counts, total, research, visible } = await getBoard(network);
   const researchBy = Map.groupBy(research, (r) => r.serviceId);
   const base = basePath(network);
@@ -370,6 +373,7 @@ export async function BoardView({ network }: { network: NetworkId }) {
   const exportHref = `/api/results.json${network === "testnet" ? "?network=testnet" : ""}`;
   const nu7 = await nu7Promise;
   const latestOutcomes = latestAcross(await outcomesPromise, 4);
+  const livePaused = (await livePromise).map((r) => presentLive(r, now)).filter((v) => v.deposit === "paused" || v.withdraw === "paused");
 
   return (
     <BoardSearchProvider>
@@ -430,17 +434,31 @@ export async function BoardView({ network }: { network: NetworkId }) {
                 How verification works <ArrowDown aria-hidden="true" className="size-4" />
               </a>
             </div>
-            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-subtle">
-              <span>
-                <span className="tabular-nums">{total}</span> services tracked
-              </span>
-              <span aria-hidden="true">·</span>
-              <span>
-                <span className="tabular-nums">{verifiedCount}</span> verified on-chain
-              </span>
-              <span aria-hidden="true">·</span>
-              <ScannerWord network={network} />
-            </p>
+            <div className="space-y-2">
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-subtle">
+                <span>
+                  <span className="tabular-nums">{total}</span> services tracked
+                </span>
+                <span aria-hidden="true">·</span>
+                <span>
+                  <span className="tabular-nums">{verifiedCount}</span> verified on-chain
+                </span>
+                <span aria-hidden="true">·</span>
+                <ScannerWord network={network} />
+              </p>
+              {network === "mainnet" && (
+                <Link
+                  href="/status"
+                  className={`inline-flex items-center gap-1.5 text-xs font-medium underline-offset-4 hover:underline ${livePaused.length ? "text-bad" : "text-accent-ink"}`}
+                >
+                  <Radio aria-hidden="true" className="size-3.5" />
+                  {livePaused.length
+                    ? `ZEC paused right now on ${livePaused.map((v) => v.name).join(", ")}: live status`
+                    : "Can I move ZEC right now? Live exchange status"}
+                  <ArrowRight aria-hidden="true" className="size-3.5" />
+                </Link>
+              )}
+            </div>
           </div>
           <LatestProof network={network} />
         </section>

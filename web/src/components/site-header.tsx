@@ -9,9 +9,10 @@ import { ThemeToggle } from "./theme-toggle";
 import { CommandPalette } from "./command-palette";
 
 // Board stays highlighted on mainnet service pages, Testnet on testnet ones.
-// Phones show the first two (Board, NU7); Testnet and API stay in the command palette.
+// Phones show the first two (Board, Status); NU7, Testnet and API stay in the command palette.
 const NAV = [
   { href: "/", label: "Board", match: (p: string) => p === "/" || p.startsWith("/services/") },
+  { href: "/status", label: "Status", match: (p: string) => p === "/status" },
   { href: "/nu7", label: "NU7", match: (p: string) => p === "/nu7" },
   { href: "/testnet", label: "Testnet", match: (p: string) => p.startsWith("/testnet") },
   { href: "/api/results.json", label: "API", match: () => false },

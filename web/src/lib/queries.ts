@@ -1,8 +1,9 @@
 import "server-only";
 import { connection } from "next/server";
 import { and, arrayContains, asc, desc, eq, isNotNull, ne } from "drizzle-orm";
-import { outcomeReports, reports, researchClaims, services, tests, workerHeartbeats, type AddressType } from "@zecproof/db";
+import { fundingEvents, fundingStatus, outcomeReports, reports, researchClaims, services, tests, workerHeartbeats, type AddressType } from "@zecproof/db";
 import type { OutcomeRow } from "./outcome-record";
+import type { LiveEvent, LiveRow } from "./live";
 import { summarize } from "./evidence";
 import { getDb } from "./db";
 import type { NetworkId } from "./network";
@@ -210,4 +211,50 @@ export async function acceptedOutcomes(network: NetworkId, serviceId?: string): 
       ),
     )
     .orderBy(desc(outcomeReports.weekOf), desc(outcomeReports.createdAt));
+}
+
+const liveColumns = {
+  slug: services.slug,
+  name: services.name,
+  source: fundingStatus.source,
+  deposit: fundingStatus.deposit,
+  withdraw: fundingStatus.withdraw,
+  confirmations: fundingStatus.confirmations,
+  note: fundingStatus.note,
+  checkedAt: fundingStatus.checkedAt,
+  lastOkAt: fundingStatus.lastOkAt,
+  changedAt: fundingStatus.changedAt,
+};
+
+/** Live ZEC deposit/withdrawal status of every exchange the worker reads, by name. Mainnet only. */
+export async function liveStatuses(): Promise<LiveRow[]> {
+  await connection();
+  return getDb()
+    .select(liveColumns)
+    .from(fundingStatus)
+    .innerJoin(services, eq(services.id, fundingStatus.serviceId))
+    .where(arrayContains(services.networks, ["mainnet"]))
+    .orderBy(asc(services.name));
+}
+
+/** One service's live status, if the worker reads it. */
+export async function liveStatusFor(serviceId: string): Promise<LiveRow | null> {
+  await connection();
+  const [row] = await getDb()
+    .select(liveColumns)
+    .from(fundingStatus)
+    .innerJoin(services, eq(services.id, fundingStatus.serviceId))
+    .where(eq(fundingStatus.serviceId, serviceId));
+  return row ?? null;
+}
+
+/** Confirmed open/paused changes, newest first. */
+export async function recentLiveEvents(limit = 50): Promise<LiveEvent[]> {
+  await connection();
+  return getDb()
+    .select({ slug: services.slug, name: services.name, side: fundingEvents.side, fromState: fundingEvents.fromState, toState: fundingEvents.toState, at: fundingEvents.at })
+    .from(fundingEvents)
+    .innerJoin(services, eq(services.id, fundingEvents.serviceId))
+    .orderBy(desc(fundingEvents.at))
+    .limit(limit);
 }

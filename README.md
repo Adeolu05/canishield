@@ -47,6 +47,8 @@ Claims older than 30 days show as **Stale** until retested. The mainnet board op
 
 Each cycle that reaches an endpoint, the worker upserts one row per network into `worker_heartbeats` (tip, endpoint, time). The header pill reads it via `GET /api/scanner-status?network=…`: **Scanner online** if the last heartbeat is under 90 s old, otherwise a grey **Scanner offline**. Heartbeats are not evidence. After pulling this change, run `npm run db:migrate` and **restart any running worker** (testnet and mainnet) so it starts writing heartbeats.
 
+**Live status (`/status`).** Every 5 minutes the mainnet worker reads ZEC deposit and withdrawal status from the public APIs of Kraken, KuCoin, Gate, HTX, Poloniex, Bitfinex, Backpack and Bitget (`worker/src/status-sources.ts`; fixed URLs, no keys) into `funding_status`. A state shows only after two readings in a row agree; anything unreadable is "unknown", never "paused". Confirmed open/paused changes go to `funding_events`, which feed `/status/feed.xml` (Atom), `/api/status.json` and, when `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are set, Telegram alerts. This is about an exchange taking ZEC at all, not shielded ZEC: it is never evidence and never moves a verdict.
+
 ## Chain endpoints
 
 Each network has its own list, tried in order each cycle; the worker stops if an endpoint it reaches is on the wrong chain.
