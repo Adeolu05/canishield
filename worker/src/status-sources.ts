@@ -39,6 +39,8 @@ export interface StatusSource {
   /** Human name of where the data comes from, shown on the site. */
   label: string;
   urls: readonly string[];
+  /** Largest reply accepted, when a source's feed is bigger than the default 2 MB. */
+  maxBytes?: number;
   /** Pure: takes the parsed JSON body of each URL, in order. */
   parse(bodies: unknown[]): SourceResult;
 }
@@ -200,6 +202,8 @@ export const SOURCES: readonly StatusSource[] = [
     slug: "backpack",
     label: "Backpack public API",
     urls: ["https://api.backpack.exchange/api/v1/assets"],
+    // Every asset Backpack lists, not just ZEC: 7,403 assets and 2.17 MB on 16 Nov 2026, over the default cap.
+    maxBytes: 8_000_000,
     parse([body]) {
       if (!Array.isArray(body)) return fail("unexpected reply");
       const cur = body.filter(isObj).find((a) => a.symbol === "ZEC");
@@ -255,7 +259,7 @@ export async function readSource(src: StatusSource, fetchFn: Fetch = fetch, time
     for (const url of src.urls) {
       const res = await fetchFn(url, { signal: AbortSignal.timeout(timeoutMs) });
       if (!res.ok) return fail(`HTTP ${res.status}`);
-      const text = await readCapped(res, MAX_BYTES);
+      const text = await readCapped(res, src.maxBytes ?? MAX_BYTES);
       if (text === null) return fail("reply too large");
       try {
         bodies.push(JSON.parse(text));

@@ -224,3 +224,15 @@ test("readCapped: stops at the limit, with or without a content-length", async (
   });
   assert.equal(await readCapped(new Response(stream), 100), null, "an endless reply is cut off");
 });
+
+test("readSource: a source's own maxBytes lets a big feed through (Backpack lists every asset)", async () => {
+  const bp = src("backpack");
+  assert.ok((bp.maxBytes ?? 0) >= 4_000_000);
+  const filler = Array.from({ length: 9000 }, (_, i) => ({ symbol: `T${i}`, tokens: [{ blockchain: "Solana", depositEnabled: true, withdrawEnabled: true, contractAddress: "x".repeat(200) }] }));
+  const body = JSON.stringify([...filler, { symbol: "ZEC", tokens: [{ blockchain: "Zcash", depositEnabled: true, withdrawEnabled: true }] }]);
+  assert.ok(body.length > 2_000_000, "bigger than the default cap");
+  const r = await readSource(bp, async () => new Response(body));
+  assert.deepEqual(r, { ok: true, reading: { deposit: "open", withdraw: "open", confirmations: null, note: null } });
+  // Other sources keep the default cap.
+  assert.deepEqual(await readSource(src("kraken"), async () => new Response(body)), { ok: false, reason: "reply too large" });
+});
