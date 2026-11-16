@@ -10,6 +10,7 @@ import { listServices } from "@/lib/queries";
 export const metadata = {
   title: "Report what happened",
   description: "Sent shielded ZEC to an exchange or swap? Say whether it was credited, held or refused, so the next person knows before they send.",
+  alternates: { canonical: "/report/outcome" },
 };
 
 export default async function OutcomePage(props: PageProps<"/report/outcome">) {

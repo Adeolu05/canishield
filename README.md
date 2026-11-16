@@ -6,9 +6,9 @@
 
 A public registry of which Zcash services actually deliver shielded withdrawals, backed by on-chain evidence.
 
-**Live now:** [canishield.vercel.app](https://canishield.vercel.app) · [2-min demo](https://youtu.be/dE29j72mCJM) · built for Colosseum's Crypto World's Fair (Zcash track). Two scanners (mainnet and testnet) run around the clock on Railway; the board runs on Vercel with Postgres on Neon.
+**Live now:** [canishield.vercel.app](https://canishield.vercel.app) · [2-min demo](https://youtu.be/dE29j72mCJM) · built for Colosseum's Crypto World's Fair (Zcash track). Two scanners (mainnet and testnet) run around the clock on Railway; the board runs on Vercel, and Postgres runs on Railway.
 
-**Results so far (mainnet, 4 of 40 services tested):**
+**Results so far (mainnet, 4 of 41 services tested):**
 
 - Trust Wallet sends transparent only: verified on-chain at block 3,503,266, with the txid and a throwaway viewing key published so anyone can re-check it.
 - Trust Wallet, Bitget, MEXC and Binance reject both Ironwood-only and full unified addresses (withdrawal-form checks with screenshots, reviewed before publishing).
@@ -82,7 +82,7 @@ u1k4cq54vwua52vle8cvqamyl9mhgzusd0p50enuq9jc3j8evra07r8zx9737wz66f9vj5tmf8wv5f66
 
 The first mainnet test, step by step on Windows: [docs/RUNBOOK-mainnet.md](docs/RUNBOOK-mainnet.md).
 
-Deploying (web on Vercel, Postgres on Neon, worker on Railway), step by step on Windows: [docs/DEPLOY.md](docs/DEPLOY.md). Apply migrations to the hosted database with `npm run db:migrate:hosted` (reads only `DATABASE_URL` from the environment, never `.env`).
+Deploying (web on Vercel, Postgres and worker on Railway), step by step on Windows: [docs/DEPLOY.md](docs/DEPLOY.md). Apply migrations to the hosted database with `npm run db:migrate:hosted` (reads only `DATABASE_URL` from the environment, never `.env`).
 
 The whole pool path can be rehearsed on testnet: generate a `--network testnet` batch, verify, import, and run the worker with `WORKER_TEST_MNEMONIC=` (empty) and `ZECPROOF_REQUIRED_CONFIRMATIONS=10 ZECPROOF_EXPLORER_CHECK=on`.
 

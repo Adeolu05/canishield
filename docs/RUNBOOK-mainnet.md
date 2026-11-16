@@ -1,5 +1,10 @@
 # Runbook: first mainnet test (Windows, PowerShell 7)
 
+> **Now that the site is hosted**, a mainnet test only shows on the live board if it goes into the production database (Railway Postgres). The differences from the steps below:
+> - Step 5: skip `db:up`, `db:migrate` and `.env.mainnet`. Import with `$env:DATABASE_URL` set to the Railway connection string (via `Read-Host -MaskInput`) and `$env:ZECPROOF_ALLOW_MAINNET = 'yes'`, then `npx tsx src/import-pool.ts $Public` in `worker`.
+> - Step 6: skip Window A. The Railway mainnet worker assigns keys and watches payments; follow its logs instead. Start Window B with the same `$env:DATABASE_URL`.
+> - Skip "Add Trust Wallet": it is already a service.
+
 Goal: generate 5 mainnet test keys offline, verify one in Zingo, import them, and test **Trust Wallet** against the three address types: Ironwood-only UA, full UA, transparent.
 
 Rules for the whole session:

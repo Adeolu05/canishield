@@ -30,6 +30,17 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Every response: no MIME sniffing, no full URLs leaked to other sites, and
+        // no browser features the site never uses (camera, microphone, location,
+        // payment, USB). Routes below add their own stricter rules.
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+        ],
+      },
+      {
         // Only the embeddable card (/embed/*, which sets its own headers) may be
         // framed by other sites; every other page, forms included, may not.
         source: "/((?!embed/).*)",

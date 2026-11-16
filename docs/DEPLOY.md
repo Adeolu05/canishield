@@ -7,8 +7,10 @@ What goes where:
 | Part | Host | Config in the repo |
 | --- | --- | --- |
 | Web app (`web/`) | **Vercel** | `web/vercel.json`, `web/next.config.ts`, `web/.env.example` |
-| Database | **Neon** (Postgres 17, SSL) | `packages/db/migrations`, `npm run db:migrate:hosted` |
+| Database | **Railway** Postgres (first set up on Neon) | `packages/db/migrations`, `npm run db:migrate:hosted` |
 | Scanner worker (`worker/`) | **Railway** (always on, Docker) | `worker/Dockerfile`, `railway.json`, `worker/.env.example` |
+
+> **The database now runs on Railway, not Neon.** Steps 1 and 2 below are the original Neon setup, kept for reference. For a new setup, add a Postgres service in Railway and use its connection string wherever these steps say Neon. `npm run db:migrate:hosted` works the same with either: it reads only `DATABASE_URL`.
 
 Rules for the whole session:
 
@@ -243,6 +245,6 @@ Then merge: Vercel and Railway redeploy `main` by themselves.
 | `ZECPROOF_KEY_SOURCE` | Railway | **don't set**; the image pins `pool` |
 | `ZECPROOF_STATUS_CHECKS` | Railway | unset (live status on, mainnet worker only). `off` stops it |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Railway | optional, mainnet service only; both needed for /status alerts. The token is a secret: paste it only into Railway |
-| `WORKER_TEST_MNEMONIC` | — | **never** on Vercel or Railway |
+| `WORKER_TEST_MNEMONIC` | none | **never** on Vercel or Railway |
 
 Templates with placeholders only: `web/.env.example` (Vercel), `worker/.env.example` (Railway), `.env.example` (local).

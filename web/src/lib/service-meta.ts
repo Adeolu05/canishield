@@ -16,5 +16,8 @@ export async function serviceMetadata(network: NetworkId, slug: string): Promise
   const deposit = newestDeposit(await publishedDeposits(network, detail.service.id).catch(() => []));
   const summary = deposit ? depositSummary(deposit) : null;
   const depositText = summary ? ` ${summary.text}.` : "";
-  return { title, description: `${v.title}: ${v.detail}.${depositText} On-chain evidence with txids and viewing keys.` };
+  // Only claim on-chain evidence when the page has some (a verified test or a deposit check).
+  const evidence = detail.tests.length > 0 || deposit ? " On-chain evidence with txids and viewing keys." : "";
+  const path = `${network === "testnet" ? "/testnet" : ""}/services/${detail.service.slug}`;
+  return { title, description: `${v.title}: ${v.detail}.${depositText}${evidence}`, alternates: { canonical: path } };
 }
