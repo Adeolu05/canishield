@@ -25,13 +25,16 @@ async function main() {
           name: e.name,
           kind: "exchange",
           websiteUrl: e.website,
-          notes: `Listed on ${snap.source.name} (read ${snap.source.readAt}). Not yet tested by CanIShield.`,
+          notes: `Listed on ${snap.source.name} (read ${snap.source.readAt}). A ZecHub listing, not a CanIShield test.`,
           networks: ["mainnet"],
         })
         .onConflictDoUpdate({
           target: services.slug,
           set: {
             networks: sql`(SELECT ARRAY(SELECT DISTINCT unnest(${services.networks} || ARRAY['mainnet']::text[])))`,
+            // Refresh the name and site only while the note is still one this import wrote.
+            name: sql`CASE WHEN ${services.notes} IS NULL OR ${services.notes} LIKE 'Listed on %' THEN excluded.name ELSE ${services.name} END`,
+            websiteUrl: sql`CASE WHEN ${services.notes} IS NULL OR ${services.notes} LIKE 'Listed on %' THEN excluded.website_url ELSE ${services.websiteUrl} END`,
             notes: sql`CASE WHEN ${services.notes} IS NULL OR ${services.notes} LIKE 'Listed on %' THEN excluded.notes ELSE ${services.notes} END`,
           },
         })

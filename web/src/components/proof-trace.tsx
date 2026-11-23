@@ -22,7 +22,7 @@ const LANES: { pool: Pool; y: number }[] = [
   { pool: "transparent", y: 126 },
 ];
 const TYPE_Y: Record<AddressType, number> = { ironwood_ua: 38, full_ua: 82, transparent: 126 };
-const SHORT_TYPE: Record<AddressType, string> = { ironwood_ua: "Ironwood UA", full_ua: "Full UA", transparent: "t-address" };
+const SHORT_TYPE: Record<AddressType, string> = { ironwood_ua: "Shielded", full_ua: "Mixed", transparent: "t-address" };
 
 const SERVICE = { x: 14, y: 82 };
 const TYPE_X = 134;
@@ -40,7 +40,7 @@ export interface TraceInput {
   rejected: AddressType[];
 }
 
-const SPOKEN_TYPE: Record<AddressType, string> = { ...ADDRESS_TYPE_LABEL, transparent: "t-address" };
+const SPOKEN_TYPE: Record<AddressType, string> = ADDRESS_TYPE_LABEL;
 
 /** Plain-language version of the whole trace, in the order it is drawn (top to bottom). */
 export function describeTrace({ serviceName, proof, rejected }: TraceInput) {

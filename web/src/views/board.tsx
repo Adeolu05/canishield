@@ -1,23 +1,36 @@
 import Link from "next/link";
-import { ArrowDown, ArrowRight, BadgeCheck, Braces, Clock, FileText, KeyRound, Radio, ScanSearch, Send, Users } from "lucide-react";
+import { ArrowDown, ArrowRight, BadgeCheck, Braces, Clock, FileText, KeyRound, ScanSearch, Send, Users } from "lucide-react";
+import type { AddressType, Pool, Report, Test } from "@zecproof/db";
 import type { Readiness } from "@/lib/evidence";
-import { LISTED_CLAIM, STALE_AFTER_DAYS } from "@/lib/evidence";
-import { ADDRESS_TYPE_LABEL } from "@/lib/labels";
+import { LISTED_CLAIM, STALE_AFTER_DAYS, reportDate, testDate } from "@/lib/evidence";
+import { ADDRESS_TYPE_LABEL, POOL_LABEL } from "@/lib/labels";
 import { NETWORKS, basePath, canCreateTests, outcomeReportsEnabled, type NetworkId } from "@/lib/network";
-import { OUTCOME_VISUAL, READINESS_ORDER, READINESS_VISUAL, cellView, shortDate, strongestTier, type Tone } from "@/lib/present";
-import { acceptedOutcomes, getBoard, getLatestProof, getServiceDetail, liveStatuses } from "@/lib/queries";
-import { presentLive } from "@/lib/live";
-import { latestAcross } from "@/lib/outcome-record";
+import { READINESS_ORDER, READINESS_VISUAL, cellView, shortDate, strongestTier, type Tone } from "@/lib/present";
+import { acceptedOutcomes, getBoard } from "@/lib/queries";
+import type { ReadMode } from "@/lib/read-mode";
+import { latestAcross, weekLabel } from "@/lib/outcome-record";
+import { OUTCOME_RESULT_LABEL } from "@/lib/outcome";
 import { LatestOutcomes } from "@/components/outcome-record";
 import { Nu7Strip } from "@/components/nu7-live";
+import { LivePausedLink } from "@/components/live-paused";
 import { depositsEnabled, publishedDeposits, type PublishedDeposit } from "@/lib/deposit-checks";
 import { DEPOSIT_ADDRESS_LABEL, DEPOSIT_RESULT_LABEL, DEPOSIT_SERVICE_KINDS, roundedDuration } from "@/lib/deposit-core";
 import type { DepositCellView } from "./board-client";
 import { getNu7Snapshot } from "@/lib/nu7-data";
-import { readinessOf } from "@/lib/evidence";
-import { verdictFor } from "@/lib/present";
 import { SITE_URL } from "@/lib/site";
 import { RESEARCH_CLAIM, inactiveLast, isInactive, researchLabel, researchSource, resolutionFor, type ClaimLine } from "@/lib/research";
+import { FORM_CHECK_METHOD } from "@/lib/form-check";
+import {
+  EVIDENCE_KIND_LABEL,
+  describeResearch,
+  formCheckTie,
+  latestDate,
+  pickLatest,
+  plainStatus,
+  whereToShield,
+  zecHubListing,
+  type EvidenceKind,
+} from "@/lib/plain";
 import { ProofTrace } from "@/components/proof-trace";
 import { ShareProof } from "@/components/share";
 import { ServiceIcon } from "@/components/service-icon";
@@ -89,100 +102,199 @@ function ReadinessBar({ counts, total, tested }: { counts: Record<Readiness, num
 
 const shortTxid = (txid: string) => `${txid.slice(0, 10)}…${txid.slice(-8)}`;
 
-async function LatestProof({ network }: { network: NetworkId }) {
-  const proof = await getLatestProof(network);
-  const base = basePath(network);
-  const pool = proof?.test.receivedPool;
-  const txid = proof?.test.receivedTxid;
-  if (!proof || !pool || !txid) {
+interface EvidenceCard {
+  kind: EvidenceKind;
+  at: Date;
+  tie: number;
+  serviceName: string;
+  serviceSlug: string;
+  detail: string;
+  txid?: string;
+  block?: number | null;
+  explorerName?: string | null;
+  addressType?: AddressType;
+  pool?: Pool;
+}
+
+function weekDate(weekOf: string): Date {
+  return new Date(`${weekOf}T00:00:00Z`);
+}
+
+/** Every check we made, newest first. Listings and research are claims, not evidence. */
+function collectEvidence(
+  servicesById: Map<string, { name: string; slug: string }>,
+  verified: Test[],
+  reports: Report[],
+  deposits: PublishedDeposit[],
+  outcomes: { serviceName: string; serviceSlug: string; result: keyof typeof OUTCOME_RESULT_LABEL; weekOf: string }[],
+): EvidenceCard[] {
+  const cards: EvidenceCard[] = [];
+  for (const test of verified) {
+    const service = servicesById.get(test.serviceId);
+    const pool = test.receivedPool;
+    if (!service || !pool || !test.receivedTxid) continue;
+    cards.push({
+      kind: "onchain",
+      at: testDate(test),
+      tie: 0,
+      serviceName: service.name,
+      serviceSlug: service.slug,
+      detail: `Sent to a ${ADDRESS_TYPE_LABEL[test.addressType].toLowerCase()}. The payment landed in the ${POOL_LABEL[pool].toLowerCase()} pool.`,
+      txid: test.receivedTxid,
+      block: test.receivedHeight,
+      explorerName: test.explorerName,
+      addressType: test.addressType,
+      pool,
+    });
+  }
+  for (const report of reports) {
+    if (report.tier !== "community") continue;
+    const service = servicesById.get(report.serviceId);
+    if (!service) continue;
+    const form = report.method === FORM_CHECK_METHOD;
+    const sent = form ? " The address was pasted into the withdrawal form and nothing was sent." : "";
+    const what =
+      report.outcome === "address_rejected"
+        ? `A ${report.addressType ? ADDRESS_TYPE_LABEL[report.addressType].toLowerCase() : "address"} was refused.${sent}`
+        : report.outcome === "form_accepted"
+          ? `A ${report.addressType ? ADDRESS_TYPE_LABEL[report.addressType].toLowerCase() : "address"} was accepted by the form.${sent} This is not proof of a payment.`
+          : `Reported outcome: ${report.outcome}. Not an on-chain proof.`;
+    cards.push({
+      kind: form ? "form_check" : "community",
+      at: reportDate(report),
+      tie: formCheckTie(report.addressType, report.outcome),
+      serviceName: service.name,
+      serviceSlug: service.slug,
+      detail: what,
+    });
+  }
+  for (const deposit of deposits) {
+    if (!deposit.result || (!deposit.blockTime && !deposit.reviewedAt)) continue;
+    cards.push({
+      kind: "deposit",
+      at: deposit.reviewedAt ?? deposit.blockTime!,
+      tie: 0,
+      serviceName: deposit.serviceName,
+      serviceSlug: deposit.serviceSlug,
+      detail: `${DEPOSIT_RESULT_LABEL[deposit.result]}. This is a deposit from a shielded wallet, not a withdrawal. The transaction id is not published.`,
+    });
+  }
+  for (const outcome of outcomes) {
+    cards.push({
+      kind: "exit",
+      at: weekDate(outcome.weekOf),
+      tie: 0,
+      serviceName: outcome.serviceName,
+      serviceSlug: outcome.serviceSlug,
+      detail: `Exit report: ${OUTCOME_RESULT_LABEL[outcome.result].title}, ${weekLabel(outcome.weekOf)}. A reviewed report, not an on-chain proof.`,
+    });
+  }
+  return cards;
+}
+
+function LatestEvidence({
+  piece,
+  onchain,
+  rejected,
+  base,
+  now,
+}: {
+  piece: EvidenceCard | null;
+  onchain: EvidenceCard | null;
+  rejected: AddressType[];
+  base: string;
+  now: Date;
+}) {
+  if (!piece) {
     return (
       <aside className="rounded-2xl border border-dashed border-line-strong bg-surface p-6 text-sm text-muted">
-        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-subtle">Latest proof</p>
-        <p className="mt-4">No verified payment on this board yet. The first one will appear here with its txid.</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-subtle">Latest evidence</p>
+        <p className="mt-4">No check on this board yet. The first one will appear here, labelled by how it was made.</p>
       </aside>
     );
   }
-  const { test, service } = proof;
-  const v = OUTCOME_VISUAL[pool];
-  // The same service's other address types that a form refused: drawn as stubs ending in ✕.
-  const detail = await getServiceDetail(network, service.slug);
-  const visible = detail ? [...detail.communityReports, ...detail.listings] : [];
-  const rejected = [
-    ...new Set(
-      (detail?.communityReports ?? [])
-        .filter((r) => r.outcome === "address_rejected" && r.addressType && r.addressType !== test.addressType)
-        .map((r) => r.addressType!),
-    ),
-  ];
-  const verdict = verdictFor(readinessOf(detail?.tests ?? [], visible), detail?.tests ?? [], visible);
-  const pageUrl = `${SITE_URL}${base}/services/${service.slug}`;
-  const height = test.receivedHeight?.toLocaleString("en-US");
-  const shareText = `${service.name} → ${verdict.title.toLowerCase()}. Verified on-chain, block ${height}.`;
-  const when = test.receivedAt ?? test.updatedAt;
+  const href = `${base}/services/${piece.serviceSlug}`;
   const row = "flex items-baseline justify-between gap-4 py-2";
   const label = "font-mono text-[11px] uppercase tracking-[0.14em] text-subtle";
+  const showOlderProof = onchain && piece.kind !== "onchain";
   return (
-    <aside aria-labelledby="latest-proof" className="rounded-2xl border border-line bg-surface p-4 shadow-card sm:p-6 [box-shadow:var(--shadow-card),var(--shadow-glow)] lg:[box-shadow:var(--shadow-card)]">
+    <aside aria-labelledby="latest-evidence" className="rounded-2xl border border-line bg-surface p-4 shadow-card sm:p-6 [box-shadow:var(--shadow-card),var(--shadow-glow)] lg:[box-shadow:var(--shadow-card)]">
       <div className="flex items-baseline justify-between gap-4">
-        <h2 id="latest-proof" className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">
-          Latest proof
+        <h2 id="latest-evidence" className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">
+          Latest evidence
         </h2>
         <span className="text-xs text-subtle">
-          <RelativeTime iso={when.toISOString()} fallback={shortDate(when)} />
+          <RelativeTime iso={piece.at.toISOString()} fallback={shortDate(piece.at, now)} />
         </span>
       </div>
-      <div className="mt-4">
-        <ProofTrace serviceName={service.name} proof={{ addressType: test.addressType, pool }} rejected={rejected} />
-      </div>
+      <p className="mt-3 text-xs font-medium text-muted">{EVIDENCE_KIND_LABEL[piece.kind]}</p>
+      {piece.kind === "onchain" && piece.addressType && piece.pool && (
+        <div className="mt-4">
+          <ProofTrace serviceName={piece.serviceName} proof={{ addressType: piece.addressType, pool: piece.pool }} rejected={rejected} />
+        </div>
+      )}
       <dl className="mt-4 divide-y divide-dashed divide-line-strong/60 border-y border-dashed border-line-strong/60 text-sm">
         <div className={row}>
           <dt className={label}>Service</dt>
           <dd>
-            <Link href={`${base}/services/${service.slug}`} className="inline-flex items-center gap-2 font-medium underline-offset-4 hover:underline">
-              <ServiceIcon slug={service.slug} name={service.name} />
-              {service.name}
+            <Link href={href} className="inline-flex items-center gap-2 font-medium underline-offset-4 hover:underline">
+              <ServiceIcon slug={piece.serviceSlug} name={piece.serviceName} />
+              {piece.serviceName}
             </Link>
           </dd>
         </div>
         <div className={row}>
-          <dt className={label}>Sent to</dt>
-          <dd>{ADDRESS_TYPE_LABEL[test.addressType]}</dd>
+          <dt className={label}>What we found</dt>
+          <dd className="max-w-[18rem] text-right">{piece.detail}</dd>
         </div>
-        <div className={row}>
-          <dt className={label}>Result</dt>
-          <dd>
-            <StatusLabel icon={v.icon} tone={v.tone} label={v.label} />
-          </dd>
-        </div>
-        <div className={row}>
-          <dt className={label}>Txid</dt>
-          <dd className="flex items-center gap-2">
-            <span className="font-mono text-xs tabular-nums" title={txid}>
-              {shortTxid(txid)}
-            </span>
-            <CopyButton value={txid} label="txid" />
-          </dd>
-        </div>
-        <div className={row}>
-          <dt className={label}>Block</dt>
-          <dd className="font-mono text-xs tabular-nums">{test.receivedHeight?.toLocaleString("en-US")}</dd>
-        </div>
+        {piece.kind === "onchain" && piece.txid && (
+          <div className={row}>
+            <dt className={label}>Txid</dt>
+            <dd className="flex items-center gap-2">
+              <span className="font-mono text-xs tabular-nums" title={piece.txid}>
+                {shortTxid(piece.txid)}
+              </span>
+              <CopyButton value={piece.txid} label="txid" />
+            </dd>
+          </div>
+        )}
+        {piece.kind === "onchain" && piece.block != null && (
+          <div className={row}>
+            <dt className={label}>Block</dt>
+            <dd className="font-mono text-xs tabular-nums">{piece.block.toLocaleString("en-US")}</dd>
+          </div>
+        )}
       </dl>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs">
-        <span className="inline-flex items-center gap-1 text-ok">
-          <BadgeCheck aria-hidden="true" className="size-4" />
-          {test.explorerName ? `Confirmed on ${test.explorerName}` : "Verified on-chain"}
-        </span>
-        <Link
-          href={`${base}/services/${service.slug}`}
-          className="inline-flex items-center gap-1 font-medium text-accent-ink underline-offset-4 hover:underline"
-        >
-          View evidence <ArrowRight aria-hidden="true" className="size-3.5" />
+        {piece.kind === "onchain" ? (
+          <span className="inline-flex items-center gap-1 text-ok">
+            <BadgeCheck aria-hidden="true" className="size-4" />
+            {piece.explorerName ? `Confirmed on ${piece.explorerName}` : "Verified on-chain"}
+          </span>
+        ) : (
+          <span className="text-subtle">Not an on-chain proof.</span>
+        )}
+        <Link href={href} className="inline-flex items-center gap-1 font-medium text-accent-ink underline-offset-4 hover:underline">
+          View the service <ArrowRight aria-hidden="true" className="size-3.5" />
         </Link>
       </div>
-      <div className="mt-4 border-t border-dashed border-line-strong/60 pt-4">
-        <ShareProof url={pageUrl} text={shareText} />
-      </div>
+      {showOlderProof && onchain && (
+        <p className="mt-4 border-t border-dashed border-line-strong/60 pt-4 text-xs text-subtle">
+          Latest on-chain proof:{" "}
+          <Link href={`${base}/services/${onchain.serviceSlug}`} className="font-medium text-foreground underline-offset-4 hover:underline">
+            {onchain.serviceName}
+          </Link>
+          , {shortDate(onchain.at, now)}. {onchain.detail}
+        </p>
+      )}
+      {piece.kind === "onchain" && piece.txid && piece.pool && (
+        <div className="mt-4 border-t border-dashed border-line-strong/60 pt-4">
+          <ShareProof
+            url={`${SITE_URL}${href}`}
+            text={`${piece.serviceName} → landed in ${POOL_LABEL[piece.pool]}. Verified on-chain${piece.block != null ? `, block ${piece.block.toLocaleString("en-US")}` : ""}.`}
+          />
+        </div>
+      )}
     </aside>
   );
 }
@@ -308,25 +420,30 @@ function depositCells(deposits: PublishedDeposit[], now: Date): Map<string, Depo
   return out;
 }
 
-export async function BoardView({ network }: { network: NetworkId }) {
+export async function BoardView({ network, dynamic = true }: { network: NetworkId; dynamic?: boolean }) {
+  // dynamic: false lets the homepage use ISR. Live scanner and exchange status stay client-fetched.
+  const mode: ReadMode = { dynamic };
   // NU7 is a mainnet event (testnet activated it on 4 Oct). Started alongside the board query;
   // getNu7Snapshot never throws; on a database problem the strip shows the planned date.
-  const nu7Promise = network === "mainnet" ? getNu7Snapshot() : null;
-  const depositsPromise = publishedDeposits(network).catch(() => [] as PublishedDeposit[]);
+  const nu7Promise = network === "mainnet" ? getNu7Snapshot(mode) : null;
+  const depositsPromise = publishedDeposits(network, undefined, mode).catch(() => [] as PublishedDeposit[]);
   // Exit outcomes are a mainnet record; a database problem only hides the strip.
-  const outcomesPromise = network === "mainnet" ? acceptedOutcomes(network).catch(() => []) : Promise.resolve([]);
-  // Live ZEC status (mainnet): extra, so a database problem only hides the paused names.
-  const livePromise = network === "mainnet" ? liveStatuses().catch(() => []) : Promise.resolve([]);
-  const { rows, counts, total, research, visible } = await getBoard(network);
+  const outcomesPromise = network === "mainnet" ? acceptedOutcomes(network, undefined, mode).catch(() => []) : Promise.resolve([]);
+  const { rows, counts, total, research, visible, verified } = await getBoard(network, mode);
   const researchBy = Map.groupBy(research, (r) => r.serviceId);
   const base = basePath(network);
   const testsOpen = canCreateTests(network);
   const now = new Date();
-  const deposits = depositCells(await depositsPromise, now);
+  const depositList = await depositsPromise;
+  const outcomeRows = await outcomesPromise;
+  const deposits = depositCells(depositList, now);
+  const outcomeDates = Map.groupBy(outcomeRows, (o) => o.serviceId);
 
   const tested: TestedRowView[] = [];
   const untested: UntestedRowView[] = [];
   let verifiedCount = 0;
+  const reportsByService = Map.groupBy(visible, (r) => r.serviceId);
+  const serviceById = new Map(rows.map((r) => [r.service.id, { name: r.service.name, slug: r.service.slug }]));
   for (const { service, cells, readiness } of rows) {
     const c = {
       ironwood_ua: cellView(cells.ironwood_ua, now),
@@ -337,8 +454,35 @@ export async function BoardView({ network }: { network: NetworkId }) {
     const strongest = strongestTier(Object.values(c));
     if (strongest === "verified") verifiedCount++;
     const deposit = deposits.get(service.id);
+    const serviceReports = reportsByService.get(service.id) ?? [];
+    const listings = serviceReports.filter((r) => r.tier === "listing");
+    const community = serviceReports.filter((r) => r.tier === "community");
+    const ownTests = verified.filter((t) => t.serviceId === service.id);
+    const serviceResearch = researchBy.get(service.id) ?? [];
+    const status = plainStatus({
+      readiness,
+      ownCheckedAt: latestDate([
+        ...ownTests.map(testDate),
+        ...community.map(reportDate),
+        ...depositList.filter((d) => d.serviceId === service.id).map((d) => d.reviewedAt ?? d.blockTime),
+        ...(outcomeDates.get(service.id) ?? []).map((o) => new Date(`${o.weekOf}T00:00:00Z`)),
+      ]),
+      listingReadAt: latestDate(listings.map(reportDate)),
+      researchReadAt: latestDate(serviceResearch.map((r) => r.readAt)),
+      zecHub: zecHubListing(listings),
+      researchSentence: describeResearch(serviceResearch, serviceReports),
+      now,
+    });
     if (strongest === "verified" || strongest === "community" || deposit) {
-      tested.push({ ...common, readiness, cells: c, deposit, depositNotApplicable: !(DEPOSIT_SERVICE_KINDS as readonly string[]).includes(service.kind) });
+      tested.push({
+        ...common,
+        readiness,
+        cells: c,
+        deposit,
+        depositNotApplicable: !(DEPOSIT_SERVICE_KINDS as readonly string[]).includes(service.kind),
+        summary: status.line,
+        checked: status.checked,
+      });
     } else {
       // One line per source. ZecHub: the UA claim if listed, else the t-address claim.
       const claims: ClaimLine[] = [];
@@ -359,7 +503,14 @@ export async function BoardView({ network }: { network: NetworkId }) {
           inactive: !!RESEARCH_CLAIM[r.claim].inactive,
         });
       }
-      untested.push({ ...common, testHref: testsOpen ? `${base}/test?service=${service.id}` : null, claims, inactive: isInactive(found) });
+      untested.push({
+        ...common,
+        testHref: testsOpen ? `${base}/test?service=${service.id}` : null,
+        claims,
+        inactive: isInactive(found),
+        summary: status.line,
+        checked: status.checked,
+      });
     }
   }
 
@@ -372,8 +523,48 @@ export async function BoardView({ network }: { network: NetworkId }) {
   const chips = CHIPS.filter((slug) => bySlug.has(slug)).map((slug) => ({ slug, name: bySlug.get(slug)! }));
   const exportHref = `/api/results.json${network === "testnet" ? "?network=testnet" : ""}`;
   const nu7 = await nu7Promise;
-  const latestOutcomes = latestAcross(await outcomesPromise, 4);
-  const livePaused = (await livePromise).map((r) => presentLive(r, now)).filter((v) => v.deposit === "paused" || v.withdraw === "paused");
+  const latestOutcomes = latestAcross(outcomeRows, 4);
+  const evidence = collectEvidence(serviceById, verified, visible, depositList, outcomeRows);
+  const latest = pickLatest(evidence);
+  const latestOnchain = pickLatest(evidence.filter((e) => e.kind === "onchain"));
+  const rejectedForTrace =
+    latest?.kind === "onchain" && latest.addressType
+      ? [
+          ...new Set(
+            visible
+              .filter(
+                (r) =>
+                  r.tier === "community" &&
+                  r.outcome === "address_rejected" &&
+                  r.addressType &&
+                  r.addressType !== latest.addressType &&
+                  serviceById.get(r.serviceId)?.slug === latest.serviceSlug,
+              )
+              .map((r) => r.addressType!),
+          ),
+        ]
+      : [];
+  const where = whereToShield(
+    rows.map((r) => {
+      const listings = (reportsByService.get(r.service.id) ?? []).filter((x) => x.tier === "listing");
+      return {
+        name: r.service.name,
+        slug: r.service.slug,
+        readiness: r.readiness,
+        zecHub: zecHubListing(listings),
+        listingReadAt: latestDate(listings.map(reportDate)),
+      };
+    }),
+  );
+  const walletLink = (slug: string, fallback: string) => {
+    const row = rows.find((r) => r.service.slug === slug);
+    if (!row) return fallback;
+    return (
+      <Link href={`${base}/services/${row.service.slug}`} className="font-medium text-foreground underline underline-offset-4">
+        {row.service.name}
+      </Link>
+    );
+  };
 
   return (
     <BoardSearchProvider>
@@ -382,6 +573,53 @@ export async function BoardView({ network }: { network: NetworkId }) {
           <div className="relative z-10 -mb-4">
             <Nu7Strip initial={nu7} />
           </div>
+        )}
+        {network === "mainnet" && (
+          <section aria-labelledby="where-title" className="rounded-2xl border border-line bg-surface p-5 shadow-card sm:p-6">
+            <h2 id="where-title" className="text-lg font-semibold tracking-tight">
+              Where can I get shielded ZEC?
+            </h2>
+            <div className="mt-3 max-w-[68ch] space-y-3 text-sm leading-6 text-muted">
+              {where.verified.length === 0 ? (
+                <p>No service on this board has a verified shielded withdrawal. We have not checked a shielded payment from any exchange or wallet.</p>
+              ) : (
+                <p>
+                  Shielded withdrawals we have checked on-chain:{" "}
+                  {where.verified.map((s, i) => (
+                    <span key={s.slug}>
+                      {i > 0 ? ", " : ""}
+                      <Link href={`${base}/services/${s.slug}`} className="font-medium text-foreground underline underline-offset-4">
+                        {s.name}
+                      </Link>
+                      {s.current ? "" : " (an older shielded pool, not the current one)"}
+                    </span>
+                  ))}
+                  .
+                </p>
+              )}
+              {where.listed.length > 0 && (
+                <div>
+                  <p>ZecHub lists these as allowing a shielded withdrawal. CanIShield has not tested them, so this is not a verification:</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    {where.listed.map((s) => (
+                      <li key={s.slug}>
+                        <Link href={`${base}/services/${s.slug}`} className="font-medium text-foreground underline underline-offset-4">
+                          {s.name}
+                        </Link>
+                        {s.kind === "unified"
+                          ? " is listed as accepting shielded and unified withdrawals."
+                          : " is listed as allowing shielded z-address deposits and withdrawals. The pool is not stated."}
+                        {s.readAt ? ` Listing read ${shortDate(s.readAt, now)}.` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p>
+                <span className="font-medium text-foreground">A way that still works:</span> withdraw to a normal transparent address (a t-address), then shield the coins in a wallet such as {walletLink("zodl", "Zodl")} or {walletLink("zingo", "Zingo")}. That second step is in your own wallet. It does not mean the exchange sent shielded ZEC.
+              </p>
+            </div>
+          </section>
         )}
         <section className="relative isolate grid gap-8 pt-8 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-center lg:gap-12 lg:pt-16">
           {/* Full-bleed backdrop: a faint dot grid fading downward and, in dark mode on wide
@@ -399,8 +637,8 @@ export async function BoardView({ network }: { network: NetworkId }) {
                 <CyclingHeadline unit={unit} names={headlineNames} />
               </div>
               <p className="mt-6 max-w-[65ch] text-pretty text-lg text-muted">
-                Every result carries its proof: a txid and a published viewing key you can check yourself. Claims we haven&apos;t
-                tested are labelled as someone else&apos;s.
+                We show how each answer was checked. An on-chain result includes a transaction id and a viewing key. A form check is a
+                screenshot. Anything we have not tested is labelled as someone else&apos;s claim.
               </p>
             </div>
             <div className="max-w-xl space-y-4">
@@ -446,21 +684,10 @@ export async function BoardView({ network }: { network: NetworkId }) {
                 <span aria-hidden="true">·</span>
                 <ScannerWord network={network} />
               </p>
-              {network === "mainnet" && (
-                <Link
-                  href="/status"
-                  className={`inline-flex items-center gap-1.5 text-xs font-medium underline-offset-4 hover:underline ${livePaused.length ? "text-bad" : "text-accent-ink"}`}
-                >
-                  <Radio aria-hidden="true" className="size-3.5" />
-                  {livePaused.length
-                    ? `ZEC paused right now on ${livePaused.map((v) => v.name).join(", ")}: live status`
-                    : "Can I move ZEC right now? Live exchange status"}
-                  <ArrowRight aria-hidden="true" className="size-3.5" />
-                </Link>
-              )}
+              {network === "mainnet" && <LivePausedLink />}
             </div>
           </div>
-          <LatestProof network={network} />
+          <LatestEvidence piece={latest} onchain={latestOnchain} rejected={rejectedForTrace} base={base} now={now} />
         </section>
 
         <ReadinessBar counts={counts} total={total} tested={tested.length} />

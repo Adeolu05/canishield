@@ -11,10 +11,11 @@ import { ServiceIcon } from "@/components/service-icon";
 import { PendingChip, ReviewedChip, StaleChip, StatusIcon, TONE_SOFT, TONE_TEXT, TierChip } from "@/components/status";
 import { isStale, readinessOf, reportDate, testDate } from "@/lib/evidence";
 import { describeTiming, formatDuration, summarizeTiming, timeToChainMs } from "@/lib/timing";
-import { ADDRESS_TYPE_LABEL, POOL_LABEL } from "@/lib/labels";
+import { ADDRESS_TYPE_LABEL, ADDRESS_TYPE_TECHNICAL, POOL_LABEL } from "@/lib/labels";
 import { NETWORKS, basePath, canCreateTests, formatAmount, outcomeReportsEnabled, type NetworkId } from "@/lib/network";
 import { OUTCOME_SERVICE_KINDS } from "@/lib/outcome-store";
 import { isoDay, reviewedLabel, shortDate, verdictFor } from "@/lib/present";
+import { describeResearch, isAutoListingNote, latestDate, plainStatus, zecHubListing } from "@/lib/plain";
 import { acceptedOutcomes, getServiceDetail, liveStatusFor } from "@/lib/queries";
 import { presentLive } from "@/lib/live";
 import { LiveLine } from "@/components/live-status";
@@ -59,7 +60,10 @@ function EvidenceCard({ t, network, now, service }: { t: Test; network: NetworkI
   return (
     <article id={`test-${t.id}`} className="overflow-hidden rounded-xl border border-line bg-surface shadow-card">
       <header className="flex flex-wrap items-center gap-2 border-b border-line bg-surface-2 px-4 py-4">
-        <h3 className="text-sm font-semibold">{ADDRESS_TYPE_LABEL[t.addressType]}</h3>
+        <h3 className="text-sm font-semibold">
+          {ADDRESS_TYPE_LABEL[t.addressType]}
+          <span className="ml-2 text-xs font-normal text-subtle">{ADDRESS_TYPE_TECHNICAL[t.addressType]}</span>
+        </h3>
         {t.receivedPool && <OutcomeBadge outcome={t.receivedPool} />}
         <TierChip tier="verified" />
         <span className="ml-auto flex items-center gap-2 text-xs text-subtle">
@@ -164,7 +168,12 @@ function ReportCard({ report, base, now }: { report: Report; base: string; now: 
   return (
     <article id={`report-${report.id}`} className={`rounded-xl border bg-surface p-4 text-sm ${listing ? "border-dashed border-line-strong" : "border-line shadow-card"}`}>
       <div className="flex flex-wrap items-center gap-2">
-        {report.addressType && <span className="font-semibold">{ADDRESS_TYPE_LABEL[report.addressType]}</span>}
+        {report.addressType && (
+          <span className="font-semibold">
+            {ADDRESS_TYPE_LABEL[report.addressType]}
+            <span className="ml-2 text-xs font-normal text-subtle">{ADDRESS_TYPE_TECHNICAL[report.addressType]}</span>
+          </span>
+        )}
         {listing ? (
           <>
             <ListedClaimBadge outcome={report.outcome} />
@@ -310,7 +319,8 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
   const base = basePath(network);
   const now = new Date();
   const visible = [...communityReports, ...listings];
-  const verdict = verdictFor(readinessOf(tests, visible), tests, visible, now, research);
+  const readiness = readinessOf(tests, visible);
+  const verdict = verdictFor(readiness, tests, visible, now, research);
   const testsOpen = canCreateTests(network);
   const timing = summarizeTiming(tests);
   const nothing = tests.length === 0 && communityReports.length === 0;
@@ -322,6 +332,21 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
     network === "mainnet" ? liveStatusFor(service.id).catch(() => null) : Promise.resolve(null),
   ]);
   const live = liveRow ? presentLive(liveRow, now) : null;
+  const status = plainStatus({
+    readiness,
+    ownCheckedAt: latestDate([
+      ...tests.map(testDate),
+      ...communityReports.map(reportDate),
+      ...deposits.map((d) => d.reviewedAt ?? d.blockTime),
+      ...outcomes.map((o) => new Date(`${o.weekOf}T00:00:00Z`)),
+    ]),
+    listingReadAt: latestDate(listings.map(reportDate)),
+    researchReadAt: latestDate(research.map((r) => r.readAt)),
+    zecHub: zecHubListing(listings),
+    researchSentence: describeResearch(research, visible),
+    now,
+  });
+  const listingNote = isAutoListingNote(service.notes) ? null : service.notes;
   const record = outcomesShown ? recordFor(outcomes) : null;
   const reportOpen = outcomesShown && outcomeReportsEnabled();
   // Our own evidence first on the card: the newest published deposit check, if any.
@@ -390,11 +415,9 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
             <StatusIcon icon={verdict.icon} className="size-5" />
           </span>
           <div>
-            <p className="text-lg font-semibold leading-snug">
-              <span className={TONE_TEXT[verdict.tone]}>{verdict.title}</span>
-              <span className="font-normal text-muted">: {verdict.detail}</span>
-            </p>
-            {service.notes && <p className="mt-1 text-sm text-subtle">{service.notes}</p>}
+            <p className={`text-lg font-semibold leading-snug ${TONE_TEXT[verdict.tone]}`}>{status.line}</p>
+            <p className="mt-1 text-sm text-muted">{status.checked}</p>
+            {listingNote && <p className="mt-1 text-sm text-subtle">{listingNote}</p>}
           </div>
         </div>
         {live && <LiveLine v={live} now={now} />}
@@ -461,7 +484,10 @@ export async function ServiceView({ network, slug }: { network: NetworkId; slug:
 
       {(listings.length > 0 || research.length > 0) && (
         <section className="space-y-4">
-          <SectionTitle title="Other people's claims" hint="unverified; never tested by CanIShield. Each source shown on its own" />
+          <SectionTitle
+            title="Other people's claims"
+            hint={nothing ? "Not CanIShield tests. Each source is shown on its own." : "Kept separate from our checks. Each source is shown on its own."}
+          />
           {/* One column per source, side by side: claims are never merged or ranked. */}
           <div className={`grid items-start gap-4 ${listings.length > 0 && research.length > 0 ? "lg:grid-cols-2" : ""}`}>
             {listings.length > 0 && (

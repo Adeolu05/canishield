@@ -8,11 +8,14 @@ A public registry of which Zcash services actually deliver shielded withdrawals,
 
 **Live now:** [canishield.vercel.app](https://canishield.vercel.app) · [2-min demo](https://youtu.be/dE29j72mCJM) · built for Colosseum's Crypto World's Fair (Zcash track). Two scanners (mainnet and testnet) run around the clock on Railway; the board runs on Vercel, and Postgres runs on Railway.
 
-**Results so far (mainnet, 4 of 41 services tested):**
+**Results on the live board (mainnet, 7 of 41 services tested):**
 
-- Trust Wallet sends transparent only: verified on-chain at block 3,503,266, with the txid and a throwaway viewing key published so anyone can re-check it.
-- Trust Wallet, Bitget, MEXC and Binance reject both Ironwood-only and full unified addresses (withdrawal-form checks with screenshots, reviewed before publishing).
-- None of the tested services can send shielded ZEC yet.
+- Trust Wallet is the only on-chain result: a transparent payment at block 3,503,266 (2 Oct 2026), with the txid and a throwaway viewing key published. Shielded addresses were refused on a later form check. The on-chain result is older than 30 days, so the board marks it stale.
+- Binance, Bitget, Gate, KuCoin, MEXC and OKX refused a shielded-only address and a mixed address on a withdrawal form check (reviewed, with screenshots). A transparent address was accepted by the form and not submitted. None of those withdrawals is verified on-chain.
+- No service has a verified shielded withdrawal.
+- One deposit check: Binance credited a transparent TEX deposit from Zodl on 7 Nov 2026. That is a deposit, not a shielded withdrawal.
+
+The site also has a live exchange status page (`/status`, with an Atom feed at `/status/feed.xml`), an NU7 page, deposit checks, exit-outcome reports, a page per service, a JSON API (`/api/results.json` and `/api/services/<slug>`), and an embeddable card.
 
 > **Name.** This project was called ZecProof until Oct 7, 2026 and was renamed because another, unrelated project already uses that name. Internal identifiers still use the zecproof prefix: npm packages (`@zecproof/*`), env vars (`ZECPROOF_*`), the database name and user, Docker and Railway config, folder names, and the file formats of key batches, seed files and listing snapshots (`zecproof-key-batch/1`, `zecproof-key-seeds/1`, `zecproof-listing-snapshot/1`). They are not shown to users, and renaming them would risk the deployment and existing key files.
 
@@ -40,7 +43,8 @@ Claims older than 30 days show as **Stale** until retested. The mainnet board op
 ## Data export and listings
 
 - `GET /api/results.json` (mainnet) or `?network=testnet`: readiness counts, every service's cells with dates and staleness, verified tests with txid and viewing key, community reports and listings. CORS-open and cached for a minute, format `canishield-results/1` (renamed from `zecproof-results/1` on Oct 7, 2026, before anything depended on it), with a `source` block giving the name, compact name and URL.
-- `npm run import:zechub -w @zecproof/db` loads [`packages/db/data/zechub-custodial-exchanges.json`](packages/db/data/zechub-custodial-exchanges.json), a dated snapshot of ZecHub's custodial exchanges page (commit `31decdb815`, read 2026-10-02), as **Unverified listing** claims. Re-running replaces only that source's listings. Listing claims read as claims ("Listed: transparent only", "Listed: shielded/UA accepted", always "per ZecHub") and use `listedClaim` in the export, never the `outcome` values of tests and community reports.
+- `npm run fetch:zechub -w @zecproof/db` downloads ZecHub's current custodial exchanges page and rewrites [`packages/db/data/zechub-custodial-exchanges.json`](packages/db/data/zechub-custodial-exchanges.json). It does not touch the database.
+- `npm run import:zechub -w @zecproof/db` loads that snapshot as **Unverified listing** claims. Re-running replaces only that source's listings. The snapshot in this repo was read 2026-11-23 from commit `0cadd9d8d932a1b2a73a66461c6f4e1d0333de7c` (12 exchanges, including AltQuick). HTX is stored under the existing `huobi` slug so the live-status worker and `/services/huobi` stay put; the import updates the display name to HTX while the note is still a listing note. Applying the file needs `DATABASE_URL`. Until that import runs, the live board still shows the 2 Oct 2026 snapshot. Listing claims read as claims ("Listed: transparent only", "Listed: shielded/UA accepted", always "per ZecHub") and use `listedClaim` in the export, never the `outcome` values of tests and community reports.
 - `npm run import:research -w @zecproof/db` loads [`docs/research/orb-zec-research-2026-10-02-v2.md`](docs/research/orb-zec-research-2026-10-02-v2.md) (community research by orb, read 2026-10-02) into `research_claims` and adds any new wallets, exchanges, swaps and hardware wallets to the mainnet board. Re-running replaces only that source's rows. Every row must be mapped or skipped in `packages/db/src/research.ts`, so a new row in a later version fails the import instead of being guessed at; server-only tools (zecd, zcash-walletd, Zallet, zcashd) are skipped. Corrections show as "No longer supports ZEC" (KuCoin, YWallet; sorted last) or "Listing status disputed: check pending" (Bitget). The export lists them under `research` with `researchClaim` codes and `researchCredit`.
 
 ## Scanner status

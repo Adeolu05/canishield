@@ -2,6 +2,7 @@ import "server-only";
 // Deposit checks, server side: the switch, the HMAC secret and the queries.
 import { connection } from "next/server";
 import { and, desc, eq } from "drizzle-orm";
+import { atRequest, type ReadMode } from "./read-mode";
 import { depositChecks, services } from "@zecproof/db";
 import { depositHmac } from "@zecproof/zcash/deposit";
 import { getDb } from "./db";
@@ -40,8 +41,8 @@ export async function depositCheckExists(network: NetworkId, id: string) {
 }
 
 /** Published checks only: the private fields are already NULL (the database guarantees it). */
-export async function publishedDeposits(network: NetworkId, serviceId?: string) {
-  await connection();
+export async function publishedDeposits(network: NetworkId, serviceId?: string, mode?: ReadMode) {
+  await atRequest(mode);
   const where = serviceId
     ? and(eq(depositChecks.network, network), eq(depositChecks.status, "published"), eq(depositChecks.serviceId, serviceId))
     : and(eq(depositChecks.network, network), eq(depositChecks.status, "published"));

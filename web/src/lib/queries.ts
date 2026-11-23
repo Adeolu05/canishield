@@ -1,6 +1,7 @@
 import "server-only";
 import { connection } from "next/server";
 import { and, arrayContains, asc, desc, eq, isNotNull, ne } from "drizzle-orm";
+import { atRequest, type ReadMode } from "./read-mode";
 import { fundingEvents, fundingStatus, outcomeReports, reports, researchClaims, services, tests, workerHeartbeats, type AddressType } from "@zecproof/db";
 import type { OutcomeRow } from "./outcome-record";
 import type { LiveEvent, LiveRow } from "./live";
@@ -54,14 +55,14 @@ const servicesOn = (db: Db, network: NetworkId) =>
   db.select().from(services).where(arrayContains(services.networks, [network])).orderBy(asc(services.name));
 
 /** Board rows (cells + readiness) and the readiness counts for one network. */
-export async function getBoard(network: NetworkId) {
-  const { summary, research, visible } = await getResults(network);
-  return { ...summary, research, visible };
+export async function getBoard(network: NetworkId, mode?: ReadMode) {
+  const { summary, research, visible, verified } = await getResults(network, mode);
+  return { ...summary, research, visible, verified };
 }
 
 /** Everything the board and /api/results.json are built from. */
-export async function getResults(network: NetworkId) {
-  await connection(); // request-time data
+export async function getResults(network: NetworkId, mode?: ReadMode) {
+  await atRequest(mode);
   const db = getDb();
   const [allServices, verified, visible, research] = await Promise.all([
     servicesOn(db, network),
@@ -160,8 +161,8 @@ export async function testExists(network: NetworkId, id: string) {
 }
 
 /** The newest verified test on a network, with its service: the hero's "Latest proof". */
-export async function getLatestProof(network: NetworkId) {
-  await connection();
+export async function getLatestProof(network: NetworkId, mode?: ReadMode) {
+  await atRequest(mode);
   const [row] = await getDb()
     .select({ test: tests, service: services })
     .from(tests)
@@ -173,8 +174,8 @@ export async function getLatestProof(network: NetworkId) {
 }
 
 /** The worker's last heartbeat for a network, if any. */
-export async function getScannerHeartbeat(network: NetworkId) {
-  await connection();
+export async function getScannerHeartbeat(network: NetworkId, mode?: ReadMode) {
+  await atRequest(mode);
   const [row] = await getDb().select().from(workerHeartbeats).where(eq(workerHeartbeats.network, network));
   return row ?? null;
 }
@@ -184,8 +185,12 @@ export async function getScannerHeartbeat(network: NetworkId) {
  * (see lib/outcome-record.ts for which of them a page actually shows). Never the evidence link
  * or the reporter token hash. Unreviewed and rejected reports never leave the database.
  */
-export async function acceptedOutcomes(network: NetworkId, serviceId?: string): Promise<(OutcomeRow & { serviceSlug: string; serviceName: string })[]> {
-  await connection();
+export async function acceptedOutcomes(
+  network: NetworkId,
+  serviceId?: string,
+  mode?: ReadMode,
+): Promise<(OutcomeRow & { serviceSlug: string; serviceName: string })[]> {
+  await atRequest(mode);
   return getDb()
     .select({
       id: outcomeReports.id,
