@@ -7,6 +7,7 @@ import { createContext, useContext, useDeferredValue, useState, type ReactNode }
 import { ArrowRight, BadgeCheck, Ban, Clock, FileSearch, FileText, Lock, Search, Users, X } from "lucide-react";
 import { ServiceIcon } from "@/components/service-icon";
 import type { AddressType } from "@zecproof/db";
+import { ADDRESS_TYPE_HINT, ADDRESS_TYPE_LABEL, ADDRESS_TYPE_TECHNICAL } from "@/lib/labels";
 import type { Readiness } from "@/lib/evidence";
 import type { ClaimLine } from "@/lib/research";
 import { READINESS_ORDER, READINESS_VISUAL, type CellView, type IconKey, type Tone } from "@/lib/present";
@@ -34,6 +35,9 @@ export interface TestedRowView {
   deposit?: DepositCellView;
   /** Wallets, hardware wallets and faucets: deposits don't apply (receiving is what withdrawal tests cover). */
   depositNotApplicable?: boolean;
+  /** One plain sentence, plus when it was last checked. */
+  summary: string;
+  checked: string;
 }
 
 export interface UntestedRowView {
@@ -48,6 +52,8 @@ export interface UntestedRowView {
   claims: ClaimLine[];
   /** Research says the service dropped ZEC; sorted last. */
   inactive: boolean;
+  summary: string;
+  checked: string;
 }
 
 const QueryContext = createContext<{ query: string; setQuery: (q: string) => void }>({ query: "", setQuery: () => {} });
@@ -171,11 +177,14 @@ function ReadinessTag({ readiness }: { readiness: Readiness }) {
   );
 }
 
-const COLUMNS: { type: AddressType; label: string; hint: string }[] = [
-  { type: "ironwood_ua", label: "Ironwood-only UA", hint: "shielded receiver only" },
-  { type: "full_ua", label: "Full UA", hint: "shielded + transparent" },
-  { type: "transparent", label: "Transparent", hint: "t-address" },
-];
+const COLUMNS: { type: AddressType; label: string; technical: string; hint: string }[] = (
+  ["ironwood_ua", "full_ua", "transparent"] as const
+).map((type) => ({
+  type,
+  label: ADDRESS_TYPE_LABEL[type],
+  technical: ADDRESS_TYPE_TECHNICAL[type],
+  hint: ADDRESS_TYPE_HINT[type],
+}));
 
 function DepositCell({ cell, notApplicable }: { cell?: DepositCellView; notApplicable?: boolean }) {
   if (notApplicable) return <span className="text-xs text-subtle">Not applicable</span>;
@@ -225,12 +234,16 @@ export function TestedMatrix({ rows, showDeposit = false }: { rows: TestedRowVie
                     scope="col"
                     className={`sticky top-14 z-20 border-b border-line bg-surface-2 px-4 py-2 text-xs font-medium text-muted ${i === COLUMNS.length - 1 && !showDeposit ? "rounded-tr-xl" : ""}`}
                   >
-                    <span className="text-foreground">{c.label}</span> <span className="font-normal text-subtle">· {c.hint}</span>
+                    <span className="block text-foreground" title={c.hint}>
+                      {c.label}
+                    </span>
+                    <span className="mt-0.5 block font-normal text-subtle">{c.technical}</span>
                   </th>
                 ))}
                 {showDeposit && (
                   <th scope="col" className="sticky top-14 z-20 rounded-tr-xl border-b border-l border-line bg-surface-2 px-4 py-2 text-xs font-medium text-muted">
-                    <span className="text-foreground">Shielded deposit</span> <span className="font-normal text-subtle">· from a shielded wallet</span>
+                    <span className="block text-foreground">Shielded deposit</span>
+                    <span className="mt-0.5 block font-normal text-subtle">From a shielded wallet</span>
                   </th>
                 )}
               </tr>
@@ -249,6 +262,8 @@ export function TestedMatrix({ rows, showDeposit = false }: { rows: TestedRowVie
                       <span className="text-xs capitalize text-subtle">{r.kind}</span>
                       <ReadinessTag readiness={r.readiness} />
                     </div>
+                    <p className="mt-2 max-w-sm text-xs leading-5 text-muted">{r.summary}</p>
+                    <p className="mt-1 pl-0 text-xs text-subtle">{r.checked}</p>
                   </th>
                   {COLUMNS.map((c) => (
                     <td key={c.type} className="border-b border-line px-4 py-4 align-top group-last:border-b-0">
@@ -281,18 +296,26 @@ export function TestedMatrix({ rows, showDeposit = false }: { rows: TestedRowVie
                   </div>
                   <ReadinessTag readiness={r.readiness} />
                 </div>
+                <p className="mt-2 text-xs leading-5 text-muted">{r.summary}</p>
+                <p className="mt-1 text-xs text-subtle">{r.checked}</p>
                 <dl className="mt-4 divide-y divide-line border-t border-line">
                   {COLUMNS.map((c) => (
-                    <div key={c.type} className="grid grid-cols-[8rem_1fr] gap-4 py-2">
-                      <dt className="pt-0.5 text-xs text-muted">{c.label}</dt>
+                    <div key={c.type} className="grid grid-cols-[9.5rem_1fr] gap-4 py-2">
+                      <dt className="pt-0.5 text-xs text-muted" title={c.hint}>
+                        <span className="block text-foreground">{c.label}</span>
+                        <span className="mt-0.5 block text-subtle">{c.technical}</span>
+                      </dt>
                       <dd>
                         <Cell cell={r.cells[c.type]} />
                       </dd>
                     </div>
                   ))}
                   {showDeposit && (
-                    <div className="grid grid-cols-[8rem_1fr] gap-4 py-2">
-                      <dt className="pt-0.5 text-xs text-muted">Shielded deposit</dt>
+                    <div className="grid grid-cols-[9.5rem_1fr] gap-4 py-2">
+                      <dt className="pt-0.5 text-xs text-muted">
+                        <span className="block text-foreground">Shielded deposit</span>
+                        <span className="mt-0.5 block text-subtle">From a shielded wallet</span>
+                      </dt>
                       <dd>
                         <DepositCell cell={r.deposit} notApplicable={r.depositNotApplicable} />
                       </dd>
@@ -326,17 +349,26 @@ export function UntestedList({ rows, note }: { rows: UntestedRowView[]; note?: s
       ) : (
         <ul className="divide-y divide-line rounded-xl border border-line bg-surface shadow-card">
           {shown.map((r) => (
-            <li
-              key={r.slug}
-              className="grid gap-2 px-4 py-4 transition-colors duration-150 hover:bg-surface-2/60 sm:grid-cols-[minmax(10rem,14rem)_1fr_auto] sm:items-center sm:gap-6 sm:py-2"
-            >
-              <div className="flex items-center gap-2">
-                <ServiceIcon slug={r.slug} name={r.name} />
-                <Link href={r.href} className="font-medium underline-offset-4 hover:underline">
-                  {r.name}
-                </Link>
-                <span className="text-xs capitalize text-subtle">{r.kind}</span>
+            <li key={r.slug} className="space-y-2 px-4 py-4 transition-colors duration-150 hover:bg-surface-2/60">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <ServiceIcon slug={r.slug} name={r.name} />
+                  <Link href={r.href} className="font-medium underline-offset-4 hover:underline">
+                    {r.name}
+                  </Link>
+                  <span className="text-xs capitalize text-subtle">{r.kind}</span>
+                </div>
+                {r.testHref && (
+                  <Link
+                    href={r.testHref}
+                    className="inline-flex items-center gap-1 text-sm font-medium text-accent-ink underline-offset-4 transition-colors duration-150 hover:underline"
+                  >
+                    Help test this <ArrowRight aria-hidden="true" className="size-4" />
+                  </Link>
+                )}
               </div>
+              <p className="text-sm text-muted">{r.summary}</p>
+              <p className="text-xs text-subtle">{r.checked}</p>
               {r.claims.length ? (
                 <ul className="space-y-1 text-sm">
                   {r.claims.map((c) => {
@@ -356,14 +388,6 @@ export function UntestedList({ rows, note }: { rows: UntestedRowView[]; note?: s
                   <FileText aria-hidden="true" className="size-4 shrink-0" />
                   Not in any listing or research
                 </p>
-              )}
-              {r.testHref && (
-                <Link
-                  href={r.testHref}
-                  className="inline-flex items-center gap-1 justify-self-start text-sm font-medium text-accent-ink underline-offset-4 transition-colors duration-150 hover:underline sm:justify-self-end"
-                >
-                  Help test this <ArrowRight aria-hidden="true" className="size-4" />
-                </Link>
               )}
             </li>
           ))}

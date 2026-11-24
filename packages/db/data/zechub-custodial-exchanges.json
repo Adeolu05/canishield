@@ -3,10 +3,10 @@
   "source": {
     "name": "ZecHub Wiki: Custodial Exchanges",
     "url": "https://zechub.wiki/using-zcash/custodial-exchanges",
-    "file": "https://github.com/ZecHub/zechub/blob/31decdb815ed62ef8fef58ffa6aee6d8f546cf14/site/Using_Zcash/Custodial_Exchanges.md",
-    "commit": "31decdb815ed62ef8fef58ffa6aee6d8f546cf14",
-    "committedAt": "2026-09-20T17:43:22Z",
-    "readAt": "2026-10-02",
+    "file": "https://github.com/ZecHub/zechub/blob/0cadd9d8d932a1b2a73a66461c6f4e1d0333de7c/site/Using_Zcash/Custodial_Exchanges.md",
+    "commit": "0cadd9d8d932a1b2a73a66461c6f4e1d0333de7c",
+    "committedAt": "2026-11-13T16:29:55Z",
+    "readAt": "2026-11-23",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
     "attribution": "Adapted from the ZecHub Wiki (ZecHub contributors), CC BY-SA 4.0. Quotes are verbatim; the per-address-type claims below are CanIShield's reading of them."
@@ -18,6 +18,18 @@
     "no claim": "\"Not stated\", or shielded support limited to Sapling z-addresses (not in the MVP matrix) → the cell stays Untested."
   },
   "exchanges": [
+    {
+      "slug": "altquick",
+      "name": "AltQuick",
+      "website": "https://altquick.com/market/zcash-bitcoin/",
+      "supports": "Transparent",
+      "ironwood": "Not applicable, transparent addresses only",
+      "claims": {
+        "transparent": "transparent",
+        "ironwood_ua": "address_rejected",
+        "full_ua": "address_rejected"
+      }
+    },
     {
       "slug": "backpack",
       "name": "Backpack",
@@ -32,7 +44,11 @@
       "website": "https://binance.com",
       "supports": "Transparent (TEX Address Deposit)",
       "ironwood": "Not applicable, transparent addresses only",
-      "claims": { "transparent": "transparent", "ironwood_ua": "address_rejected", "full_ua": "address_rejected" }
+      "claims": {
+        "transparent": "transparent",
+        "ironwood_ua": "address_rejected",
+        "full_ua": "address_rejected"
+      }
     },
     {
       "slug": "bitcoinvn",
@@ -40,7 +56,9 @@
       "website": "https://bitcoinvn.io",
       "supports": "Transparent | Shielded (z-address Deposit & Withdrawal)",
       "ironwood": "Not stated",
-      "claims": { "transparent": "transparent" }
+      "claims": {
+        "transparent": "transparent"
+      }
     },
     {
       "slug": "bitfinex",
@@ -48,7 +66,11 @@
       "website": "https://bitfinex.com",
       "supports": "Transparent",
       "ironwood": "Not applicable, transparent addresses only",
-      "claims": { "transparent": "transparent", "ironwood_ua": "address_rejected", "full_ua": "address_rejected" }
+      "claims": {
+        "transparent": "transparent",
+        "ironwood_ua": "address_rejected",
+        "full_ua": "address_rejected"
+      }
     },
     {
       "slug": "coinbase",
@@ -56,7 +78,11 @@
       "website": "https://coinbase.com",
       "supports": "Transparent",
       "ironwood": "Not applicable, transparent addresses only",
-      "claims": { "transparent": "transparent", "ironwood_ua": "address_rejected", "full_ua": "address_rejected" }
+      "claims": {
+        "transparent": "transparent",
+        "ironwood_ua": "address_rejected",
+        "full_ua": "address_rejected"
+      }
     },
     {
       "slug": "gemini",
@@ -64,15 +90,23 @@
       "website": "https://gemini.com",
       "supports": "Transparent | Shielded and unified withdrawals, Orchard since November 2025",
       "ironwood": "Shielded withdrawals supported, pool not stated",
-      "claims": { "transparent": "transparent", "ironwood_ua": "form_accepted", "full_ua": "form_accepted" }
+      "claims": {
+        "transparent": "transparent",
+        "ironwood_ua": "form_accepted",
+        "full_ua": "form_accepted"
+      }
     },
     {
       "slug": "huobi",
-      "name": "Huobi",
-      "website": "https://huobi.com",
+      "name": "HTX",
+      "website": "https://www.htx.com",
       "supports": "Transparent",
       "ironwood": "Not applicable, transparent addresses only",
-      "claims": { "transparent": "transparent", "ironwood_ua": "address_rejected", "full_ua": "address_rejected" }
+      "claims": {
+        "transparent": "transparent",
+        "ironwood_ua": "address_rejected",
+        "full_ua": "address_rejected"
+      }
     },
     {
       "slug": "kraken",
@@ -80,7 +114,11 @@
       "website": "https://kraken.com",
       "supports": "Transparent",
       "ironwood": "Not applicable, transparent addresses only",
-      "claims": { "transparent": "transparent", "ironwood_ua": "address_rejected", "full_ua": "address_rejected" }
+      "claims": {
+        "transparent": "transparent",
+        "ironwood_ua": "address_rejected",
+        "full_ua": "address_rejected"
+      }
     },
     {
       "slug": "kucoin",
@@ -88,7 +126,11 @@
       "website": "https://kucoin.com",
       "supports": "Transparent",
       "ironwood": "Not applicable, transparent addresses only",
-      "claims": { "transparent": "transparent", "ironwood_ua": "address_rejected", "full_ua": "address_rejected" }
+      "claims": {
+        "transparent": "transparent",
+        "ironwood_ua": "address_rejected",
+        "full_ua": "address_rejected"
+      }
     },
     {
       "slug": "okx",
@@ -96,7 +138,11 @@
       "website": "https://www.okx.com",
       "supports": "Transparent",
       "ironwood": "Not applicable, transparent addresses only",
-      "claims": { "transparent": "transparent", "ironwood_ua": "address_rejected", "full_ua": "address_rejected" }
+      "claims": {
+        "transparent": "transparent",
+        "ironwood_ua": "address_rejected",
+        "full_ua": "address_rejected"
+      }
     },
     {
       "slug": "robinhood",
@@ -104,7 +150,11 @@
       "website": "https://robinhood.com",
       "supports": "Withdrawals to transparent t-addresses only. ZEC deposits are not supported",
       "ironwood": "Not applicable, transparent addresses only",
-      "claims": { "transparent": "transparent", "ironwood_ua": "address_rejected", "full_ua": "address_rejected" }
+      "claims": {
+        "transparent": "transparent",
+        "ironwood_ua": "address_rejected",
+        "full_ua": "address_rejected"
+      }
     }
   ]
 }

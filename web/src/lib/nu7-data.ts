@@ -3,8 +3,8 @@
 // numbers on the page, in a share card and in the calendar always agree.
 import "server-only";
 import { cache } from "react";
-import { connection } from "next/server";
 import { and, between, desc, eq } from "drizzle-orm";
+import { atRequest, type ReadMode } from "./read-mode";
 import { chainBlocks } from "@zecproof/db";
 import { getDb } from "./db";
 import { getScannerHeartbeat } from "./queries";
@@ -47,12 +47,12 @@ const toPoint = (r: { height: number; time: Date }): BlockPoint => ({ h: r.heigh
  * Never throws: a database problem gives an empty snapshot, and the page falls back to the planned date.
  * Cached per request, so the page and its metadata share one set of queries.
  */
-export const getNu7Snapshot = cache(async function getNu7Snapshot(): Promise<Nu7Snapshot> {
-  await connection();
+export const getNu7Snapshot = cache(async function getNu7Snapshot(mode?: ReadMode): Promise<Nu7Snapshot> {
+  await atRequest(mode);
   try {
     const db = getDb();
     const [hb, recentRows, activationRows] = await Promise.all([
-      getScannerHeartbeat("mainnet"),
+      getScannerHeartbeat("mainnet", mode),
       db
         .select({ height: chainBlocks.height, time: chainBlocks.time })
         .from(chainBlocks)
