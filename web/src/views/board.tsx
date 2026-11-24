@@ -27,7 +27,6 @@ import {
   latestDate,
   pickLatest,
   plainStatus,
-  whereLead,
   whereToShield,
   zecHubListing,
   type EvidenceKind,
@@ -570,13 +569,59 @@ export async function BoardView({ network, dynamic = true }: { network: NetworkI
   return (
     <BoardSearchProvider>
       <div className="space-y-12">
-        <div className="space-y-3">
         {nu7 && (
-          <div className="relative z-10">
+          <div className="relative z-10 -mb-4">
             <Nu7Strip initial={nu7} />
           </div>
         )}
-        <section className="relative isolate grid gap-8 pt-2 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-center lg:gap-12">
+        {network === "mainnet" && (
+          <section aria-labelledby="where-title" className="rounded-2xl border border-line bg-surface p-5 shadow-card sm:p-6">
+            <h2 id="where-title" className="text-lg font-semibold tracking-tight">
+              Where can I get shielded ZEC?
+            </h2>
+            <div className="mt-3 max-w-[68ch] space-y-3 text-sm leading-6 text-muted">
+              {where.verified.length === 0 ? (
+                <p>No service on this board has a verified shielded withdrawal. We have not checked a shielded payment from any exchange or wallet.</p>
+              ) : (
+                <p>
+                  Shielded withdrawals we have checked on-chain:{" "}
+                  {where.verified.map((s, i) => (
+                    <span key={s.slug}>
+                      {i > 0 ? ", " : ""}
+                      <Link href={`${base}/services/${s.slug}`} className="font-medium text-foreground underline underline-offset-4">
+                        {s.name}
+                      </Link>
+                      {s.current ? "" : " (an older shielded pool, not the current one)"}
+                    </span>
+                  ))}
+                  .
+                </p>
+              )}
+              {where.listed.length > 0 && (
+                <div>
+                  <p>ZecHub lists these as allowing a shielded withdrawal. CanIShield has not tested them, so this is not a verification:</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    {where.listed.map((s) => (
+                      <li key={s.slug}>
+                        <Link href={`${base}/services/${s.slug}`} className="font-medium text-foreground underline underline-offset-4">
+                          {s.name}
+                        </Link>
+                        {s.kind === "unified"
+                          ? " is listed as accepting shielded and unified withdrawals."
+                          : " is listed as allowing shielded z-address deposits and withdrawals. The pool is not stated."}
+                        {s.readAt ? ` Listing read ${shortDate(s.readAt, now)}.` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p>
+                <span className="font-medium text-foreground">A way that still works:</span> withdraw to a normal transparent address (a t-address), then shield the coins in a wallet such as {walletLink("zodl", "Zodl")} or {walletLink("zingo", "Zingo")}. That second step is in your own wallet. It does not mean the exchange sent shielded ZEC.
+              </p>
+            </div>
+          </section>
+        )}
+        <section className="relative isolate grid gap-8 pt-8 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-center lg:gap-12 lg:pt-16">
           {/* Full-bleed backdrop: a faint dot grid fading downward and, in dark mode on wide
               screens, the gold glow behind the receipt. Decoration only; under everything. */}
           <div aria-hidden="true" className="zp-bleed pointer-events-none -top-10 bottom-0 -z-10">
@@ -588,61 +633,10 @@ export async function BoardView({ network, dynamic = true }: { network: NetworkI
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent-ink">
                 {network === "mainnet" ? "Zcash · Ironwood readiness" : "Testnet · rehearsal board"}
               </p>
-              <div className="mt-3">
+              <div className="mt-4">
                 <CyclingHeadline unit={unit} names={headlineNames} />
               </div>
-              {network === "mainnet" && (
-                <div className="mt-4 max-w-[65ch] space-y-2 text-sm">
-                  <div className="text-muted">
-                    {whereLead(where)}{" "}
-                    <details className="inline">
-                      <summary className="inline cursor-pointer font-medium text-accent-ink underline-offset-4 hover:underline">See details</summary>
-                      <div className="mt-2 space-y-2 text-muted">
-                        {where.verified.length === 0 ? (
-                          <p>No service on this board has a verified shielded withdrawal. We have not checked a shielded payment from any exchange or wallet.</p>
-                        ) : (
-                          <p>
-                            Shielded withdrawals we have checked on-chain:{" "}
-                            {where.verified.map((s, i) => (
-                              <span key={s.slug}>
-                                {i > 0 ? ", " : ""}
-                                <Link href={`${base}/services/${s.slug}`} className="font-medium text-foreground underline underline-offset-4">
-                                  {s.name}
-                                </Link>
-                                {s.current ? "" : " (an older shielded pool, not the current one)"}
-                              </span>
-                            ))}
-                            .
-                          </p>
-                        )}
-                        {where.listed.length > 0 && (
-                          <div>
-                            <p>ZecHub lists these as allowing a shielded withdrawal. CanIShield has not tested them, so this is not a verification:</p>
-                            <ul className="mt-2 list-disc space-y-1 pl-5">
-                              {where.listed.map((s) => (
-                                <li key={s.slug}>
-                                  <Link href={`${base}/services/${s.slug}`} className="font-medium text-foreground underline underline-offset-4">
-                                    {s.name}
-                                  </Link>
-                                  {s.kind === "unified"
-                                    ? " is listed as accepting shielded and unified withdrawals."
-                                    : " is listed as allowing shielded z-address deposits and withdrawals. The pool is not stated."}
-                                  {s.readAt ? ` Listing read ${shortDate(s.readAt, now)}.` : ""}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        <p>Shielding afterwards happens in your own wallet. It does not mean the exchange sent shielded ZEC.</p>
-                      </div>
-                    </details>
-                  </div>
-                  <p className="w-fit max-w-full rounded-full border border-line bg-surface px-3 py-1 text-xs leading-5 text-muted">
-                    <span className="font-medium text-foreground">Workaround:</span> withdraw, then shield in {walletLink("zodl", "Zodl")} or {walletLink("zingo", "Zingo")}
-                  </p>
-                </div>
-              )}
-              <p className="mt-4 max-w-[65ch] text-pretty text-base text-muted">
+              <p className="mt-6 max-w-[65ch] text-pretty text-lg text-muted">
                 We show how each answer was checked. An on-chain result includes a transaction id and a viewing key. A form check is a
                 screenshot. Anything we have not tested is labelled as someone else&apos;s claim.
               </p>
@@ -695,7 +689,6 @@ export async function BoardView({ network, dynamic = true }: { network: NetworkI
           </div>
           <LatestEvidence piece={latest} onchain={latestOnchain} rejected={rejectedForTrace} base={base} now={now} />
         </section>
-        </div>
 
         <ReadinessBar counts={counts} total={total} tested={tested.length} />
 

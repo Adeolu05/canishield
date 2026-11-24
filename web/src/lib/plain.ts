@@ -116,19 +116,6 @@ export function whereToShield(services: WhereService[]): WhereAnswer {
   return { verified, listed };
 }
 
-/** One short line for the homepage. The counts come from the answer, never a fixed number. */
-export function whereLead(answer: WhereAnswer): string {
-  const proven =
-    answer.verified.length === 0
-      ? "No exchange is proven to send shielded ZEC yet."
-      : answer.verified.length === 1
-        ? `${answer.verified[0]?.name ?? "One service"} is proven on-chain to send shielded ZEC${answer.verified[0]?.current ? "" : ", in an older pool"}.`
-        : `${answer.verified.length} services are proven on-chain to send shielded ZEC.`;
-  if (answer.listed.length === 0) return proven;
-  const say = answer.listed.length === 1 ? "says it does" : "say they do";
-  return `${proven} ZecHub lists ${answer.listed.length} that ${say}.`;
-}
-
 export interface StatusInput {
   readiness: Readiness;
   ownCheckedAt: Date | null;
