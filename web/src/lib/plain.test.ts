@@ -6,8 +6,10 @@ import {
   isAutoListingNote,
   pickLatest,
   plainStatus,
+  whereLead,
   whereToShield,
   zecHubListing,
+  type WhereAnswer,
   type WhereService,
 } from "./plain";
 
@@ -74,6 +76,30 @@ test("where to get shielded ZEC lists only verified payments and untested ZecHub
   ]);
   assert.deepEqual(withProof.verified, [{ name: "Example", slug: "example", current: true }]);
   assert.ok(!withProof.listed.some((s) => s.slug === "example"));
+});
+
+test("the homepage lead is one line and the ZecHub count comes from the data", () => {
+  const listed = (n: number): WhereAnswer["listed"] =>
+    Array.from({ length: n }, (_, i) => ({ name: `S${i}`, slug: `s${i}`, kind: "unified" as const, readAt: null }));
+  const none: WhereAnswer = { verified: [], listed: listed(2) };
+  assert.equal(whereLead(none), "No exchange is proven to send shielded ZEC yet. ZecHub lists 2 that say they do.");
+  assert.equal(
+    whereLead({ verified: [], listed: listed(1) }),
+    "No exchange is proven to send shielded ZEC yet. ZecHub lists 1 that says it does.",
+  );
+  assert.equal(whereLead({ verified: [], listed: [] }), "No exchange is proven to send shielded ZEC yet.");
+  assert.doesNotMatch(whereLead({ verified: [], listed: listed(4) }), /lists 2/);
+  assert.match(whereLead({ verified: [], listed: listed(4) }), /lists 4 that say they do/);
+  const proven = whereLead({
+    verified: [{ name: "Example", slug: "example", current: true }],
+    listed: listed(2),
+  });
+  assert.match(proven, /^Example is proven on-chain/);
+  assert.doesNotMatch(proven, /No exchange is proven/);
+  assert.match(
+    whereLead({ verified: [{ name: "Old Pool", slug: "old", current: false }], listed: [] }),
+    /older pool/,
+  );
 });
 
 test("plain status never calls a listing or a form check verified", () => {
