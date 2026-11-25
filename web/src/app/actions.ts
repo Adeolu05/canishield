@@ -1,9 +1,10 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
-import { and, arrayContains, eq, isNull } from "drizzle-orm";
-import { reports, services, tests, addressType, type AddressType } from "@zecproof/db";
+import { and, arrayContains, count, eq, isNull } from "drizzle-orm";
+import { keyPool, reports, services, tests, addressType, type AddressType } from "@zecproof/db";
 import { isNetworkId } from "@zecproof/zcash/networks";
 import { getDb } from "@/lib/db";
 import { basePath, canCreateTests } from "@/lib/network";
@@ -11,6 +12,7 @@ import { EVIDENCE_MAX_BYTES, canLogFormChecks, checkEvidence, parseFormCheck } f
 import { saveFormCheck } from "@/lib/form-check-store";
 import { parseRequestedAt } from "@/lib/timing";
 import { isTester, newTesterToken, setTesterCookie } from "@/lib/tester-token";
+import { OPEN_TESTS_COOKIE, STILL_OPEN, openTestKey, parseOpenTests, poolIsFull, rememberOpenTest } from "@/lib/open-tests-core";
 
 const isAddressType = (v: unknown): v is AddressType =>
   typeof v === "string" && (addressType.enumValues as readonly string[]).includes(v);
@@ -44,12 +46,42 @@ export async function createTest(formData: FormData) {
     .where(and(eq(services.id, serviceId), arrayContains(services.networks, [network])));
   if (!service) throw new Error(`That service is not listed on ${network}.`);
 
+  // Clicking again (or going back and resubmitting) reopens this browser's own
+  // test for the same service and address type instead of using up another key.
+  const jar = await cookies();
+  const open = parseOpenTests(jar.get(OPEN_TESTS_COOKIE)?.value);
+  const openKey = openTestKey(network, serviceId, type);
+  const existingId = open[openKey];
+  if (existingId) {
+    const [existing] = await db.select({ id: tests.id, status: tests.status }).from(tests).where(eq(tests.id, existingId));
+    if (existing && (STILL_OPEN as readonly string[]).includes(existing.status)) {
+      redirect(`${basePath(network)}/test/${existing.id}`);
+    }
+  }
+
+  // Mainnet keys come from a fixed, offline-made pool: don't queue more tests
+  // than there are keys left to give them.
+  if (network === "mainnet") {
+    const [[{ waiting }], [{ available }]] = await Promise.all([
+      db.select({ waiting: count() }).from(tests).where(and(eq(tests.network, network), eq(tests.status, "pending"))),
+      db.select({ available: count() }).from(keyPool).where(and(eq(keyPool.network, network), eq(keyPool.status, "available"))),
+    ]);
+    if (poolIsFull(waiting, available)) redirect(`${basePath(network)}/test?busy=1`);
+  }
+
   const { token, hash } = newTesterToken();
   const [test] = await db
     .insert(tests)
     .values({ network, serviceId, addressType: type, testerTokenHash: hash })
     .returning({ id: tests.id });
   await setTesterCookie(test.id, token, `${basePath(network)}/test/${test.id}`);
+  jar.set(OPEN_TESTS_COOKIE, JSON.stringify(rememberOpenTest(open, openKey, test.id)), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 3 * 24 * 3600, // a test stays open 48 h at most
+  });
   redirect(`${basePath(network)}/test/${test.id}`);
 }
 

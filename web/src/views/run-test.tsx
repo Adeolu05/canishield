@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { createTest } from "@/app/actions";
 import { Stepper } from "@/components/stepper";
+import { SubmitOnce } from "@/components/submit-once";
 import { ADDRESS_TYPES, ADDRESS_TYPE_HINT, ADDRESS_TYPE_LABEL } from "@/lib/labels";
 import { NETWORKS, basePath, canCreateTests, type NetworkId } from "@/lib/network";
 import { depositsEnabled } from "@/lib/deposit-checks";
 import { listServices } from "@/lib/queries";
 
-export async function RunTestView({ network, preselected }: { network: NetworkId; preselected?: string }) {
+export async function RunTestView({ network, preselected, busy }: { network: NetworkId; preselected?: string; busy?: boolean }) {
   if (!canCreateTests(network)) {
     return (
       <div className="mx-auto max-w-xl space-y-4 rounded-xl border border-line bg-surface p-6 shadow-card">
@@ -37,6 +37,12 @@ export async function RunTestView({ network, preselected }: { network: NetworkId
           </p>
         </div>
       </div>
+
+      {busy && (
+        <p role="status" className="rounded-xl border border-line bg-surface-2 p-4 text-sm">
+          Every test address is in use right now. Please try again later, or use the testnet meanwhile.
+        </p>
+      )}
 
       <form action={createTest} className="space-y-6 rounded-xl border border-line bg-surface p-6 shadow-card">
         <input type="hidden" name="network" value={network} />
@@ -82,12 +88,11 @@ export async function RunTestView({ network, preselected }: { network: NetworkId
           <p className="text-xs text-subtle">Sapling-only addresses are coming later.</p>
         </fieldset>
 
-        <button
-          type="submit"
-          className="inline-flex items-center gap-2 rounded-lg bg-btn px-4 py-2 text-sm font-medium text-btn-fg shadow-card transition-opacity duration-150 hover:opacity-90"
-        >
-          Generate test address <ArrowRight aria-hidden="true" className="size-4" />
-        </button>
+        <SubmitOnce
+          label="Generate test address"
+          busyLabel="Preparing your address…"
+          className="inline-flex items-center gap-2 rounded-lg bg-btn px-4 py-2 text-sm font-medium text-btn-fg shadow-card transition-opacity duration-150 hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+        />
       </form>
       {depositsEnabled(network) && (
         <p className="text-sm text-muted">
